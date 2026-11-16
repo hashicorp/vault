@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -16,27 +16,34 @@ export default class MfaMethodRoute extends Route {
   @service api;
 
   async model({ id }) {
-    let enforcements;
+    let enforcements = [];
     let method;
-    let error = [];
 
     try {
       method = await this.api.identity.mfaReadMethod(id);
-      method.data.displayName = getMfaMethodName(method.data.type);
-      method.data.icon = getMfaMethodIcon(method.data.type);
-
-      enforcements = await fetchMfaLoginEnforcements(this.api);
+      if (method?.data) {
+        method.data.displayName = getMfaMethodName(method.data.type);
+        method.data.icon = getMfaMethodIcon(method.data.type);
+      }
     } catch (err) {
       const { status } = await this.api.parseError(err);
-      if (status === 404) {
-        error = [];
-      } else {
+      if (status !== 404) {
         throw err;
       }
     }
+
+    try {
+      const allEnforcements = await fetchMfaLoginEnforcements(this.api);
+      enforcements = allEnforcements.filter((item) => {
+        return item.mfa_method_ids?.includes(id);
+      });
+    } catch (err) {
+      // Ignore errors loading enforcements
+    }
+
     return hash({
-      method: method.data || {},
-      enforcements: enforcements || error,
+      method: method?.data || {},
+      enforcements: enforcements || [],
     });
   }
 

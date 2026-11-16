@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from '../../fixtures/demo';
 
 test('leases list navigation and prefix revoke buttons', async ({ page }) => {
   await page.goto('dashboard');
@@ -30,4 +31,15 @@ test('leases list navigation and prefix revoke buttons', async ({ page }) => {
   // Back to Leases button navigates back to list root and is no longer visible at root
   await page.getByRole('link', { name: 'Back to Leases' }).click();
   await expect(page.getByRole('link', { name: 'Back to Leases' })).not.toBeVisible();
+});
+
+// Invalid lease IDs must show Vault's specific error instead of a generic API failure.
+test('invalid lease ID shows the specific error message', async ({ page }) => {
+  await test.step('open a nonexistent lease', async () => {
+    await page.goto('access/leases/show/not-found');
+  });
+
+  await test.step('show the invalid lease ID message', async () => {
+    await expect(page.getByText('not-found is not a valid lease ID.', { exact: true })).toBeVisible();
+  });
 });

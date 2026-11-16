@@ -21,7 +21,7 @@ export default class LogoutRoute extends Route {
   @service version;
   @service customMessages;
 
-  modelTypes = ['secret', 'secret-engine'];
+  modelTypes = ['secret'];
 
   beforeModel({ to: { queryParams } }) {
     const ns = this.namespaceService.path;

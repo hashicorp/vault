@@ -15,7 +15,7 @@ func newMondayCreateSubitemCmd() *cobra.Command {
 	var githubOutput bool
 
 	cmd := &cobra.Command{
-		Use:   "create-subitem --parent-item-id <id> --item-name <name>",
+		Use:   "create-subitem --parent-item-id <id> --item-name <name> [--status <label>]",
 		Short: "Create a new sub-item under an existing Monday.com item",
 		Long:  "Create a new sub-item under an existing Monday.com item",
 		Args:  cobra.NoArgs,
@@ -50,6 +50,7 @@ func newMondayCreateSubitemCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&req.ParentItemID, "parent-item-id", "", "Monday.com id for the item that receives the new sub-item")
 	cmd.Flags().StringVar(&req.ItemName, "item-name", "", "The name of the sub-item to create")
+	cmd.Flags().StringVar(&req.Status, "status", "", "Initial status label of the sub-item, e.g. \"Not started\". Case-sensitive. When empty, the status stays blank")
 	cmd.Flags().BoolVar(&githubOutput, "github-output", false, "Write the new sub-item's subitem-id to $GITHUB_OUTPUT")
 
 	_ = cmd.MarkFlagRequired("parent-item-id")

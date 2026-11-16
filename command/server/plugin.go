@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -22,7 +22,7 @@ func (c *PluginCommand) Synopsis() string {
 
 func (c *PluginCommand) Help() string {
 	helpText := `
-Usage: vault plugin <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` plugin <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault's plugins and the
   plugin catalog. The plugin catalog is divided into three types: "auth", 
@@ -31,15 +31,15 @@ Usage: vault plugin <subcommand> [options] [args]
 
   List all available plugins in the catalog of a particular type:
 
-      $ vault plugin list database
+      $ ` + c.BinaryName + ` plugin list database
 
   Register a new plugin to the catalog as a particular type:
 
-      $ vault plugin register -sha256=d3f0a8b... auth my-custom-plugin
+      $ ` + c.BinaryName + ` plugin register -sha256=d3f0a8b... auth my-custom-plugin
 
   Get information about a plugin in the catalog listed under a particular type:
 
-      $ vault plugin info auth my-custom-plugin
+      $ ` + c.BinaryName + ` plugin info auth my-custom-plugin
 
   Please see the individual subcommand help for detailed usage information.
 `

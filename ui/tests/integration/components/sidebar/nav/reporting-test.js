@@ -9,7 +9,6 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
 import { capitalize } from '@ember/string';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const renderComponent = () => {
@@ -25,13 +24,7 @@ module('Integration | Component | sidebar-nav-reporting', function (hooks) {
 
   hooks.beforeEach(function () {
     this.flags = this.owner.lookup('service:flags');
-
-    setRunOptions({
-      rules: {
-        // This is an issue with Hds::AppHeader::HomeLink
-        'aria-prohibited-attr': { enabled: false },
-      },
-    });
+    this.owner.lookup('service:currentCluster').setCluster({ name: 'vault' });
   });
 
   test('it should hide links user does not have access to', async function (assert) {

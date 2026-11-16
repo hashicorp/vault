@@ -612,3 +612,71 @@ func TestFileGroups_Intersection(t *testing.T) {
 		})
 	}
 }
+
+// TestFiles_Disallowed tests that we return files in disallowed groups and that
+// exempt files are returned separately and don't count toward the matched
+// groups. Exemptions are exact paths so a new file next to an exempt file is
+// still disallowed.
+func TestFiles_Disallowed(t *testing.T) {
+	t.Parallel()
+
+	files := Files{
+		{Filename: "README.md", Groups: FileGroups{"docs"}},
+		{Filename: "changelog/1.txt", Groups: FileGroups{"changelog"}},
+		{Filename: ".github/instructions/index.md", Groups: FileGroups{"docs", "enterprise"}},
+		{Filename: ".github/instructions/new.md", Groups: FileGroups{"docs", "enterprise"}},
+		{Filename: "vault_ent/secret.go", Groups: FileGroups{"app", "enterprise"}},
+		{Filename: "ungrouped"},
+	}
+
+	for name, test := range map[string]struct {
+		groups            FileGroups
+		exempt            []string
+		wantMatched       []string
+		wantMatchedGroups FileGroups
+		wantExempt        []string
+	}{
+		"no exempt files": {
+			groups:            FileGroups{"enterprise"},
+			wantMatched:       []string{".github/instructions/index.md", ".github/instructions/new.md", "vault_ent/secret.go"},
+			wantMatchedGroups: FileGroups{"enterprise"},
+		},
+		"exempt file": {
+			groups:            FileGroups{"enterprise"},
+			exempt:            []string{".github/instructions/index.md"},
+			wantMatched:       []string{".github/instructions/new.md", "vault_ent/secret.go"},
+			wantMatchedGroups: FileGroups{"enterprise"},
+			wantExempt:        []string{".github/instructions/index.md"},
+		},
+		"every match is exempt": {
+			groups:     FileGroups{"enterprise"},
+			exempt:     []string{".github/instructions/index.md", ".github/instructions/new.md", "vault_ent/secret.go"},
+			wantExempt: []string{".github/instructions/index.md", ".github/instructions/new.md", "vault_ent/secret.go"},
+		},
+		"exempt files that didn't change": {
+			groups:            FileGroups{"changelog"},
+			exempt:            []string{"vault_ent/secret.go"},
+			wantMatched:       []string{"changelog/1.txt"},
+			wantMatchedGroups: FileGroups{"changelog"},
+		},
+		"exempt files don't add matched groups": {
+			groups:            FileGroups{"changelog", "docs"},
+			exempt:            []string{".github/instructions/index.md", ".github/instructions/new.md", "README.md"},
+			wantMatched:       []string{"changelog/1.txt"},
+			wantMatchedGroups: FileGroups{"changelog"},
+			wantExempt:        []string{"README.md", ".github/instructions/index.md", ".github/instructions/new.md"},
+		},
+		"no matches": {
+			groups: FileGroups{"ui"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			matched, matchedGroups, exempt := files.Disallowed(test.groups, test.exempt)
+			require.Equal(t, test.wantMatched, matched.Names())
+			require.Equal(t, test.wantMatchedGroups, matchedGroups)
+			require.Equal(t, test.wantExempt, exempt.Names())
+		})
+	}
+}

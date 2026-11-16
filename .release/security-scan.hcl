@@ -5,7 +5,6 @@ binary {
   go_stdlib  = true // Scan the Go standard library used to build the binary.
   go_modules = true // Scan the Go modules included in the binary.
   osv        = true // Use the OSV vulnerability database.
-  oss_index  = true // And use OSS Index vulnerability database.
 
   triage {
     suppress {
@@ -34,6 +33,11 @@ binary {
         // github.com/go-jose/go-jose/v3 is EOL and has several open advisories.
         // Temporarily suppress them until we've fully migrated to v4.
         "GHSA-mgcc-cww5-fp2q", "GHSA-vvm8-gf78-28g4", "GHSA-4w3g-jfj2-cw2q",
+
+        // https://github.com/golang/vulndb/issues/6909#issuecomment-6705609971
+        // github.com/crewjam/saml has been bumped to the fixed version
+        // but we need to suppress because OSV is out of date - shows that there is no fixed version
+        "GO-2026-6909",
       ]
     }
   }
@@ -74,6 +78,11 @@ container {
         // github.com/go-jose/go-jose/v3 is EOL and has several open advisories.
         // Temporarily suppress them until we've fully migrated to v4.
         "GHSA-mgcc-cww5-fp2q", "GHSA-vvm8-gf78-28g4", "GHSA-4w3g-jfj2-cw2q",
+
+        // https://github.com/golang/vulndb/issues/6909#issuecomment-6705609971
+        // github.com/crewjam/saml has been bumped to the fixed version
+        // but we need to suppress because OSV is out of date - shows that there is no fixed version
+        "GO-2026-6909",
       ]
 
       // The OSV scanner will trip on several packages that are included in the

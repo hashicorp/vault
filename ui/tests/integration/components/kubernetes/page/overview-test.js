@@ -11,7 +11,6 @@ import { render } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/kubernetes/kubernetes-selectors';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
@@ -40,13 +39,6 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
         { owner: this.engine }
       );
     };
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it should display role card', async function (assert) {

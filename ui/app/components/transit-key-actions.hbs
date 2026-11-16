@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 <div {{did-update this.updateProps @selectedAction}}>
@@ -123,7 +123,7 @@
       @updateContext={{this.updateContext}}
       data-test-transit-action={{@selectedAction}}
     />
-  {{else if (or (eq @selectedAction "export") (eq (get @key.supportedActions 0) "export"))}}
+  {{else if (or (eq @selectedAction "export") (eq this.firstSupportedAction "export"))}}
     <TransitKeyAction::Export
       @key={{@key}}
       @keys={{this.props.keys}}

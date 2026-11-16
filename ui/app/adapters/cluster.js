@@ -121,29 +121,6 @@ export default ApplicationAdapter.extend({
     });
   },
 
-  mfaValidate({ mfa_request_id, mfa_constraints }) {
-    const options = {
-      data: {
-        mfa_request_id,
-        mfa_payload: mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
-          let payload = [];
-          if (passcode) {
-            // duo requires passcode= prepended to the actual passcode
-            // this isn't a great UX so we add it behind the scenes to fulfill the requirement
-            // check if user added passcode= to avoid duplication
-            payload =
-              selectedMethod.type === 'duo' && !passcode.includes('passcode=')
-                ? [`passcode=${passcode}`]
-                : [passcode];
-          }
-          obj[selectedMethod.id] = payload;
-          return obj;
-        }, {}),
-      },
-    };
-    return this.ajax('/v1/sys/mfa/validate', 'POST', options);
-  },
-
   urlFor(endpoint) {
     if (!ENDPOINTS.includes(endpoint)) {
       throw new Error(

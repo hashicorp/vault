@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 )
 
 var AllowedOuterJWSTypes = map[string]interface{}{
@@ -25,6 +25,14 @@ var AllowedOuterJWSTypes = map[string]interface{}{
 	"ES384": true,
 	"ES512": true,
 }
+
+var outerJWSSigAlgs = []jose.SignatureAlgorithm{
+	jose.RS256, jose.RS384, jose.RS512,
+	jose.PS256, jose.PS384, jose.PS512,
+	jose.ES256, jose.ES384, jose.ES512,
+}
+
+var eabJWSSigAlgs = []jose.SignatureAlgorithm{jose.HS256, jose.HS384, jose.HS512}
 
 var AllowedEabJWSTypes = map[string]interface{}{
 	"HS256": true,
@@ -146,7 +154,7 @@ func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 	// > The JWS Unencoded Payload Option [RFC7797] MUST NOT be used
 	//
 	// This is validated by go-jose.
-	sig, err := jose.ParseSigned(signature)
+	sig, err := jose.ParseSigned(signature, outerJWSSigAlgs)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing signature: %s: %w", err, ErrMalformed)
 	}
@@ -236,7 +244,7 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 
 	// go-jose only seems to support compact signature encodings.
 	compactSig := fmt.Sprintf("%v.%v.%v", jwkBase64, payloadBase64, signatureBase64)
-	sig, err := jose.ParseSigned(compactSig)
+	sig, err := jose.ParseSigned(compactSig, eabJWSSigAlgs)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing eab signature: %s: %w", err, ErrMalformed)
 	}

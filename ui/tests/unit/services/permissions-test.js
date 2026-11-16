@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -30,6 +30,12 @@ function registerNs(owner, path) {
   owner.register('service:namespace', Ns);
 }
 
+// Header names are case-insensitive; fetch-based requests send them lowercased.
+function namespaceHeader(request) {
+  const key = Object.keys(request.requestHeaders).find((k) => k.toLowerCase() === 'x-vault-namespace');
+  return key ? request.requestHeaders[key] : undefined;
+}
+
 // Note: Policy matching follows Vault’s priority rules
 // (see: https://developer.hashicorp.com/vault/docs/concepts/policies#priority-matching).
 // In short:
@@ -58,7 +64,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('sets the root token', function (assert) {
-    this.service.setPaths({ data: { root: true } });
+    this.service.setPaths({ root: true });
     assert.true(this.service.isRoot, 'isRoot is true with root token');
   });
 
@@ -66,6 +72,68 @@ module('Unit | Service | permissions', function (hooks) {
     this.server.get(`${RESULTANT_ACL_PATH}`, () => overrideResponse(403));
     await this.service.getPaths.perform();
     assert.true(this.service.hasFallbackAccess, 'hasFallbackAccess is true when policy cannot be found');
+  });
+
+  test('requests the resultant-acl in the user root namespace rather than the current namespace', async function (assert) {
+    assert.expect(1);
+    const auth = this.owner.lookup('service:auth');
+    this.owner.lookup('service:namespace').setNamespace('admin/foo');
+    auth.setCluster('1');
+    auth.set('tokens', ['vault-_root_☃1']);
+    auth.setTokenData('vault-_root_☃1', { userRootNamespace: 'admin/bar', backend: { mountPath: 'token' } });
+
+    this.server.get(`/${RESULTANT_ACL_PATH}`, (schema, request) => {
+      assert.strictEqual(
+        namespaceHeader(request),
+        'admin/bar',
+        'namespace header is the user root namespace'
+      );
+      return PERMISSIONS_RESPONSE;
+    });
+    await this.service.getPaths.perform();
+  });
+
+  test('requests the resultant-acl without a namespace when the user root namespace is root', async function (assert) {
+    assert.expect(1);
+    const auth = this.owner.lookup('service:auth');
+    this.owner.lookup('service:namespace').setNamespace('admin');
+    auth.setCluster('1');
+    auth.set('tokens', ['vault-_root_☃1']);
+    auth.setTokenData('vault-_root_☃1', { userRootNamespace: '', backend: { mountPath: 'token' } });
+
+    this.server.get(`/${RESULTANT_ACL_PATH}`, (schema, request) => {
+      assert.notOk(namespaceHeader(request), 'no namespace is sent for the root namespace');
+      return PERMISSIONS_RESPONSE;
+    });
+    await this.service.getPaths.perform();
+  });
+
+  test('hydrates root and chroot namespace from a successful response', async function (assert) {
+    this.server.get(`/${RESULTANT_ACL_PATH}`, () => ({
+      data: { exact_paths: {}, glob_paths: {}, root: true, chroot_namespace: 'admin/' },
+    }));
+    await this.service.getPaths.perform();
+    assert.true(this.service.isRoot, 'isRoot is set from the response');
+    assert.strictEqual(this.service.chrootNamespace, 'admin/', 'chroot namespace is set from the response');
+    assert.false(this.service.hasFallbackAccess, 'fallback access is off after a successful load');
+    assert.strictEqual(this.service.permissionsBanner, null, 'no banner for a root token');
+  });
+
+  test('clears previously loaded paths and shows the read-failed banner when a later fetch fails', async function (assert) {
+    await this.service.getPaths.perform();
+    assert.deepEqual(this.service.exactPaths, PERMISSIONS_RESPONSE.data.exact_paths, 'paths loaded first');
+
+    this.server.get(`/${RESULTANT_ACL_PATH}`, () => overrideResponse(403));
+    await this.service.getPaths.perform();
+    assert.strictEqual(this.service.exactPaths, null, 'exact paths are cleared');
+    assert.strictEqual(this.service.globPaths, null, 'glob paths are cleared');
+    assert.false(this.service.isRoot, 'isRoot is false');
+    assert.true(this.service.hasFallbackAccess, 'fallback access keeps the nav visible');
+    assert.strictEqual(
+      this.service.permissionsBanner,
+      PERMISSIONS_BANNER_STATES.readFailed,
+      'read-failed banner is shown'
+    );
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -479,9 +547,7 @@ module('Unit | Service | permissions', function (hooks) {
         const Ns = Service.extend({ userRootNamespace: testCase.userRoot, path: testCase.currentNs });
         this.owner.register('service:namespace', Ns);
 
-        this.service.setPaths({
-          data: { glob_paths: {}, exact_paths: {}, chroot_namespace: testCase.chroot },
-        });
+        this.service.setPaths({ glob_paths: {}, exact_paths: {}, chroot_namespace: testCase.chroot });
 
         const fullNamespace = this.service.fullCurrentNamespace;
         assert.strictEqual(fullNamespace, testCase.expectedFullNs, 'full ns computed correctly');

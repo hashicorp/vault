@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -27,7 +27,7 @@ func (c *OperatorSealCommand) Synopsis() string {
 
 func (c *OperatorSealCommand) Help() string {
 	helpText := `
-Usage: vault operator seal [options]
+Usage: ` + c.BinaryName + ` operator seal [options]
 
   Seals the Vault server. Sealing tells the Vault server to stop responding
   to any operations until it is unsealed. When sealed, the Vault server
@@ -41,7 +41,7 @@ Usage: vault operator seal [options]
 
   Seal the Vault server:
 
-      $ vault operator seal
+      $ ` + c.BinaryName + ` operator seal
 
 ` + c.Flags().Help()
 

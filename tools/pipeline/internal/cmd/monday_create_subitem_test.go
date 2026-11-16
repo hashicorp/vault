@@ -15,7 +15,8 @@ import (
 
 // TestMondayCreateSubitemCmd_FlagParsing verifies that required flags are
 // enforced, that --parent-item-id and --item-name are correctly populated when
-// provided, and that --github-output is correctly parsed when set.
+// provided, that the optional --status label is accepted and defaults to empty
+// (status stays blank), and that --github-output is correctly parsed when set.
 func TestMondayCreateSubitemCmd_FlagParsing(t *testing.T) {
 	t.Parallel()
 
@@ -23,6 +24,7 @@ func TestMondayCreateSubitemCmd_FlagParsing(t *testing.T) {
 		args             []string
 		wantParentItemID string
 		wantItemName     string
+		wantStatus       string
 		wantGithubOutput bool
 		wantErr          bool
 	}{
@@ -38,6 +40,26 @@ func TestMondayCreateSubitemCmd_FlagParsing(t *testing.T) {
 			args:             []string{"--parent-item-id", "1210003", "--item-name", "Release Checklist"},
 			wantParentItemID: "1210003",
 			wantItemName:     "Release Checklist",
+		},
+		// --status is optional and empty by default, so existing call-sites keep
+		// creating sub-items with a blank status.
+		"--status defaults to empty": {
+			args:             []string{"--parent-item-id", "1210003", "--item-name", "Release Checklist"},
+			wantParentItemID: "1210003",
+			wantItemName:     "Release Checklist",
+			wantStatus:       "",
+		},
+		// --status carries the label verbatim; Monday.com labels are case-sensitive.
+		"--status is respected": {
+			args:             []string{"--parent-item-id", "1210003", "--item-name", "Release Checklist", "--status", "Not started"},
+			wantParentItemID: "1210003",
+			wantItemName:     "Release Checklist",
+			wantStatus:       "Not started",
+		},
+		// The status column is fixed; there is deliberately no flag to change it.
+		"--status-column-id is not a flag": {
+			args:    []string{"--parent-item-id", "1210003", "--item-name", "Release Checklist", "--status", "Done", "--status-column-id", "status_1"},
+			wantErr: true,
 		},
 		"--github-output flag is set": {
 			args:             []string{"--parent-item-id", "1210003", "--item-name", "Release Checklist", "--github-output"},
@@ -67,6 +89,10 @@ func TestMondayCreateSubitemCmd_FlagParsing(t *testing.T) {
 			itemName, err := cmd.Flags().GetString("item-name")
 			require.NoError(t, err)
 			require.Equal(t, tc.wantItemName, itemName)
+
+			status, err := cmd.Flags().GetString("status")
+			require.NoError(t, err)
+			require.Equal(t, tc.wantStatus, status)
 
 			githubOutput, err := cmd.Flags().GetBool("github-output")
 			require.NoError(t, err)

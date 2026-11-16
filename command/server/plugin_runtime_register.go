@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -36,14 +36,14 @@ func (c *PluginRuntimeRegisterCommand) Synopsis() string {
 
 func (c *PluginRuntimeRegisterCommand) Help() string {
 	helpText := `
-Usage: vault plugin runtime register [options] NAME
+Usage: ` + c.BinaryName + ` plugin runtime register [options] NAME
 
   Registers a new plugin runtime in the catalog. Currently, Vault only supports registering runtimes of type "container".
 The OCI runtime must be available on Vault's host. If no OCI runtime is specified, Vault will use "runsc", gVisor's OCI runtime.
 
   Register the plugin runtime named my-custom-plugin-runtime:
 
-      $ vault plugin runtime register -type=container -oci_runtime=my-oci-runtime my-custom-plugin-runtime
+      $ ` + c.BinaryName + ` plugin runtime register -type=container -oci_runtime=my-oci-runtime my-custom-plugin-runtime
 
 ` + c.Flags().Help()
 

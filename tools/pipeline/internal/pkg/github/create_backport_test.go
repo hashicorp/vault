@@ -5,6 +5,7 @@ package github
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -757,6 +758,58 @@ func TestCreateBackportRes_Err(t *testing.T) {
 	}
 }
 
+// TestCreateBackportRes_ToTable verifies that an attempt without a pull
+// request, like one we skipped, gets an empty URL cell rather than <nil>. The
+// empty cell lets us hide the URL column when no attempt has a pull request,
+// and keeps <nil> out of the comment we leave on the pull request.
+func TestCreateBackportRes_ToTable(t *testing.T) {
+	t.Parallel()
+
+	const prURL = "https://github.com/hashicorp/vault-enterprise/pull/1"
+
+	for name, test := range map[string]struct {
+		res          *CreateBackportRes
+		wantContains []string
+		wantMissing  []string
+	}{
+		"skipped attempt": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main": {BaseRef: "main", TargetRef: "ce/main", Skipped: true, SkippedReason: "no changes"},
+			}},
+			wantContains: []string{"ce/main", "no changes"},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;", "URL"},
+		},
+		"attempt with a pull request": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main": {BaseRef: "main", TargetRef: "ce/main", PullRequest: &libgithub.PullRequest{HTMLURL: libgithub.Ptr(prURL)}},
+			}},
+			wantContains: []string{"ce/main", "URL", prURL},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;"},
+		},
+		"skipped attempt next to one with a pull request": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main":        {BaseRef: "main", TargetRef: "ce/main", PullRequest: &libgithub.PullRequest{HTMLURL: libgithub.Ptr(prURL)}},
+				"release/1.21.x": {BaseRef: "main", TargetRef: "release/1.21.x", Skipped: true, SkippedReason: "no changes"},
+			}},
+			wantContains: []string{"ce/main", "release/1.21.x", "URL", prURL, "no changes"},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, got := range []string{test.res.ToTable().Render(), test.res.CommentBody()} {
+				for _, want := range test.wantContains {
+					require.Contains(t, got, want)
+				}
+				for _, missing := range test.wantMissing {
+					require.NotContains(t, got, missing)
+				}
+			}
+		})
+	}
+}
+
 // Test_filterNonBackportLabels tests the label filtering functionality
 func Test_filterNonBackportLabels(t *testing.T) {
 	t.Parallel()
@@ -996,6 +1049,46 @@ func Test_syncBackportFailedLabel(t *testing.T) {
 			}
 			require.Equal(t, test.expectAdd, addCalled, "add label API call expectation mismatch")
 			require.Equal(t, test.expectRemove, removeCalled, "remove label API call expectation mismatch")
+		})
+	}
+}
+
+// Test_createBackportPullRequest verifies that a backport pull request is
+// opened as a draft when requested, which we do for failed backports so that
+// the no-op commit is less likely to be approved by mistake, and is opened as
+// a regular pull request otherwise.
+func Test_createBackportPullRequest(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		draft bool
+	}{
+		"draft":     {draft: true},
+		"not draft": {draft: false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			client, mux, teardown := setupTestClient(t)
+			defer teardown()
+
+			var got libgithub.NewPullRequest
+			mux.HandleFunc("/repos/test-owner/test-repo/pulls", func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewDecoder(r.Body).Decode(&got)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 7}`))
+			})
+
+			req := &CreateBackportReq{Owner: "test-owner", Repo: "test-repo"}
+			pr, err := req.createBackportPullRequest(
+				context.Background(), client, "title", "backport/branch", "release/1.19.x", "body", test.draft,
+			)
+			require.NoError(t, err)
+			require.Equal(t, 7, pr.GetNumber())
+			require.Equal(t, test.draft, got.GetDraft())
+			require.Equal(t, "backport/branch", got.GetHead())
+			require.Equal(t, "release/1.19.x", got.GetBase())
 		})
 	}
 }

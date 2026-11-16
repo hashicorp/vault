@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -59,7 +59,7 @@ Usage: ` + c.BinaryName + ` write [options] PATH [DATA K=V...]
 
   Configure access to Consul by providing an access token:
 
-      $ echo $MY_TOKEN | vault write consul/config/access token=-
+      $ echo $MY_TOKEN | ` + c.BinaryName + ` write consul/config/access token=-
 
   Create a token
 

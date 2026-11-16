@@ -1146,6 +1146,7 @@ var autoAuthMethodKeys = map[string][]string{
 	"oci":        {""},
 	"token_file": {""},
 	"tpm":        {""},
+	"spiffe":     {""},
 }
 
 // normalizeAutoAuthMethod takes a storage name, a configuration key

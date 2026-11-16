@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -27,14 +27,14 @@ func (c *PolicyReadCommand) Synopsis() string {
 
 func (c *PolicyReadCommand) Help() string {
 	helpText := `
-Usage: vault policy read [options] [NAME]
+Usage: ` + c.BinaryName + ` policy read [options] [NAME]
 
   Prints the contents and metadata of the Vault policy named NAME. If the policy
   does not exist, an error is returned.
 
   Read the policy named "my-policy":
 
-      $ vault policy read my-policy
+      $ ` + c.BinaryName + ` policy read my-policy
 
 ` + c.Flags().Help()
 

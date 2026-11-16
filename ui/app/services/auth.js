@@ -5,7 +5,6 @@
 
 import Ember from 'ember';
 import { task, timeout } from 'ember-concurrency';
-import { getOwner } from '@ember/owner';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
@@ -23,10 +22,10 @@ const ROOT_PREFIX = '_root_';
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
+  api: service(),
   permissions: service(),
   currentCluster: service(),
   router: service(),
-  store: service(),
   namespaceService: service('namespace'),
 
   IDLE_TIMEOUT: 3 * 60e3,
@@ -124,10 +123,6 @@ export default Service.extend({
     this.checkForRootToken();
   },
 
-  clusterAdapter() {
-    return getOwner(this).lookup('adapter:cluster');
-  },
-
   generateTokenName({ backend, clusterId }, policies) {
     return (policies || []).includes('root')
       ? `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}${clusterId}`
@@ -199,12 +194,6 @@ export default Service.extend({
     const namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/renew-self';
     return this.ajax(url, 'POST', { namespace });
-  },
-
-  async lookupSelf(token) {
-    return this.store
-      .adapterFor('application')
-      .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
   },
 
   revokeCurrentToken() {
@@ -309,7 +298,7 @@ export default Service.extend({
     // Only lookup if we're missing displayName or namespacePath in a non-root namespace
     if (!displayName || (!namespacePath && hasNamespace)) {
       try {
-        const { data } = await this.lookupSelf(token);
+        const { data } = await this.api.auth.tokenLookUpSelf(this.api.buildHeaders({ token }));
         return {
           displayName: displayName || data?.display_name,
           namespacePath: namespacePath || data?.namespace_path,
@@ -440,9 +429,27 @@ export default Service.extend({
     return {};
   },
 
+  async mfaValidate({ mfa_request_id, mfa_constraints }) {
+    const mfa_payload = mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
+      let payload = [];
+      if (passcode) {
+        // duo requires passcode= prepended to the actual passcode
+        // this isn't a great UX so we add it behind the scenes to fulfill the requirement
+        // check if user added passcode= to avoid duplication
+        payload =
+          selectedMethod.type === 'duo' && !passcode.includes('passcode=')
+            ? [`passcode=${passcode}`]
+            : [passcode];
+      }
+      obj[selectedMethod.id] = payload;
+      return obj;
+    }, {});
+    return this.api.sys.mfaValidate({ mfa_request_id, mfa_payload });
+  },
+
   async totpValidate({ clusterId, mfaRequirement, authMethodType, authMountPath }) {
     // mfa/validate consistently returns data inside the "auth" key
-    const { auth } = await this.clusterAdapter().mfaValidate(mfaRequirement);
+    const { auth } = await this.mfaValidate(mfaRequirement);
     const normalizedAuthData = this.normalizeAuthData(auth, { authMethodType, authMountPath });
     return this.authSuccess(clusterId, normalizedAuthData);
   },

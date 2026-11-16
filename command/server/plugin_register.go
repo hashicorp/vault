@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -43,7 +43,7 @@ func (c *PluginRegisterCommand) Synopsis() string {
 
 func (c *PluginRegisterCommand) Help() string {
 	helpText := `
-Usage: vault plugin register [options] TYPE NAME
+Usage: ` + c.BinaryName + ` plugin register [options] TYPE NAME
 
   Registers a new plugin in the catalog. The plugin binary must exist in Vault's
   configured plugin directory. The argument of type takes "auth", "database",
@@ -51,11 +51,11 @@ Usage: vault plugin register [options] TYPE NAME
 
   Register the plugin named my-custom-plugin:
 
-      $ vault plugin register -sha256=d3f0a8b... -version=v1.0.0 auth my-custom-plugin
+      $ ` + c.BinaryName + ` plugin register -sha256=d3f0a8b... -version=v1.0.0 auth my-custom-plugin
 
   Register a plugin with custom arguments:
 
-      $ vault plugin register \
+      $ ` + c.BinaryName + ` plugin register \
           -sha256=d3f0a8b... \
           -version=v1.0.0 \
           -args=--with-glibc,--with-cgo \
@@ -63,7 +63,7 @@ Usage: vault plugin register [options] TYPE NAME
 
   Register a plugin with -download (enterprise only):
 
-      $ vault plugin register \
+      $ ` + c.BinaryName + ` plugin register \
           -version=v0.17.0+ent \
           -download=true \
           secret vault-plugin-secrets-keymgmt

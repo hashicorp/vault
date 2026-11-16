@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -14,7 +14,7 @@
  * @example
  * <TtlPicker @onChange={{this.handleChange}} @initialEnabled={{@model.myAttribute}} @initialValue={{@model.myAttribute}}/>
  *
- * @param {function} onChange - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
+ * @param {function} onChange - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}, isValid{bool}. isValid is false when an enabled value is longer than Vault supports; the value is still passed so the parent can block submit.
  * @param {boolean} initialEnabled=false - Set this value if you want the toggle on when component is mounted
  * @param {string} label=Time to live (TTL) - Label is the main label that lives next to the toggle. Yielded values will replace the label
  * @param {string} labelDisabled=Label to display when TTL is toggled off
@@ -24,6 +24,7 @@
  * @param {boolean} changeOnInit=false - if true, calls the onChange hook when component is initialized
  * @param {boolean} hideToggle=false - set this value if you'd like to hide the toggle and just leverage the input field
  * @param {boolean} emptyMeansZero=false - treat an empty input as 0 instead of showing a required error, for fields where 0 is meaningful
+ * @param {boolean} validateMax=true - show an error when the value is longer than Vault supports. Set to false when the parent form reports that error itself.
  */
 
 import Component from '@glimmer/component';
@@ -38,7 +39,9 @@ import {
   convertToSeconds,
   durationToSeconds,
   goSafeConvertFromSeconds,
+  isDurationOverMax,
   largestUnitFromSeconds,
+  maxDurationMessage,
 } from 'core/utils/duration-utils';
 export default class TtlPickerComponent extends Component {
   @tracked enableTTL = false;
@@ -46,6 +49,7 @@ export default class TtlPickerComponent extends Component {
   @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
   @tracked unit = 's';
   @tracked errorMessage = '';
+  @tracked isOverMax = false;
 
   /* Used internally */
   recalculationTimeout = 5000;
@@ -56,6 +60,10 @@ export default class TtlPickerComponent extends Component {
       return this.enableTTL ? this.args.label : this.args.labelDisabled;
     }
     return this.args.label || 'Time to live (TTL)';
+  }
+  get validationMessage() {
+    if (this.errorMessage) return this.errorMessage;
+    return this.isOverMax && this.args.validateMax !== false ? maxDurationMessage(this.label) : '';
   }
   get helperText() {
     return this.enableTTL || this.args.hideToggle
@@ -124,11 +132,15 @@ export default class TtlPickerComponent extends Component {
 
   handleChange() {
     const { time, unit, seconds, enableTTL } = this;
+    const enabled = this.args.hideToggle || enableTTL;
+    // A disabled TTL is not sent, so only an enabled value can be too large.
+    this.isOverMax = !!enabled && isDurationOverMax(seconds);
     const ttl = {
-      enabled: this.args.hideToggle || enableTTL,
+      enabled,
       seconds,
       timeString: time + unit,
       goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
+      isValid: !this.isOverMax,
     };
     this.args.onChange(ttl);
   }

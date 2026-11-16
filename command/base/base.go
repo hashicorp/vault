@@ -588,7 +588,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				EnvVar:     api.EnvVaultWrapTTL,
 				Completion: complete.PredictAnything,
 				Usage: "Wraps the response in a cubbyhole token with the requested " +
-					"TTL. The response is available via the \"vault unwrap\" command. " +
+					"TTL. The response is available via the \"" + c.BinaryName + " unwrap\" command. " +
 					"The TTL is specified as a numeric string with suffix like \"30s\" " +
 					"or \"5m\".",
 			})
@@ -683,7 +683,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Completion: complete.PredictSet("table", "json", "yaml", "pretty", "raw"),
 					Usage: `Print the output in the given format. Valid formats
 						are "table", "json", "yaml", or "pretty". "raw" is allowed
-						for 'vault read' operations only.`,
+						for '` + c.BinaryName + ` read' operations only.`,
 				})
 			}
 

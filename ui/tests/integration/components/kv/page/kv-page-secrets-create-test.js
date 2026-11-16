@@ -10,7 +10,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { click, render, waitFor } from '@ember/test-helpers';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import KvForm from 'vault/forms/secrets/kv';
 
@@ -50,14 +49,6 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       );
 
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
-    setRunOptions({
-      rules: {
-        // TODO fix JSONEditor, KVObjectEditor, MaskedInput
-        label: { enabled: false },
-        'color-contrast': { enabled: false }, // JSONEditor only
-      },
-    });
   });
 
   test('it should toggle json editor', async function (assert) {

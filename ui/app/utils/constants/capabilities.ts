@@ -21,6 +21,8 @@ export const PATH_MAP = {
   authMethodDelete: apiPath`sys/auth/${'path'}`,
   clientsActivityExport: apiPath`${'namespace'}/sys/internal/counters/activity/export`,
   clientsConfig: apiPath`sys/internal/counters/config`,
+  controlGroupAuthorize: apiPath`sys/control-group/authorize`,
+  controlGroupConfig: apiPath`sys/config/control-group`,
   customLogin: apiPath`sys/config/ui/login/default-auth/${'id'}`,
   customMessages: apiPath`sys/config/ui/custom-messages/${'id'}`,
   databaseConfig: apiPath`${'backend'}/config`,

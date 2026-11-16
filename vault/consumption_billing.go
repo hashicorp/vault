@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -130,10 +131,16 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				if err := c.updateBillingMetrics(ctx, now); err != nil {
 					c.logger.Error("error updating billing metrics", "error", err)
 				}
-				// If active node, also send metrics to the secure hub
+				// If active node, attempt to send metrics to Secure Hub.
 				if state := c.HAStateWithLock(); state == consts.Active {
-					if err := c.sendBillingMetrics(ctx, now); err != nil {
+					switch err := c.sendBillingMetrics(ctx, now); {
+					case err == nil:
+						c.recordBillingStreamSuccess(now)
+					case errors.Is(err, errSecureHubClientNotReady):
+						// Client absent or not yet connected; skip silently.
+					default:
 						c.logger.Error("error sending consumption billing metrics to secure hub", "error", err)
+						c.recordBillingStreamFailure(err, now)
 					}
 				}
 			case <-ctx.Done():
@@ -147,15 +154,20 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				if err := c.updateBillingMetrics(ctx, previousMonth); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
 				}
-				// Send the month's final counts and attributions to control hub
+				// Send the month's final counts and attributions to Secure Hub.
 				if state := c.HAStateWithLock(); state == consts.Active {
-					if err := c.sendBillingMetrics(ctx, previousMonth); err != nil {
+					switch err := c.sendBillingMetrics(ctx, previousMonth); {
+					case err == nil:
+						c.recordBillingStreamSuccess(currentMonth)
+					case errors.Is(err, errSecureHubClientNotReady):
+						// Client absent or not yet connected; skip silently.
+					default:
 						c.logger.Error("error sending billing metrics", "error", err)
+						c.recordBillingStreamFailure(err, currentMonth)
 					}
 				}
 				c.HandleStartOfMonth(ctx, currentMonth)
 				endOfMonth.Reset(untilNextMonth(currentMonth))
-
 			}
 		}
 	}()

@@ -14,6 +14,7 @@ func newReleasesCmd() *cobra.Command {
 		Long:  "Releases API related tasks",
 	}
 	releasesCmd.AddCommand(newReleasesListCmd())
+	releasesCmd.AddCommand(newReleasesVerifyCmd())
 
 	return releasesCmd
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,28 +7,26 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { waitFor } from '@ember/test-waiters';
+import AwsCredentialForm from 'vault/forms/aws-credential';
 
-import type AdapterError from 'vault/@ember-data/adapter/error';
 import type ApiService from 'vault/services/api';
-import type AwsCredential from 'vault/models/aws-credential';
 import type ControlGroupService from 'vault/vault/services/control-group';
-import type RouterService from '@ember/routing/router-service';
-import type Store from '@ember-data/store';
+import AwsCredentialResource from 'vault/resources/aws-credential';
+import type { AwsCredentialResponse } from 'vault/resources/aws-credential';
 
 const CREDENTIAL_TYPES = {
   aws: {
-    model: 'aws-credential',
     title: 'Generate AWS Credentials',
     backIsListLink: true,
-    displayFields: ['accessKey', 'secretKey', 'securityToken', 'leaseId', 'renewable', 'leaseDuration'],
-    // aws form fields are dynamic
-    formFields: (model: AwsCredential) => {
-      return {
-        iam_user: ['credentialType'],
-        assumed_role: ['credentialType', 'ttl', 'roleArn'],
-        federation_token: ['credentialType', 'ttl'],
-        session_token: ['credentialType', 'ttl'],
-      }[model.credentialType as string];
+    formFields: (credentialType?: string) => {
+      const fields: Record<string, string[]> = {
+        iam_user: ['credential_type'],
+        assumed_role: ['credential_type', 'ttl', 'role_arn'],
+        federation_token: ['credential_type', 'ttl'],
+        session_token: ['credential_type', 'ttl'],
+      };
+      return fields[credentialType || 'iam_user'];
     },
   },
 };
@@ -43,55 +41,27 @@ interface Args {
 export default class GenerateCredentials extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly controlGroup: ControlGroupService;
-  @service declare readonly store: Store;
-  @service declare readonly router: RouterService;
 
-  @tracked model;
+  @tracked model: AwsCredentialResource | undefined;
+  @tracked credentialForm: AwsCredentialForm;
+  @tracked errorMessage: string | null = null;
   @tracked loading = false;
   @tracked hasGenerated = false;
 
   cannotReadAwsRole = false;
-  emptyData = '{\n}';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    const modelType = this.modelForType();
-    this.model = this.generateNewModel(modelType);
-
-    // if user lacks role read permissions, awsRoleType will be undefined
-    // the role type dictates which form inputs are available, so this case
-    // will need special handling when generating credentials
-    this.cannotReadAwsRole = this.args.backendType == 'aws' && !this.args.awsRoleType;
-  }
-
-  willDestroy() {
-    // components are torn down after store is unloaded and will cause an error if attempt to unload record
-    const noTeardown = this.store && !this.store.isDestroying;
-    if (noTeardown && !this.model.isDestroyed && !this.model.isDestroying) {
-      this.model.unloadRecord();
-    }
-    super.willDestroy();
-  }
-
-  modelForType(): string | undefined {
-    const type = this.options;
-    if (type) {
-      return type.model;
-    }
-    // if we don't have a model for that type then redirect them back to the backend list
-    this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.args.backendPath);
-    return undefined;
+    this.credentialForm = new AwsCredentialForm({ credential_type: this.args.awsRoleType || 'iam_user' });
+    this.cannotReadAwsRole = this.args.backendType === 'aws' && !this.args.awsRoleType;
   }
 
   get breadcrumbs() {
+    const { backendPath, roleName } = this.args;
     return [
-      {
-        label: this.args.backendPath,
-        route: 'vault.cluster.secrets.backend',
-        model: this.args.backendPath,
-      },
-      { label: 'Credentials', route: 'vault.cluster.secrets.backend', model: this.args.backendPath },
-      { label: this.args.roleName, route: 'vault.cluster.secrets.backend.show', model: this.args.roleName },
+      { label: backendPath, route: 'vault.cluster.secrets.backend', model: backendPath },
+      { label: 'Credentials', route: 'vault.cluster.secrets.backend', model: backendPath },
+      { label: roleName, route: 'vault.cluster.secrets.backend.show', model: roleName },
       { label: this.options.title },
     ];
   }
@@ -102,7 +72,7 @@ export default class GenerateCredentials extends Component<Args> {
       message =
         'You do not have permissions to read this role so Vault cannot infer the credential type. Select the credential type you want to generate. ';
     }
-    if (this.options?.model === 'aws-credential' && this.model.credentialType === 'iam_user')
+    if (this.credentialForm.data.credential_type === 'iam_user')
       message += 'For Vault roles of credential type iam_user, there are no inputs, just submit the form.';
     return message;
   }
@@ -111,94 +81,64 @@ export default class GenerateCredentials extends Component<Args> {
     return CREDENTIAL_TYPES[this.args.backendType];
   }
 
-  get formFields(): string[] | undefined {
-    const typeOpts = this.options;
-
-    if (typeof typeOpts.formFields === 'function') {
-      // without read access to the role, awsRoleType will be undefined and will default to iam_user
-      // so we will need to show credentialType input for user selection
-      // otherwise, we can omit that input
-      const fields = typeOpts.formFields(this.model) ?? [];
-
-      if (!this.cannotReadAwsRole) {
-        return fields.filter((f) => f !== 'credentialType');
-      }
-
-      return fields;
-    }
-    return typeOpts.formFields;
-  }
-
-  get displayFields() {
-    return this.options.displayFields;
-  }
-
-  generateNewModel(modelType?: string) {
-    if (!modelType) {
-      return;
-    }
-    const { roleName, backendPath, awsRoleType } = this.args;
-    // conditionally add credentialType so that if not present, it will default to iam_user
-    const attrs = {
-      role: {
-        backend: backendPath,
-        name: roleName,
-      },
-      id: `${backendPath}-${roleName}`,
-      ...(awsRoleType ? { credentialType: awsRoleType } : {}),
-    };
-
-    return this.store.createRecord(modelType, attrs);
-  }
-
-  replaceModel() {
-    const modelType = this.modelForType();
-    if (!modelType) {
-      return;
-    }
-    if (this.model) {
-      this.model.unloadRecord();
-    }
-    this.model = this.generateNewModel(modelType);
+  get formFields() {
+    const fields = this.options.formFields(this.credentialForm.data.credential_type) ?? [];
+    return this.credentialForm.formFields.filter(
+      (field) => fields.includes(field.name) && (this.cannotReadAwsRole || field.name !== 'credential_type')
+    );
   }
 
   @action
-  create(evt: Event) {
+  @waitFor
+  async create(evt: Event) {
     evt.preventDefault();
+    if (this.loading) return;
     this.loading = true;
-    this.model
-      .save()
-      .then(() => {
-        this.hasGenerated = true;
-      })
-      .catch(async (error: AdapterError) => {
-        const { response } = await this.api.parseError(error);
-        // Handle control group AdapterError
-        if (response?.isControlGroupError) {
-          this.controlGroup.saveTokenFromError(response);
-          const err = this.controlGroup.logFromError(response);
-          error.errors = [err.content];
-        }
-        throw error;
-      })
-      .finally(() => {
-        this.loading = false;
-      });
-  }
-
-  @action
-  editorUpdated(attr: string, val: string) {
-    // wont set invalid JSON to the model
+    this.errorMessage = null;
+    const { roleName, backendPath } = this.args;
+    const params = { name: roleName, aws_mount_path: backendPath };
+    const { data } = this.credentialForm.toJSON();
     try {
-      this.model[attr] = JSON.parse(val);
-    } catch {
-      // linting is handled by the component
+      const result =
+        this.credentialForm.data.credential_type === 'iam_user'
+          ? await this.api.secrets.awsGenerateCredentialsRaw(params)
+          : await this.api.secrets.awsGenerateCredentialsWithParametersRaw({
+              ...params,
+              AwsGenerateCredentialsWithParametersRequest: data,
+            });
+      // The generated value() strips top-level lease metadata from Vault's envelope.
+      const response: AwsCredentialResponse = await result.raw.json();
+      if (!response.data?.access_key) {
+        throw new Error('AWS did not return credentials. Please try again.');
+      }
+      this.model = new AwsCredentialResource(
+        {
+          ...response.data,
+          lease_id: response.lease_id,
+          lease_duration: response.lease_duration,
+          renewable: response.renewable,
+        },
+        this
+      );
+      this.hasGenerated = true;
+    } catch (error) {
+      const { message, response } = await this.api.parseError(error);
+      if (response?.isControlGroupError) {
+        this.controlGroup.saveTokenFromError(response);
+        this.errorMessage = this.controlGroup.logFromError(response).content;
+      } else {
+        this.errorMessage = message;
+      }
+    } finally {
+      this.loading = false;
     }
   }
 
   @action
   reset() {
     this.hasGenerated = false;
-    this.replaceModel();
+    this.model = undefined;
+    this.errorMessage = null;
+    this.credentialForm = new AwsCredentialForm({ credential_type: this.args.awsRoleType || 'iam_user' });
   }
 }

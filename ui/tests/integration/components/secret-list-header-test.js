@@ -5,22 +5,12 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { getContext, render } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-
-const mirageToModels = (data) => {
-  const context = getContext();
-  const store = context.owner.lookup('service:store');
-  const modelName = Array.isArray(data) ? data[0].modelName : data.modelName;
-  const json = context.server.serializerOrRegistry.serialize(data);
-  store.push(json);
-  return Array.isArray(data)
-    ? data.map(({ id }) => store.peekRecord(modelName, id))
-    : store.peekRecord(modelName, data.id);
-};
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | secret-list-header', function (hooks) {
   setupRenderingTest(hooks);
@@ -79,8 +69,11 @@ module('Integration | Component | secret-list-header', function (hooks) {
     this.server.post('/sys/capabilities-self', () => {});
 
     for (const type of backends) {
-      const data = this.server.create('secret-engine', 2, { type });
-      this.model = mirageToModels(data);
+      this.model = new SecretsEngineResource({
+        path: `${type}/`,
+        type,
+        options: ['kv', 'generic'].includes(type) ? { version: 2 } : undefined,
+      });
       await render(hbs`
         <SecretListHeader
           @model={{this.model}}

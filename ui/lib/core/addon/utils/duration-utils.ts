@@ -59,27 +59,45 @@ export const durationToSeconds = (duration: string) => {
   }
 };
 
-// Vault parses durations into Go's time.Duration (int64 nanoseconds) and rejects anything longer.
+// Vault parses every duration into Go's time.Duration (int64 nanoseconds) and rejects anything longer.
+// It's a language limit, not a server setting, so it only changes if Vault changes its duration type.
 export const MAX_DURATION_SECONDS = 9223372036;
 
-// Matches plain seconds, including the exponent notation large numbers get when interpolated (e.g. '1e+21s')
-// and 'Infinity', which TtlPicker produces when a long digit input overflows.
-const PLAIN_SECONDS = /^(\d+(?:\.\d+)?(?:e\+?\d+)?|Infinity)s?$/;
+// Matches a number with an optional s/m/h/d unit, including the exponent notation large numbers get when
+// interpolated (e.g. '1e+21h') and 'Infinity', which TtlPicker produces when a long digit input overflows.
+// Duration.parse can't read either form, so they are handled here.
+const NUMBER_WITH_UNIT = /^(\d+(?:\.\d+)?(?:e\+?\d+)?|Infinity)([smhd])?$/;
 
 /**
- * Returns true when a duration is longer than Vault can store.
+ * Returns true when a duration is longer than `maxSeconds` (Vault's maximum by default).
  * Empty values and values that cannot be parsed return false so the API can report them.
  */
-export const isDurationOverMax = (duration: unknown): boolean => {
+export const isDurationOverMax = (duration: unknown, maxSeconds = MAX_DURATION_SECONDS): boolean => {
   let seconds: number | null = null;
   if (typeof duration === 'number') {
     seconds = duration;
   } else if (typeof duration === 'string' && duration.trim()) {
-    const plain = duration.trim().match(PLAIN_SECONDS);
-    seconds = plain ? Number(plain[1]) : durationToSeconds(duration.trim());
+    const match = duration.trim().match(NUMBER_WITH_UNIT);
+    seconds = match
+      ? convertToSeconds(Number(match[1]), match[2] ?? 's')
+      : durationToSeconds(duration.trim());
   }
-  return seconds !== null && seconds > MAX_DURATION_SECONDS;
+  return seconds !== null && seconds > maxSeconds;
 };
 
-export const maxDurationMessage = (label: string) =>
-  `${label} is too large. Maximum allowed value is 106,751 days.`;
+const MESSAGE_UNITS: Array<[string, number]> = [
+  ['day', secondsMap.d],
+  ['hour', secondsMap.h],
+  ['minute', secondsMap.m],
+  ['second', secondsMap.s],
+];
+
+// Writes the maximum in the largest unit it fills, rounded down so the stated limit is always accepted.
+const formatMaxDuration = (maxSeconds: number) => {
+  const [unit, size] = MESSAGE_UNITS.find(([, unitSeconds]) => maxSeconds >= unitSeconds) ?? ['second', 1];
+  const count = Math.floor(maxSeconds / size);
+  return `${new Intl.NumberFormat('en-US').format(count)} ${unit}${count === 1 ? '' : 's'}`;
+};
+
+export const maxDurationMessage = (label: string, maxSeconds = MAX_DURATION_SECONDS) =>
+  `${label} is too large. Maximum allowed value is ${formatMaxDuration(maxSeconds)}.`;

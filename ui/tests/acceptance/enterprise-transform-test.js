@@ -16,7 +16,7 @@ import transformationsPage from 'vault/tests/pages/secrets/backend/transform/tra
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
 import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
-import { runCmd } from '../helpers/commands';
+import { mountEngineCmd, runCmd } from '../helpers/commands';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -61,6 +61,62 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   hooks.beforeEach(async function () {
     return login();
   });
+
+  for (const { tab, prefix } of [
+    { tab: 'Transformations', prefix: '' },
+    { tab: 'Roles', prefix: 'role/' },
+    { tab: 'Templates', prefix: 'template/' },
+    { tab: 'Alphabets', prefix: 'alphabet/' },
+  ]) {
+    test(`it filters Transform ${tab.toLowerCase()} by name`, async function (assert) {
+      const backend = `transform-${uuidv4()}`;
+      const filterInput = '[data-test-component="navigate-input"]';
+      const matchingItem = SES.secretLink(`${prefix}test-item`);
+      const otherItem = SES.secretLink(`${prefix}other-item`);
+      await runCmd(mountEngineCmd('transform', backend));
+
+      try {
+        for (const name of ['test-item', 'other-item']) {
+          await runCmd(`write ${backend}/alphabet/${name} alphabet=abcdefg`);
+          await runCmd(`write ${backend}/template/${name} type=regex pattern="([a-g]+)" alphabet=${name}`);
+          await runCmd(
+            `write ${backend}/transformations/masking/${name} template=${name} masking_character=X allowed_roles=${name}`
+          );
+          await runCmd(`write ${backend}/role/${name} transformations=${name}`);
+        }
+        await visit(`/vault/secrets-engines/${backend}/list`);
+        await click(GENERAL.secretTab(tab));
+        assert.dom(matchingItem).exists('The matching item appears before filtering');
+        assert.dom(otherItem).exists('The other item appears before filtering');
+
+        await fillIn(filterInput, 'test-item');
+        assert.dom(matchingItem).exists('An exact name match remains visible');
+        assert.dom(otherItem).doesNotExist('Nonmatching items are hidden');
+
+        await fillIn(filterInput, 'OTHER');
+        assert.dom(otherItem).exists('Partial matching is case-insensitive');
+        assert.dom(matchingItem).doesNotExist('The previous match is no longer visible');
+
+        await fillIn(filterInput, 'missing-item');
+        assert.dom(SES.secretLink()).doesNotExist('No items appear for an unmatched filter');
+        assert
+          .dom(GENERAL.emptyStateTitle)
+          .includesText(`There are no ${tab.toLowerCase()} matching "missing-item".`);
+
+        if (tab === 'Templates' || tab === 'Alphabets') {
+          await fillIn(filterInput, 'BUILTIN');
+          assert.dom('[data-test-view-only-list-item]').exists('Built-in items can also be filtered');
+          assert.dom(SES.secretLink()).doesNotExist('Custom items do not match the built-in filter');
+        }
+
+        await fillIn(filterInput, '');
+        assert.dom(matchingItem).exists('Clearing the filter restores the matching item');
+        assert.dom(otherItem).exists('Clearing the filter restores the other item');
+      } finally {
+        await runCmd(`delete sys/mounts/${backend}`);
+      }
+    });
+  }
 
   test('it transitions to list route after mount success', async function (assert) {
     assert.expect(1);

@@ -74,8 +74,9 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		return 0, err
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.ThirdPartyPluginsPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 
 	previousThirdPartyPluginCounts, err := c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -140,8 +141,9 @@ func (c *Core) GetStoredThirdPartyPluginCounts(ctx context.Context, month time.T
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.ThirdPartyPluginsPrefix)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
@@ -224,7 +226,7 @@ func combineSecretEngineResourceCounts(a, b *SecretEngineResourceCounts) *Secret
 	}
 }
 
-// storeMaxKvCountsLocked must be called with BillingStorageLock held
+// storeMaxKvCountsLocked must be called with the KvHWMCountsHWM metric lock held
 func (c *Core) storeMaxKvCountsLocked(ctx context.Context, maxKvCounts int, localPathPrefix string, month time.Time) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.KvHWMCountsHWM)
 	entry := &logical.StorageEntry{
@@ -238,7 +240,7 @@ func (c *Core) storeMaxKvCountsLocked(ctx context.Context, maxKvCounts int, loca
 	return view.Put(ctx, entry)
 }
 
-// getStoredMaxKvCountsLocked must be called with BillingStorageLock held
+// getStoredMaxKvCountsLocked must be called with the KvHWMCountsHWM metric lock held
 func (c *Core) getStoredMaxKvCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.KvHWMCountsHWM)
 	view, ok := c.GetBillingSubView()
@@ -268,8 +270,9 @@ func (c *Core) GetStoredHWMKvCounts(ctx context.Context, localPathPrefix string,
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.KvHWMCountsHWM)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, month)
 }
 
@@ -284,8 +287,9 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.KvHWMCountsHWM)
+	mu.Lock()
+	defer mu.Unlock()
 
 	// Get the stored max kv counts
 	maxKvCounts, err := c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, currentMonth)
@@ -330,7 +334,7 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 	return maxKvCounts, nil
 }
 
-// storeMaxRoleCountsLocked must be called with BillingStorageLock held
+// storeMaxRoleCountsLocked must be called with the RoleHWMCountsHWM metric lock held
 func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *RoleCounts, localPathPrefix string, month time.Time) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.RoleHWMCountsHWM)
 	entry, err := logical.StorageEntryJSON(billingPath, maxRoleCounts)
@@ -356,8 +360,8 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 	}
 
 	// If somehow the current counts is empty, we should try get the counts (and attributions) here
-	// before taking BillingStorageLock. CountMetricsSecretMounts traverses mounts and
-	// may acquire other locks, so holding the billing storage lock here can create
+	// before taking the roles metric lock. CountMetricsSecretMounts traverses mounts and
+	// may acquire other locks, so holding the roles metric lock here can create
 	// lock-order inversions.
 	if currentRoleCounts == nil || currentManagedKeyCounts == nil {
 		c.logger.Debug("current role or managed key counts is empty, trying to get counts again")
@@ -379,11 +383,10 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 		}
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
-
-	// get max role counts - this also stores updated attribution data if HWM is updated
+	roleMu := cb.MetricLocks.LockForMetric(billing.RoleHWMCountsHWM)
+	roleMu.Lock()
 	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, roleAttribution, localPathPrefix, currentMonth)
+	roleMu.Unlock()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -391,16 +394,22 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 	maxManagedKeyCounts := &ManagedKeyCounts{}
 
 	// get max totp key counts - this also stores updated attribution data if HWM is updated
+	totpMu := cb.MetricLocks.LockForMetric(billing.TotpHWMCountsHWM)
 	totpAttribution := managedKeyAttribution[billing.TotpKeys]
+	totpMu.Lock()
 	maxTotpKeyCounts, err := c.updateMaxTotpKeyCounts(ctx, currentManagedKeyCounts.TotpKeys, totpAttribution, localPathPrefix, currentMonth)
+	totpMu.Unlock()
 	if err != nil {
 		return nil, nil, err
 	}
 	maxManagedKeyCounts.TotpKeys = maxTotpKeyCounts
 
 	// get max kmse key counts - this also stores updated attribution data if HWM is updated
+	kmseMu := cb.MetricLocks.LockForMetric(billing.KmseHWMCountsHWM)
 	kmseAttribution := managedKeyAttribution[billing.KmseKeys]
+	kmseMu.Lock()
 	maxKmseKeyCounts, err := c.updateMaxKmseKeyCounts(ctx, currentManagedKeyCounts.KmseKeys, kmseAttribution, localPathPrefix, currentMonth)
+	kmseMu.Unlock()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -481,8 +490,9 @@ func (c *Core) GetStoredHWMRoleCounts(ctx context.Context, localPathPrefix strin
 		return nil, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.RoleHWMCountsHWM)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getStoredRoleCountsLocked(ctx, localPathPrefix, month)
 }
 
@@ -562,7 +572,7 @@ func (c *Core) updateMaxTotpKeyCounts(ctx context.Context, currentKeyCounts int,
 	return maxKeyCounts, nil
 }
 
-// storeMaxTotpKeyCountsLocked must be called with BillingStorageLock held
+// storeMaxTotpKeyCountsLocked must be called with the TotpHWMCountsHWM metric lock held
 func (c *Core) storeMaxTotpKeyCountsLocked(ctx context.Context, maxKeyCounts int, localPathPrefix string, month time.Time) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TotpHWMCountsHWM)
 	entry := &logical.StorageEntry{
@@ -585,8 +595,9 @@ func (c *Core) GetStoredHWMTotpCounts(ctx context.Context, localPathPrefix strin
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.TotpHWMCountsHWM)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getStoredTotpKeyCountsLocked(ctx, localPathPrefix, month)
 }
 
@@ -715,7 +726,7 @@ func (c *Core) UpdateAttributionRetentionMonths(ctx context.Context, retentionMo
 	return nil
 }
 
-// storeTransitCallCountsLocked must be called with BillingStorageLock held
+// storeTransitCallCountsLocked must be called with the TransitDataProtectionCallCountsPrefix metric lock held
 func (c *Core) storeTransitCallCountsLocked(ctx context.Context, transitCount uint64, localPathPrefix string, month time.Time) error {
 	// Store count for each data protection type separately because they are atomic counters
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix)
@@ -730,7 +741,7 @@ func (c *Core) storeTransitCallCountsLocked(ctx context.Context, transitCount ui
 	return view.Put(ctx, entry)
 }
 
-// getStoredTransitCallCountsLocked must be called with BillingStorageLock held
+// getStoredTransitCallCountsLocked must be called with the TransitDataProtectionCallCountsPrefix metric lock held
 func (c *Core) getStoredTransitCallCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (uint64, error) {
 	// Retrieve count for each data protection type separately because they are atomic counters
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix)
@@ -761,8 +772,9 @@ func (c *Core) GetStoredTransitCallCounts(ctx context.Context, month time.Time) 
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.TransitDataProtectionCallCountsPrefix)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getStoredTransitCallCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
@@ -774,8 +786,9 @@ func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Ti
 	if cb == nil {
 		return 0, ErrConsumptionBillingNotInitialized
 	}
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.TransitDataProtectionCallCountsPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 	storedTransitCount, err := c.getStoredTransitCallCountsLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
 		return 0, err
@@ -800,8 +813,9 @@ func (c *Core) UpdateGcpKmsCallCounts(ctx context.Context, currentMonth time.Tim
 	if cb == nil {
 		return 0, ErrConsumptionBillingNotInitialized
 	}
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.GcpKmsDataProtectionCallCountsPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 	storedGcpKmsCount, err := c.getStoredGcpKmsCallCountsLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
 		return 0, err
@@ -818,7 +832,7 @@ func (c *Core) UpdateGcpKmsCallCounts(ctx context.Context, currentMonth time.Tim
 	return gcpKmsCount, nil
 }
 
-// storeGcpKmsCallCountsLocked must be called with BillingStorageLock held
+// storeGcpKmsCallCountsLocked must be called with the GcpKmsDataProtectionCallCountsPrefix metric lock held
 func (c *Core) storeGcpKmsCallCountsLocked(ctx context.Context, gcpKmsCount uint64, localPathPrefix string, month time.Time) error {
 	// Store count for each data protection type separately because they are atomic counters
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.GcpKmsDataProtectionCallCountsPrefix)
@@ -833,7 +847,7 @@ func (c *Core) storeGcpKmsCallCountsLocked(ctx context.Context, gcpKmsCount uint
 	return view.Put(ctx, entry)
 }
 
-// getStoredGcpKmsCallCountsLocked must be called with BillingStorageLock held
+// getStoredGcpKmsCallCountsLocked must be called with the GcpKmsDataProtectionCallCountsPrefix metric lock held
 func (c *Core) getStoredGcpKmsCallCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (uint64, error) {
 	// Retrieve count for each data protection type separately because they are atomic counters
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.GcpKmsDataProtectionCallCountsPrefix)
@@ -864,8 +878,9 @@ func (c *Core) GetStoredGcpKmsCallCounts(ctx context.Context, month time.Time) (
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.GcpKmsDataProtectionCallCountsPrefix)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getStoredGcpKmsCallCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
@@ -911,8 +926,9 @@ func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time)
 		return false, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.KmipEnabledPrefix)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getStoredKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth)
 }
 
@@ -945,8 +961,9 @@ func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (b
 		return false, errors.New("billing subview not available")
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.KmipEnabledPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 
 	// Scan all mounts to collect KMIP attribution data.
 	kmipMounts, err := c.CollectKmipMounts()
@@ -988,8 +1005,9 @@ func (c *Core) GetStoredPkiDurationAdjustedCount(ctx context.Context, currentMon
 		return 0, errors.New("consumption billing is not initialized")
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.PkiDurationAdjustedCountPrefix)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	return c.getStoredPkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth)
 }
@@ -1010,8 +1028,9 @@ func (c *Core) UpdatePkiDurationAdjustedCount(ctx context.Context, inc float64, 
 		return errors.New("consumption billing is not initialized")
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.PkiDurationAdjustedCountPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 
 	return c.storePkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth, inc)
 }
@@ -1063,7 +1082,7 @@ func (c *Core) storePkiDurationAdjustedCountLocked(ctx context.Context, localPat
 	return nil
 }
 
-// storeMetricsLastUpdateTimeLocked must be called with BillingStorageLock held
+// storeMetricsLastUpdateTimeLocked must be called with the MetricsLastUpdatedAtPrefix metric lock held
 func (c *Core) storeMetricsLastUpdateTimeLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, updateTime time.Time) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.MetricsLastUpdatedAtPrefix)
 	entry := &logical.StorageEntry{
@@ -1110,8 +1129,9 @@ func (c *Core) GetMetricsLastUpdateTime(ctx context.Context, currentMonth time.T
 	// Normalize month to UTC start-of-month to avoid timezone/midnight mismatches
 	normalizedMonth := timeutil.StartOfMonth(currentMonth.UTC())
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.MetricsLastUpdatedAtPrefix)
+	mu.RLock()
+	defer mu.RUnlock()
 	return c.getMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, normalizedMonth)
 }
 
@@ -1131,8 +1151,9 @@ func (c *Core) UpdateMetricsLastUpdateTime(ctx context.Context, currentMonth, up
 	normalizedMonth := timeutil.StartOfMonth(currentMonth.UTC())
 	updateTime = updateTime.UTC()
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.MetricsLastUpdatedAtPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 
 	return c.storeMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, normalizedMonth, updateTime)
 }
@@ -1149,8 +1170,9 @@ func (c *Core) GetStoredSSHDurationAdjustedCertCount(ctx context.Context, curren
 		return 0, errors.New("consumption billing is not initialized")
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.SSHCertificateMetric)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	return c.getStoredSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth)
 }
@@ -1184,8 +1206,9 @@ func (c *Core) UpdateStoredSSHDurationAdjustedCertCount(ctx context.Context, cur
 	if cb == nil {
 		return 0, ErrConsumptionBillingNotInitialized
 	}
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.SSHCertificateMetric)
+	mu.Lock()
+	defer mu.Unlock()
 	storedCertCount, err := c.getStoredSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
 		return 0, err
@@ -1226,8 +1249,9 @@ func (c *Core) GetStoredSSHOTPCount(ctx context.Context, currentMonth time.Time)
 		return 0, errors.New("consumption billing is not initialized")
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.SSHOTPMetric)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	return c.getStoredSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth)
 }
@@ -1261,8 +1285,9 @@ func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Ti
 	if cb == nil {
 		return 0, ErrConsumptionBillingNotInitialized
 	}
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.SSHOTPMetric)
+	mu.Lock()
+	defer mu.Unlock()
 	storedOTPCount, err := c.getStoredSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
 		return 0, err
@@ -1303,8 +1328,9 @@ func (c *Core) GetStoredOidcDurationAdjustedCount(ctx context.Context, currentMo
 		return 0, errors.New("consumption billing is not initialized")
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(billing.OidcDurationAdjustedCountPrefix)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	return c.getStoredOidcDurationAdjustedCountLocked(ctx, currentMonth)
 }
@@ -1378,8 +1404,9 @@ func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth
 		return ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(billing.OidcDurationAdjustedCountPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 
 	// Swap out the accumulated duration-adjusted units (already normalized per-token in
 	// IncrementOidcTokenCount). Using Swap to atomically reset so a crash after a successful

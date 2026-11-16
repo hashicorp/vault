@@ -91,6 +91,9 @@ type CreateBackportReq struct {
 	// when one or more backport attempts fail. E.g. "backport-failed". When
 	// empty, no label is applied.
 	BackportFailedLabel string
+
+	// WorkflowURL is the URL of the GitHub Actions workflow run triggering the backport.
+	WorkflowURL string
 }
 
 // NewCreateBackportReqOpt is a functional option to set fields when calling
@@ -583,7 +586,7 @@ func (r *CreateBackportRes) ToTable() table.Writer {
 		if values.PullRequest != nil {
 			row = append(row, values.PullRequest.GetHTMLURL())
 		} else {
-			row = append(row, nil)
+			row = append(row, "")
 		}
 		valErr := ""
 		if values.Error != nil {
@@ -746,20 +749,17 @@ func (r *CreateBackportReq) backportRef(
 	prBody, err := renderEmbeddedTemplate(templateName, struct {
 		OriginPullRequest *libgithub.PullRequest
 		Attempt           *CreateBackportAttempt
-	}{pr, res})
+		WorkflowURL       string
+	}{pr, res, r.WorkflowURL})
 	if err != nil {
 		res.Error = fmt.Errorf("creating backport pull request body %w", err)
 		return res
 	}
 	limitedPRBody := limitCharacters(prBody)
-	res.PullRequest, _, err = github.PullRequests.Create(
-		ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
-			Title:    &prTitle,
-			Head:     &branchName,
-			HeadRepo: &r.Repo,
-			Base:     &ref,
-			Body:     &limitedPRBody,
-		},
+
+	// Open as a draft if there was an error, or else proceed normally
+	res.PullRequest, err = r.createBackportPullRequest(
+		ctx, github, prTitle, branchName, ref, limitedPRBody, res.Error != nil,
 	)
 	if err != nil {
 		res.Error = fmt.Errorf("creating backport pull request %w", err)
@@ -812,6 +812,29 @@ func (r *CreateBackportReq) backportRef(
 	}
 
 	return res
+}
+
+// createBackportPullRequest opens the backport pull request. When draft is
+// true the pull request is opened as a draft.
+func (r *CreateBackportReq) createBackportPullRequest(
+	ctx context.Context,
+	github *libgithub.Client,
+	title string,
+	head string,
+	base string,
+	body string,
+	draft bool,
+) (*libgithub.PullRequest, error) {
+	pr, _, err := github.PullRequests.Create(ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
+		Title:    &title,
+		Head:     &head,
+		HeadRepo: &r.Repo,
+		Base:     &base,
+		Body:     &body,
+		Draft:    &draft,
+	})
+
+	return pr, err
 }
 
 // backportReviewers returns the logins to request reviews from on a backport

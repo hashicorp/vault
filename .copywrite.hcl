@@ -12,6 +12,7 @@ project {
   header_ignore = [
     ".bob/**",
     ".git/**",
+    "builtin/logical/pki/ocsp/**",
     "enos/.enos/**",
     "enos/.terraform/**",
     "enos/k8s/.enos/**",

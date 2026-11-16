@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -7,63 +7,63 @@
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
-        (hash
-          label=(pluralize this.itemType)
-          route="vault.cluster.access.method.item.list"
-          models=(array this.mountPath this.itemType)
-        )
-        (hash label=(if (eq this.mode "show") this.model.id (capitalize this.mode)))
+        (hash label=(pluralize @itemType) route="vault.cluster.access.method.item.list" models=(array @mountPath @itemType))
+        (hash label=(if (eq @mode "show") @form.id (capitalize @mode)))
       }}
     />
   </:breadcrumbs>
 </Page::Header>
 
-{{#if (eq this.mode "show")}}
+{{#if this.controlGroupError}}
+  <ControlGroupInlineError @error={{this.controlGroupError}} class="has-top-margin-s has-bottom-margin-s" />
+{{/if}}
+
+{{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonText="Delete {{this.itemType}}"
+        @buttonText="Delete {{@itemType}}"
         class="toolbar-button"
         @buttonColor="secondary"
-        @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage="Are you sure you want to delete {{this.itemType}} {{this.model.id}}?"
+        @onConfirmAction={{this.deleteItem}}
+        @confirmMessage="Are you sure you want to delete {{@itemType}} {{@form.id}}?"
       />
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @route="vault.cluster.access.method.item.edit"
-        @models={{array this.mountPath this.itemType this.model.id}}
+        @models={{array @mountPath @itemType @form.id}}
         data-test-configure-link="true"
       >
         Edit
-        {{singularize this.itemType}}
+        {{singularize @itemType}}
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
-{{#if (eq this.mode "show")}}
-  <FieldGroupShow @model={{this.model}} @showAllFields={{true}} />
+{{#if (eq @mode "show")}}
+  <FieldGroupShow @model={{@form}} @showAllFields={{true}} />
 {{else}}
-  <form {{action (perform this.saveModel) on="submit"}}>
+  <form {{on "submit" (perform this.save)}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <NamespaceReminder @mode="save" @noun={{this.itemType}} />
-      <MessageError @model={{this.model}} />
-      <FormFieldGroups @model={{this.model}} @mode={{this.mode}} @modelValidations={{this.modelValidations}} />
+      <NamespaceReminder @mode="save" @noun={{@itemType}} />
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <FormFieldGroups @model={{@form}} @mode={{@mode}} @groupName="formFieldGroups" />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
         <Hds::Button
           @text="Save"
-          @icon={{if this.saveModel.isRunning "loading"}}
+          @icon={{if this.save.isRunning "loading"}}
           type="submit"
-          disabled={{this.saveModel.isRunning}}
+          disabled={{this.save.isRunning}}
           data-test-submit
         />
-        {{#if (eq this.mode "create")}}
+        {{#if (eq @mode "create")}}
           <Hds::Button
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.access.method.item.list"
-            @models={{array this.mountPath this.itemType}}
+            @models={{array @mountPath @itemType}}
             data-test-cancel-link={{true}}
           />
         {{else}}
@@ -71,7 +71,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.access.method.item.show"
-            @models={{array this.mountPath this.itemType this.model.id}}
+            @models={{array @mountPath @itemType @form.id}}
             data-test-cancel-link={{true}}
           />
         {{/if}}

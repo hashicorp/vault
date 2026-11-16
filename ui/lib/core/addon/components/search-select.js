@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
+import { guidFor } from '@ember/object/internals';
 import { tracked } from '@glimmer/tracking';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
@@ -63,6 +64,7 @@ export default class SearchSelect extends Component {
   @tracked selectedOptions = []; // array of selected options (initially set by @inputValue)
   @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
   @tracked allOptions = []; // both selected and unselected options, used for wildcard filter
+  fallbackId = `search-select-${guidFor(this)}`;
 
   constructor() {
     super(...arguments);
@@ -79,6 +81,11 @@ export default class SearchSelect extends Component {
 
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
+  }
+
+  get effectiveId() {
+    // Return the provided id, or fall back to a generated fallbackId
+    return this.args.id || this.fallbackId;
   }
 
   get idKey() {

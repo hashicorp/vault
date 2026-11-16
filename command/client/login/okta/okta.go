@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package okta
@@ -16,7 +16,10 @@ import (
 )
 
 // CLIHandler struct
-type CLIHandler struct{}
+type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+}
 
 // Auth cli method
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
@@ -94,19 +97,23 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 // Help method for okta cli
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login -method=okta [CONFIG K=V...]
+Usage: ` + binaryName + ` login -method=okta [CONFIG K=V...]
 
   The Okta auth method allows users to authenticate using Okta.
 
   Authenticate as "sally":
 
-      $ vault login -method=okta username=sally
+      $ ` + binaryName + ` login -method=okta username=sally
       Password (will be hidden):
 
   Authenticate as "bob":
 
-      $ vault login -method=okta username=bob password=password
+      $ ` + binaryName + ` login -method=okta username=bob password=password
 
 Configuration:
 

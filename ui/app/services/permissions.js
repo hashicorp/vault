@@ -163,7 +163,7 @@ export default class PermissionsService extends Service {
   @tracked _aclLoadFailed = false;
   @tracked chrootNamespace = null;
 
-  @service store;
+  @service api;
   @service namespace;
 
   // isAclLoaded:
@@ -223,6 +223,8 @@ export default class PermissionsService extends Service {
   }
 
   // Load resultant-ACL used by sidebar + banner.
+  // The ACL is always read from the user's root namespace, not the current one, so that
+  // policies granting access to child namespaces are included.
   // Success:
   //   • Clear _aclLoadFailed, then hydrate via setPaths(resp).
   // Failure (network/403/etc):
@@ -231,7 +233,8 @@ export default class PermissionsService extends Service {
   //   • Clear exact/glob to avoid using stale ACL from a prior success.
   @task *getPaths() {
     try {
-      const resp = yield this.store.adapterFor('permissions').query();
+      const namespace = this.namespace.userRootNamespace ?? this.namespace.path;
+      const resp = yield this.api.sys.internalUiReadResultantAcl(this.api.buildHeaders({ namespace }));
       this._aclLoadFailed = false;
       this.setPaths(resp);
     } catch (err) {
@@ -245,17 +248,17 @@ export default class PermissionsService extends Service {
     }
   }
 
-  // Populate tracked state from a successful resultant-ACL response.
+  // Populate tracked state from a successful resultant-ACL response (the unwrapped `data` payload).
   //   • exact_paths / glob_paths → used for all permission checks
   //   • root (boolean) → authoritative “real root” from backend
   //   • hasFallbackAccess → always false on success (only true if ACL fetch fails)
   //   • chroot_namespace → prefix applied to all checks
   setPaths(resp) {
-    this.exactPaths = resp.data.exact_paths;
-    this.globPaths = resp.data.glob_paths;
-    this.isRoot = resp.data.root; // true root per backend
+    this.exactPaths = resp.exact_paths;
+    this.globPaths = resp.glob_paths;
+    this.isRoot = resp.root; // true root per backend
     this.hasFallbackAccess = false; // nav gating shortcut (true root behaves like “show all”). Only set true if ACL fail.
-    this.chrootNamespace = resp.data.chroot_namespace;
+    this.chrootNamespace = resp.chroot_namespace;
   }
 
   reset() {

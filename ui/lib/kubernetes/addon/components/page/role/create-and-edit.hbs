@@ -13,19 +13,21 @@
   </:breadcrumbs>
 </Page::Header>
 
-<div class="is-flex-row has-top-margin-s">
+<Hds::Form::RadioCard::Group @name="generation-preference-radio-group" @alignment="left" class="has-top-margin-s" as |G|>
   {{#each this.generationPreferences as |pref|}}
-    <RadioCard
-      @title={{pref.title}}
-      @description={{pref.description}}
-      @icon="token"
+    <G.RadioCard
+      @checked={{eq @form.generationPreference pref.value}}
       @value={{pref.value}}
-      @groupValue={{@form.generationPreference}}
-      @onChange={{this.changePreference}}
+      {{on "change" (fn this.changePreference pref.value)}}
       data-test-radio-card={{pref.value}}
-    />
+      as |R|
+    >
+      <R.Icon @name="token" />
+      <R.Label>{{pref.title}}</R.Label>
+      <R.Description>{{pref.description}}</R.Description>
+    </G.RadioCard>
   {{/each}}
-</div>
+</Hds::Form::RadioCard::Group>
 
 <div class="has-top-margin-xl has-bottom-margin-l">
   <h2 class="title is-4">

@@ -29,28 +29,37 @@
     </FormFieldGroups>
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
-  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
+  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xl">
     <Hds::Text::Display @tag="h2" @size="400">Assign access</Hds::Text::Display>
-    <div class="is-flex-row">
-      <RadioCard
-        data-test-oidc-radio="allow-all"
-        @title="Allow everyone to access existing"
-        @description="All Vault entities can authenticate through this application."
-        @icon="org"
+    <Hds::Form::RadioCard::Group
+      @name="assign-access-radio-group"
+      @alignment="left"
+      class="has-top-margin-s has-bottom-margin-m"
+      as |G|
+    >
+      <G.RadioCard
+        @checked={{eq this.radioCardGroupValue "allow_all"}}
+        {{on "change" (fn this.handleAssignmentSelection "allow_all")}}
         @value="allow_all"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{this.handleAssignmentSelection}}
-      />
-      <RadioCard
-        data-test-oidc-radio="limited"
-        @title="Limit access to selected users"
-        @description="Choose or create an assignment to give access to selected entities."
-        @icon="users"
+        data-test-oidc-radio="allow-all"
+        as |R|
+      >
+        <R.Icon @name="org" />
+        <R.Label>Allow everyone to access existing</R.Label>
+        <R.Description>All Vault entities can authenticate through this application.</R.Description>
+      </G.RadioCard>
+      <G.RadioCard
+        @checked={{eq this.radioCardGroupValue "limited"}}
+        {{on "change" (fn this.handleAssignmentSelection "limited")}}
         @value="limited"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{this.handleAssignmentSelection}}
-      />
-    </div>
+        data-test-oidc-radio="limited"
+        as |R|
+      >
+        <R.Icon @name="users" />
+        <R.Label>Limit access to selected users</R.Label>
+        <R.Description>Choose or create an assignment to give access to selected entities.</R.Description>
+      </G.RadioCard>
+    </Hds::Form::RadioCard::Group>
     {{#if (eq this.radioCardGroupValue "limited")}}
       <SearchSelect
         @id="oidc-client-form-assignments-select"

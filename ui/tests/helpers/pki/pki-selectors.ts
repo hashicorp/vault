@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -118,6 +118,7 @@ export const PKI_ROLE_FORM = {
 
 export const PKI_ROLE_GENERATE = {
   form: '[data-test-pki-generate-cert-form]',
+  alert: '[data-test-alert]',
   downloadButton: '[data-test-pki-cert-download-button]',
   revokeButton: '[data-test-pki-cert-revoke-button]',
 };

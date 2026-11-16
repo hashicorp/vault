@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { FEEDBACK_SURVEY_URL } from 'vault/utils/constants/links';
 
@@ -16,12 +15,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    setRunOptions({
-      rules: {
-        // This is an issue with Hds::AppHeader::HomeLink
-        'aria-prohibited-attr': { enabled: false },
-      },
-    });
+    this.owner.lookup('service:currentCluster').setCluster({ name: 'vault' });
   });
 
   test('it should hide and show app sidebar', async function (assert) {

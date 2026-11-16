@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -47,11 +47,11 @@ func (c *OperatorRaftSnapshotInspectCommand) Synopsis() string {
 
 func (c *OperatorRaftSnapshotInspectCommand) Help() string {
 	helpText := `
-	Usage: vault operator raft snapshot inspect <snapshot_file>
+	Usage: ` + c.BinaryName + ` operator raft snapshot inspect <snapshot_file>
 	
 	Inspects a snapshot file.
 	
-	$ vault operator raft snapshot inspect raft.snap
+	$ ` + c.BinaryName + ` operator raft snapshot inspect raft.snap
 	
 	` + c.Flags().Help()
 

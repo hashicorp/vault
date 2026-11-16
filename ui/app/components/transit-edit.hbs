@@ -10,14 +10,14 @@
 </Page::Header>
 
 {{#if (eq this.mode "create")}}
-  <TransitFormCreate @form={{this.form}} @errorMessage={{this.errorMessage}} />
+  <TransitFormCreate @form={{this.form}} />
 {{else if (eq this.mode "edit")}}
   <TransitFormEdit @form={{this.form}} @capabilities={{this.capabilities}} />
 {{else if (eq this.mode "show")}}
   <TransitFormShow
     @refresh={{action "refresh"}}
     @tab={{this.tab}}
-    @form={{this.form}}
+    @key={{this.key}}
     @capabilities={{this.capabilities}}
     @mode={{this.mode}}
   />

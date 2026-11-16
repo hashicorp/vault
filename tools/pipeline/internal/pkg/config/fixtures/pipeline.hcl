@@ -121,6 +121,11 @@ changed_files {
         // Internal developer tooling that must not sync to CE
         ".agents",
         joinpath("ui", ".agents"),
+        ".bob",
+        ".bob-review",
+        ".opencode",
+        joinpath(".github", "agents"),
+        joinpath(".github", "instructions"),
       ]
     }
 
@@ -128,6 +133,10 @@ changed_files {
       base_name = [
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
+        "AGENTS.md",
+        "opencode.json",
+        ".mcp.json",
+        "copilot-instructions.md",
       ]
     }
 
@@ -211,5 +220,16 @@ changed_files {
     match {
       base_dir = ["ui"]
     }
+  }
+}
+
+sync {
+  policy "ce" {
+    disallowed_groups = ["enterprise"]
+
+    exempt_from_disallowed_groups = [
+      joinpath(".github", "copilot-instructions.md"),
+      joinpath(".github", "instructions", "index.md"),
+    ]
   }
 }

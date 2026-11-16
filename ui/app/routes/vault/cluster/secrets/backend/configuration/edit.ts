@@ -16,7 +16,6 @@ import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type VersionService from 'vault/services/version';
 import type Controller from '@ember/controller';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
@@ -26,7 +25,7 @@ type SecretsBackendConfigurationModel = {
 };
 
 interface RouteModel {
-  secretsEngine: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   versions: string[];
   config: Record<string, unknown>;
 }

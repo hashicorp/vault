@@ -51,34 +51,21 @@
       />
     {{/if}}
   {{else}}
-    <div class="is-flex-row">
+    <Hds::Form::RadioCard::Group @name="mfa-authentication-radio-group" @alignment="center" as |G|>
       {{#each this.methods as |method|}}
-        <RadioCard
+        <G.RadioCard
+          @checked={{eq (lowercase method.name) this.type}}
           @value={{lowercase method.name}}
-          @groupValue={{this.type}}
-          @onChange={{this.onTypeSelect}}
+          {{on "change" (fn this.onTypeSelect (lowercase method.name))}}
           data-test-radio-card={{lowercase method.name}}
+          as |R|
         >
-          <Hds::Layout::Flex @justify="center" class="has-padding-16 is-flex-1">
-            <Hds::Layout::Flex @direction="column" @align="center" @justify="center">
-              <Icon
-                @name={{if (and method.iconMono this.isDarkMode) method.iconMono method.icon}}
-                @size="24"
-                class={{if (eq method.name "TOTP") "has-text-grey"}}
-              />
-              <Hds::Text::Body
-                @tag="p"
-                @weight="semibold"
-                @align="center"
-                class={{if (or (eq method.name "Okta") (eq method.name "TOTP")) "has-top-margin-xs"}}
-              >
-                {{method.name}}
-              </Hds::Text::Body>
-            </Hds::Layout::Flex>
-          </Hds::Layout::Flex>
-        </RadioCard>
+          <R.Icon @name={{if (and method.iconMono this.isDarkMode) method.iconMono method.icon}} />
+          <R.Label>{{method.name}}</R.Label>
+        </G.RadioCard>
       {{/each}}
-    </div>
+    </Hds::Form::RadioCard::Group>
+
     {{#if this.type}}
       <p class="has-top-margin-l">
         {{this.description}}

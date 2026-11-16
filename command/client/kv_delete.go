@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -52,7 +52,7 @@ Usage: ` + c.BinaryName + ` kv delete [options] PATH
 
       $ ` + c.BinaryName + ` kv delete -mount=secret -versions=3 foo
 
-  To delete all versions and metadata, see the "vault kv metadata" subcommand.
+  To delete all versions and metadata, see the "` + c.BinaryName + ` kv metadata" subcommand.
 
   Additional flags and more advanced use cases are detailed below.
 

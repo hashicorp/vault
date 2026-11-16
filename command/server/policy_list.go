@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -27,7 +27,7 @@ func (c *PolicyListCommand) Synopsis() string {
 
 func (c *PolicyListCommand) Help() string {
 	helpText := `
-Usage: vault policy list [options]
+Usage: ` + c.BinaryName + ` policy list [options]
 
   Lists the names of the policies that are installed on the Vault server.
 

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from '../../../fixtures/demo';
 
 test('groups workflow', async ({ page }) => {
   await test.step('should display groups page', async () => {

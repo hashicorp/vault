@@ -3,7 +3,7 @@
 
 module github.com/hashicorp/vault/command/base
 
-go 1.27.2
+go 1.27.4
 
 replace (
 	github.com/hashicorp/vault/api => ../../api
@@ -94,7 +94,7 @@ require (
 	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.26.0 // indirect

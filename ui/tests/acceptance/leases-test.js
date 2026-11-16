@@ -1,35 +1,26 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, currentRouteName, visit } from '@ember/test-helpers';
-// TESTS HERE ARE SKIPPED
-// running vault with -dev-leased-kv flag lets you run some of these tests
-// but generating leases programmatically is currently difficult
-//
-// TODO revisit this when it's easier to create leases
-
-import { module, skip } from 'qunit';
+import { module, skip, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 import { v4 as uuidv4 } from 'uuid';
 import secretList from 'vault/tests/pages/secrets/backend/list';
 import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-// import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-// import { login } from 'vault/tests/helpers/auth/auth-helpers';
+// Lease lifecycle tests remain skipped because generating leases needs -dev-leased-kv.
 
 module('Acceptance | leases', function (hooks) {
   setupApplicationTest(hooks);
-
-  hooks.beforeEach(async function () {
-    // await login();
-    // this.enginePath = `kv-for-lease-${uuidv4()}`;
-    // // need a version 1 mount for leased secrets here
-    // return mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
-  });
+  setupMirage(hooks);
 
   const createSecret = async (context, isRenewable) => {
     context.name = `secret-${uuidv4()}`;
@@ -108,10 +99,37 @@ module('Acceptance | leases', function (hooks) {
       .doesNotExist('link to the prefix was removed with revocation');
   });
 
-  skip('lease not found', async function (assert) {
+  test('lease not found', async function (assert) {
+    await login();
+    const api = this.owner.lookup('service:api');
+    const capabilities = this.owner.lookup('service:capabilities');
+    sinon.stub(api.sys, 'leasesReadLease').rejects(getErrorResponse({ errors: ['invalid lease'] }, 400));
+    sinon.stub(capabilities, 'fetchPathCapabilities').resolves({
+      canList: true,
+      canRead: true,
+      canUpdate: true,
+    });
+
     await visit('/vault/access/leases/show/not-found');
     assert
       .dom('[data-test-lease-error]')
-      .hasText('not-found is not a valid lease ID', 'it shows an error when the lease is not found');
+      .hasText('not-found is not a valid lease ID.', 'it explains that the lease ID is invalid');
+  });
+
+  test('lease lookup 404 renders the no lease state', async function (assert) {
+    await login();
+    const api = this.owner.lookup('service:api');
+    const capabilities = this.owner.lookup('service:capabilities');
+    sinon.stub(api.sys, 'leasesReadLease').rejects(getErrorResponse({}, 404));
+    sinon.stub(capabilities, 'fetchPathCapabilities').resolves({
+      canList: true,
+      canRead: true,
+      canUpdate: true,
+    });
+
+    await visit('/vault/access/leases/show/not-found');
+    assert
+      .dom('[data-test-empty-state-title]')
+      .hasText('No leases with that ID', 'it explains that no lease exists for the ID');
   });
 });

@@ -11,7 +11,6 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { duration } from 'core/helpers/format-duration';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -39,13 +38,6 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
       render(hbs`<Page::Configuration @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
         owner: this.engine,
       });
-
-    setRunOptions({
-      rules: {
-        // TODO: fix ConfirmAction rendered in toolbar not a list item
-        list: { enabled: false },
-      },
-    });
   });
 
   test('it should render tab page header', async function (assert) {

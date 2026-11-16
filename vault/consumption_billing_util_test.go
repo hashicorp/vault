@@ -418,7 +418,7 @@ func TestHWMKvSecretsCounts(t *testing.T) {
 }
 
 // TestStoreAndGetMetricsLastUpdateTimeLocked tests the store/get helpers
-// that operate under the BillingStorageLock
+// that operate under the MetricsLastUpdatedAtPrefix metric lock
 func TestStoreAndGetMetricsLastUpdateTimeLocked(t *testing.T) {
 	coreConfig := &CoreConfig{}
 	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
@@ -427,9 +427,10 @@ func TestStoreAndGetMetricsLastUpdateTimeLocked(t *testing.T) {
 	month := time.Now()
 	updateTime := time.Now().UTC().Truncate(time.Second)
 
-	// Acquire billing storage lock as required by the helper contract
-	core.consumptionBilling.BillingStorageLock.Lock()
-	defer core.consumptionBilling.BillingStorageLock.Unlock()
+	// Acquire the metric lock as required by the helper contract
+	mu := core.consumptionBilling.MetricLocks.LockForMetric(billing.MetricsLastUpdatedAtPrefix)
+	mu.Lock()
+	defer mu.Unlock()
 
 	// Store under local prefix and verify
 	err := core.storeMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, month, updateTime)
@@ -1571,10 +1572,11 @@ func TestConcurrentOidcDurationAdjustedCount(t *testing.T) {
 	done := make(chan bool, numGoroutines)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
-			// Acquire lock before calling the locked function
-			core.consumptionBilling.BillingStorageLock.Lock()
+			// Acquire the metric lock before calling the locked function
+			mu := core.consumptionBilling.MetricLocks.LockForMetric(billing.OidcDurationAdjustedCountPrefix)
+			mu.Lock()
 			err := core.storeOidcDurationAdjustedCountLocked(ctx, month, incrementPerGoroutine)
-			core.consumptionBilling.BillingStorageLock.Unlock()
+			mu.Unlock()
 			require.NoError(t, err)
 			done <- true
 		}()

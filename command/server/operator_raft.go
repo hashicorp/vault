@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -22,7 +22,7 @@ func (c *OperatorRaftCommand) Synopsis() string {
 
 func (c *OperatorRaftCommand) Help() string {
 	helpText := `
-Usage: vault operator raft <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` operator raft <subcommand> [options] [args]
 
   This command groups subcommands for operators interacting with the Vault raft
   storage backend. Most users will not need to interact with these commands. Here
@@ -30,19 +30,19 @@ Usage: vault operator raft <subcommand> [options] [args]
 
   Joins a node to the raft cluster:
 
-      $ vault operator raft join https://127.0.0.1:8200
+      $ ` + c.BinaryName + ` operator raft join https://127.0.0.1:8200
 
   Returns the set of raft peers:
 
-      $ vault operator raft list-peers
+      $ ` + c.BinaryName + ` operator raft list-peers
 
   Removes a node from the raft cluster:
 
-      $ vault operator raft remove-peer
+      $ ` + c.BinaryName + ` operator raft remove-peer
 
   Restores and saves snapshots from the raft cluster:
 
-      $ vault operator raft snapshot save out.snap
+      $ ` + c.BinaryName + ` operator raft snapshot save out.snap
 
   Please see the individual subcommand help for detailed usage information.
 `

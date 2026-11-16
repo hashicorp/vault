@@ -94,7 +94,7 @@ func (c *TransitEncryptCommand) Synopsis() string {
 
 func (c *TransitEncryptCommand) Help() string {
 	helpText := `
-Usage: vault transit envelope encrypt transit-key-path [options...] [filenames...]
+Usage: ` + c.BinaryName + ` transit envelope encrypt transit-key-path [options...] [filenames...]
 
   Using a Transit encryption key, encrypt one or more files or a stream from STDIN
   with envelope encryption.  In this mode, Vault provides a Data Encryption Key (DEK)
@@ -473,7 +473,7 @@ func (c *TransitEnvelopeCommand) Synopsis() string {
 
 func (c *TransitEnvelopeCommand) Help() string {
 	helpText := `
-Usage: vault transit envelope encrypt|decrypt options... files...
+Usage: ` + c.BinaryName + ` transit envelope encrypt|decrypt options... files...
 
   This command has subcommands for interacting with Vault's Transit Envelope
   Encryption.  This allows client side encryption and decryption of arbitrary 
@@ -481,9 +481,9 @@ Usage: vault transit envelope encrypt|decrypt options... files...
 
   An example of encrypting and decrypting a file using this feature:
 
-  $ vault transit envelope encrypt transit/keys/kek myfile.txt
+  $ ` + c.BinaryName + ` transit envelope encrypt transit/keys/kek myfile.txt
 
-  $ vault transit envelope decrypt transit/keys/key myfile.txt.vee
+  $ ` + c.BinaryName + ` transit envelope decrypt transit/keys/key myfile.txt.vee
 
   Please see the individual subcommand help for detailed usage information.
 `

@@ -7,18 +7,11 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, triggerEvent, typeIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | autocomplete-input', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render label', async function (assert) {
-    // TODO: make the input accessible when no label provided
-    setRunOptions({
-      rules: {
-        label: { enabled: false },
-      },
-    });
     await render(
       hbs`
       <AutocompleteInput
@@ -27,12 +20,14 @@ module('Integration | Component | autocomplete-input', function (hooks) {
       />`
     );
 
-    assert.dom('label').doesNotExist('Label is hidden when not provided');
+    assert.dom('[data-test-form-field-label]').doesNotExist('Visible label is hidden when not provided');
+    assert.dom('label.sr-only').hasText('Input', 'Screen reader label renders when label is not provided');
     this.setProperties({
       label: 'Some label',
       subText: 'Some description',
     });
-    assert.dom('label').hasText('Some label', 'Label renders');
+    assert.dom('label.sr-only').doesNotExist('Screen reader label is removed when label is provided');
+    assert.dom('[data-test-form-field-label]').hasText('Some label', 'Label renders');
     assert.dom('[data-test-label-subtext]').hasText('Some description', 'Sub text renders');
   });
 
@@ -58,12 +53,6 @@ module('Integration | Component | autocomplete-input', function (hooks) {
   });
 
   test('it should trigger dropdown', async function (assert) {
-    setRunOptions({
-      rules: {
-        // TODO fix this component
-        label: { enabled: false },
-      },
-    });
     await render(
       hbs`
       <AutocompleteInput

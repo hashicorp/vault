@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -32,7 +32,7 @@ func (c *PKIIssueCACommand) Synopsis() string {
 
 func (c *PKIIssueCACommand) Help() string {
 	helpText := `
-Usage: vault pki issue PARENT CHILD_MOUNT options
+Usage: ` + c.BinaryName + ` pki issue PARENT CHILD_MOUNT options
 
 PARENT is the fully qualified path of the Certificate Authority in vault which will issue the new intermediate certificate.
 
@@ -123,6 +123,7 @@ func pkiIssue(c *base.BaseCommand, parentMountIssuer string, intermediateMount s
 		parentMount:       strings.Split(parentMountIssuer, "/issuer/")[0],
 		parentIssuer:      parentMountIssuer,
 		newName:           flagNewIssuerName,
+		binaryName:        c.BinaryName,
 	}
 
 	// Generate Certificate Signing Request
@@ -285,6 +286,7 @@ type inCaseOfFailure struct {
 	certSerialNumber  string
 	certIssuerId      string
 	newName           string
+	binaryName        string
 }
 
 func (state inCaseOfFailure) generateFailureMessage() string {
@@ -316,17 +318,17 @@ func (state inCaseOfFailure) toContinue() string {
 	message := ""
 	if !state.csrSigned {
 		message += fmt.Sprintf("You can continue to work with this Certificate Signing Request CSR PEM, by saving"+
-			" it as `pki_int.csr`: %v \n Then call `vault write %v/sign-intermediate csr=@pki_int.csr ...` adding the "+
+			" it as `pki_int.csr`: %v \n Then call `%v write %v/sign-intermediate csr=@pki_int.csr ...` adding the "+
 			"same key-value arguements as to `pki issue` (except key_type and issuer_name) to generate the certificate "+
-			"and ca_chain", state.csr, state.parentIssuer)
+			"and ca_chain", state.csr, state.binaryName, state.parentIssuer)
 	}
 	if !state.certImported {
 		if state.caChain != "" {
 			message += fmt.Sprintf("The certificate chain, signed by %v, for this new certificate is: %v", state.parentIssuer, state.caChain)
 		}
 		message += fmt.Sprintf("You can continue to work with this Certificate (and chain) by saving it as "+
-			"chain.pem and importing it as `vault write %v/issuers/import/cert pem_bundle=@chain.pem`",
-			state.intermediateMount)
+			"chain.pem and importing it as `%v write %v/issuers/import/cert pem_bundle=@chain.pem`",
+			state.binaryName, state.intermediateMount)
 	}
 	if !state.certNamed {
 		issuerId := state.certIssuerId
@@ -335,8 +337,8 @@ func (state inCaseOfFailure) toContinue() string {
 				"certificate chain.")
 			issuerId = "<issuer-uuid>"
 		}
-		message += fmt.Sprintf("You can name the newly imported issuer by calling `vault patch %v/issuer/%v "+
-			"issuer_name=%v`", state.intermediateMount, issuerId, state.newName)
+		message += fmt.Sprintf("You can name the newly imported issuer by calling `%v patch %v/issuer/%v "+
+			"issuer_name=%v`", state.binaryName, state.intermediateMount, issuerId, state.newName)
 	}
 	return message
 }
@@ -349,12 +351,12 @@ func (state inCaseOfFailure) toAbort() string {
 	if state.csrGenerated && state.createdKeyId != "" {
 		message += fmt.Sprintf(" A key, with key ID %v was created on mount %v as part of this command."+
 			"  If you do not with to use this key and corresponding CSR/cert, you can delete that information by calling"+
-			" `vault delete %v/key/%v`", state.createdKeyId, state.intermediateMount, state.intermediateMount, state.createdKeyId)
+			" `%v delete %v/key/%v`", state.createdKeyId, state.intermediateMount, state.binaryName, state.intermediateMount, state.createdKeyId)
 	}
 	if state.csrSigned {
 		message += fmt.Sprintf("A certificate with serial number %v was signed by mount %v as part of this command."+
-			" If you do not want to use this certificate, consider revoking it by calling `vault write %v/revoke/%v`",
-			state.certSerialNumber, state.parentMount, state.parentMount, state.certSerialNumber)
+			" If you do not want to use this certificate, consider revoking it by calling `%v write %v/revoke/%v`",
+			state.certSerialNumber, state.parentMount, state.binaryName, state.parentMount, state.certSerialNumber)
 	}
 	//if state.certImported {
 	//	message += fmt.Sprintf("An issuer with UUID %v was created on mount %v as part of this command.  " +

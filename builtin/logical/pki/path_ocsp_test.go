@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/ocsp"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -26,7 +27,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/ocsp"
 )
 
 // If the ocsp_disabled flag is set to true in the crl configuration make sure we always
@@ -517,18 +517,19 @@ func TestOcsp_HigherLevel(t *testing.T) {
 func TestOcsp_NextUpdate(t *testing.T) {
 	// Within the runOcspRequestTest, with a ocspExpiry of 0,
 	// we will validate that NextUpdate was not set in the response
-	runOcspRequestTest(t, "POST", "ec", 0, 0, crypto.SHA256, 0)
+	runOcspRequestTest(t, "POST", "ec", 0, 0, "", crypto.SHA256, 0)
 
 	// Within the runOcspRequestTest, with a ocspExpiry of 24 hours, we will validate
 	// that NextUpdate is set and has a time 24 hours larger than ThisUpdate
-	runOcspRequestTest(t, "POST", "ec", 0, 0, crypto.SHA256, 24*time.Hour)
+	runOcspRequestTest(t, "POST", "ec", 0, 0, "", crypto.SHA256, 24*time.Hour)
 }
 
 func TestOcsp_ValidRequests(t *testing.T) {
 	type caKeyConf struct {
-		keyType string
-		keyBits int
-		sigBits int
+		keyType      string
+		keyBits      int
+		sigBits      int
+		parameterSet string
 	}
 	t.Parallel()
 	type testArgs struct {
@@ -539,13 +540,16 @@ func TestOcsp_ValidRequests(t *testing.T) {
 	var tests []testArgs
 	for _, reqType := range []string{"get", "post"} {
 		for _, keyConf := range []caKeyConf{
-			{"rsa", 0, 0},
-			{"rsa", 0, 384},
-			{"rsa", 0, 512},
-			{"ec", 0, 0},
-			{"ec", 521, 0},
+			{"rsa", 0, 0, ""},
+			{"rsa", 0, 384, ""},
+			{"rsa", 0, 512, ""},
+			{"ec", 0, 0, ""},
+			{"ec", 521, 0, ""},
+			{"ed25519", 0, 0, ""},
+			{"ml-dsa", 0, 0, "ml-dsa-44"},
+			{"ml-dsa", 0, 0, "ml-dsa-65"},
+			{"ml-dsa", 0, 0, "ml-dsa-87"},
 		} {
-			// "ed25519" is not supported at the moment in x/crypto/ocsp
 			for _, requestHash := range []crypto.Hash{crypto.SHA1, crypto.SHA256, crypto.SHA384, crypto.SHA512} {
 				tests = append(tests, testArgs{
 					reqType: reqType,
@@ -557,21 +561,26 @@ func TestOcsp_ValidRequests(t *testing.T) {
 	}
 	for _, tt := range tests {
 		localTT := tt
-		testName := fmt.Sprintf("%s-%s-keybits-%d-sigbits-%d-reqHash-%s", localTT.reqType, localTT.keyConf.keyType,
-			localTT.keyConf.keyBits,
-			localTT.keyConf.sigBits,
-			localTT.reqHash)
+		var testName string
+		if localTT.keyConf.parameterSet != "" {
+			testName = fmt.Sprintf("%s-%s-%s-reqHash-%s", localTT.reqType, localTT.keyConf.keyType, localTT.keyConf.parameterSet, localTT.reqHash)
+		} else {
+			testName = fmt.Sprintf("%s-%s-keybits-%d-sigbits-%d-reqHash-%s", localTT.reqType, localTT.keyConf.keyType,
+				localTT.keyConf.keyBits,
+				localTT.keyConf.sigBits,
+				localTT.reqHash)
+		}
 		t.Run(testName, func(t *testing.T) {
 			runOcspRequestTest(t, localTT.reqType, localTT.keyConf.keyType, localTT.keyConf.keyBits,
-				localTT.keyConf.sigBits, localTT.reqHash, 12*time.Hour)
+				localTT.keyConf.sigBits, localTT.keyConf.parameterSet, localTT.reqHash, 12*time.Hour)
 		})
 	}
 }
 
 func runOcspRequestTest(t *testing.T, requestType string, caKeyType string,
-	caKeyBits int, caKeySigBits int, requestHash crypto.Hash, ocspExpiry time.Duration,
+	caKeyBits int, caKeySigBits int, paramSet string, requestHash crypto.Hash, ocspExpiry time.Duration,
 ) {
-	b, s, testEnv := setupOcspEnvWithCaKeyConfig(t, caKeyType, caKeyBits, caKeySigBits, ocspExpiry)
+	b, s, testEnv := setupOcspEnvWithCaKeyConfigAndParam(t, caKeyType, caKeyBits, caKeySigBits, paramSet, ocspExpiry)
 
 	// Non-revoked cert
 	resp, err := SendOcspRequest(t, b, s, requestType, testEnv.leafCertIssuer1, testEnv.issuer1, requestHash)
@@ -684,6 +693,10 @@ func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocs
 }
 
 func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, caKeySigBits int, ocspExpiry time.Duration) (*backend, logical.Storage, *ocspTestEnv) {
+	return setupOcspEnvWithCaKeyConfigAndParam(t, keyType, caKeyBits, caKeySigBits, "", ocspExpiry)
+}
+
+func setupOcspEnvWithCaKeyConfigAndParam(t *testing.T, keyType string, caKeyBits int, caKeySigBits int, paramSet string, ocspExpiry time.Duration) (*backend, logical.Storage, *ocspTestEnv) {
 	b, s := CreateBackendWithStorage(t)
 	var issuerCerts []*x509.Certificate
 	var leafCerts []*x509.Certificate
@@ -697,19 +710,23 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 	requireSuccessNonNilResponse(t, resp, err, "config/crl failed")
 
 	for i := 0; i < 2; i++ {
-		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		rootData := map[string]interface{}{
 			"key_type":       keyType,
 			"key_bits":       caKeyBits,
 			"signature_bits": caKeySigBits,
 			"ttl":            "40h",
 			"common_name":    "example-ocsp.com",
-		})
+		}
+		if paramSet != "" {
+			rootData["parameter_set"] = paramSet
+		}
+		resp, err := CBWrite(b, s, "root/generate/internal", rootData)
 		requireSuccessNonNilResponse(t, resp, err, "root/generate/internal")
 		requireFieldsSetInResp(t, resp, "issuer_id", "key_id")
 		issuerId := resp.Data["issuer_id"].(issuing.IssuerID)
 		keyId := resp.Data["key_id"].(issuing.KeyID)
 
-		resp, err = CBWrite(b, s, "roles/test"+strconv.FormatInt(int64(i), 10), map[string]interface{}{
+		roleData := map[string]interface{}{
 			"allow_bare_domains": true,
 			"allow_subdomains":   true,
 			"allowed_domains":    "foobar.com",
@@ -717,7 +734,11 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 			"generate_lease":     false,
 			"issuer_ref":         issuerId,
 			"key_type":           keyType,
-		})
+		}
+		if paramSet != "" {
+			roleData["parameter_set"] = paramSet
+		}
+		resp, err = CBWrite(b, s, "roles/test"+strconv.FormatInt(int64(i), 10), roleData)
 		requireSuccessNonNilResponse(t, resp, err, "roles/test"+strconv.FormatInt(int64(i), 10))
 
 		resp, err = CBWrite(b, s, "issue/test"+strconv.FormatInt(int64(i), 10), map[string]interface{}{

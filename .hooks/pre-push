@@ -20,10 +20,11 @@
 #     to see the changed files on your branch. Replace 'main' with whatever branch
 #     you intend to merge into. Use the --branch <branch> flag in place of --range
 #     if you're pushing a new branch.
-#   - Use `pipeline git check changed-files --range (git merge-base HEAD main)..HEAD -b enterprise`
+#   - Use `pipeline git check changed-files --range (git merge-base HEAD main)..HEAD --sync-policy ce`
 #     to see the changed files on your branch that we detect as enterprise files.
 #     Replace 'main' with whatever branch you intend to merge into. Use the
 #     --branch <branch> flag in place of --range if you're pushing a new branch.
+#     The "ce" sync policy is defined in .release/pipeline.hcl.
 #
 # Git calls this hook with the following parameters:
 #
@@ -41,7 +42,7 @@
 # what commits are going to be pushed. Depending on the operation and commit
 # we employ slightly different methods to determine the changed file list. The
 # `pipeline git check changed-files` utility will handle gathering, grouping,
-# and checking for disallowed changed files.
+# and checking for disallowed changed files using the "ce" sync policy.
 
 set -eou pipefail
 
@@ -118,7 +119,7 @@ main() {
         # We're pushing a new branch. Check the entire branch history for
         # changed enterprise files. We'll swallow the output by default and only
         # show it if there are enterprise files.
-        if ! output=$(pipeline git check changed-files --branch "${local_oid}" -g enterprise 2>&1); then
+        if ! output=$(pipeline git check changed-files --branch "${local_oid}" --sync-policy ce 2>&1); then
           fail "Cannot push changes to a new community edition branch. Please make sure no enterprise files are included in your branch history" "${output}"
         fi
         exit 0
@@ -126,7 +127,7 @@ main() {
         # We're updating an existing branch. Check only the new commit history
         # for changed enterprise files. We'll swallow the output by default and
         # only show it if there are enterprise files.
-        if ! output=$(pipeline git check changed-files --range "${remote_oid}..${local_oid}" -g enterprise 2>&1); then
+        if ! output=$(pipeline git check changed-files --range "${remote_oid}..${local_oid}" --sync-policy ce 2>&1); then
           fail "Cannot push updates to community edition branch. Please make sure no enterprise files are included in your change set" "${output}"
         fi
         exit 0

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -22,7 +22,7 @@ func (c *PluginRuntimeCommand) Synopsis() string {
 
 func (c *PluginRuntimeCommand) Help() string {
 	helpText := `
-Usage: vault plugin runtime <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` plugin runtime <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault's plugin runtimes and the
   plugin runtime catalog. The plugin runtime catalog is divided into types. Currently,
@@ -34,15 +34,15 @@ Usage: vault plugin runtime <subcommand> [options] [args]
 
   List all available plugin runtimes in the catalog of a particular type:
 
-      $ vault plugin runtime list -type=container
+      $ ` + c.BinaryName + ` plugin runtime list -type=container
 
   Register a new plugin runtime to the catalog as a particular type:
 
-      $ vault plugin runtime register -type=container -oci_runtime=my-oci-runtime my-custom-plugin-runtime
+      $ ` + c.BinaryName + ` plugin runtime register -type=container -oci_runtime=my-oci-runtime my-custom-plugin-runtime
 
   Get information about a plugin runtime in the catalog listed under a particular type:
 
-      $ vault plugin runtime info -type=container my-custom-plugin-runtime
+      $ ` + c.BinaryName + ` plugin runtime info -type=container my-custom-plugin-runtime
 
   Please see the individual subcommand help for detailed usage information.
 `

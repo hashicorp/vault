@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -32,7 +32,7 @@ func (c *UnwrapCommand) Help() string {
 Usage: ` + c.BinaryName + ` unwrap [options] [TOKEN]
 
   Unwraps a wrapped secret from Vault by the given token. The result is the
-  same as the "vault read" operation on the non-wrapped secret. If no token
+  same as the "` + c.BinaryName + ` read" operation on the non-wrapped secret. If no token
   is given, the data in the currently authenticated token is unwrapped.
 
   Unwrap the data in the cubbyhole secrets engine for a token:

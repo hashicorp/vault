@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -34,12 +34,12 @@ func (c *OperatorRaftJoinCommand) Synopsis() string {
 
 func (c *OperatorRaftJoinCommand) Help() string {
 	helpText := `
-Usage: vault operator raft join [options] <leader-api-addr>
+Usage: ` + c.BinaryName + ` operator raft join [options] <leader-api-addr>
 
   Join the current node as a peer to the Raft cluster by providing the address
   of the Raft leader node.
 
-      $ vault operator raft join "http://127.0.0.2:8200"
+      $ ` + c.BinaryName + ` operator raft join "http://127.0.0.2:8200"
 
   Configure automatic leader discovery with raft.retry_join in the Vault server
   configuration; auto-join metadata cannot be provided to this command.
@@ -47,7 +47,7 @@ Usage: vault operator raft join [options] <leader-api-addr>
   TLS certificate data can also be consumed from a file on disk by prefixing with
   the "@" symbol. For example:
 
-      $ vault operator raft join \
+      $ ` + c.BinaryName + ` operator raft join \
         -leader-ca-cert=@leader_ca.crt \
         -leader-client-cert=@leader_client.crt \
         -leader-client-key=@leader.key \

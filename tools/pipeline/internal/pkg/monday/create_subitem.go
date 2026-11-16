@@ -15,15 +15,6 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-// columnValuesJSON is the GraphQL JSON scalar used for the create_subitem
-// mutation's column_values argument. Implements graphql.GraphQLType so that
-// hasura emits "JSON!" in the operation variable declaration rather than
-// inferring "String!" from the underlying Go string value.
-type columnValuesJSON string
-
-// GetGraphQLType implements graphql.GraphQLType.
-func (columnValuesJSON) GetGraphQLType() string { return "JSON" }
-
 // CreateSubitemReq is a request to create a sub-item nested under an existing
 // parent item on a Monday.com board.
 type CreateSubitemReq struct {
@@ -31,6 +22,11 @@ type CreateSubitemReq struct {
 	ParentItemID string
 	// ItemName is the name of the new sub-item.
 	ItemName string
+	// Status is the initial status label of the new sub-item, for example
+	// "Not started". Labels are case-sensitive and must match a label on the
+	// sub-item board's status column. Optional: when empty, behavior is
+	// unchanged and the status stays blank.
+	Status string
 	// retryDelay overrides the delay between retries. Zero uses defaultRetryDelay.
 	retryDelay time.Duration
 }
@@ -51,6 +47,7 @@ func (r *CreateSubitemReq) Run(ctx context.Context, client *graphql.Client) (*Cr
 	slog.Default().DebugContext(ctx, "Creating Monday board subitem",
 		slog.String("parent_item_id", r.ParentItemID),
 		slog.String("item_name", r.ItemName),
+		slog.String("status", r.Status),
 	)
 
 	var mutation struct {
@@ -59,12 +56,12 @@ func (r *CreateSubitemReq) Run(ctx context.Context, client *graphql.Client) (*Cr
 		} `graphql:"create_subitem(parent_item_id: $parentItemId, item_name: $itemName, column_values: $columnValues)"`
 	}
 
-	// column_values is part of the mutation but is not exposed on the request,
-	// so an empty JSON object is sent and no columns are set.
+	// column_values only carries the initial status. An empty JSON object is
+	// sent when no status is requested, so no columns are set.
 	vars := map[string]any{
 		"parentItemId": graphql.ID(r.ParentItemID),
 		"itemName":     graphql.String(r.ItemName),
-		"columnValues": columnValuesJSON("{}"),
+		"columnValues": statusColumnValues(r.Status),
 	}
 
 	var res *CreateSubitemRes

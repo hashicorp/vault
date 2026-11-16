@@ -10,7 +10,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn, waitFor, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import KubernetesRoleForm from 'vault/forms/secrets/kubernetes/role';
@@ -55,13 +54,6 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { label: 'Roles', route: 'roles' },
       { label: 'Create' },
     ];
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-      },
-    });
 
     this.renderComponent = () =>
       render(hbs`<Page::Role::CreateAndEdit @form={{this.form}} @breadcrumbs={{this.breadcrumbs}} />`, {
@@ -246,7 +238,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       this.role = this.setupEdit(trait);
       await this.renderComponent();
 
-      assert.dom(`[data-test-radio-card="${pref}"] input`).isChecked('Correct radio card is checked');
+      assert.dom(`[data-test-radio-card="${pref}"]`).isChecked('Correct radio card is checked');
       assert.dom(GENERAL.inputByAttr('name')).hasValue(this.role.name, 'Role name is populated');
       const selector = {
         basic: { name: GENERAL.inputByAttr('service_account_name'), method: 'hasValue', value: 'default' },

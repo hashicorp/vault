@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -14,6 +14,10 @@ var _ cli.Command = (*OperatorCommand)(nil)
 
 type OperatorCommand struct {
 	*base.BaseCommand
+
+	// clientHelp limits the examples to the operator subcommands that
+	// vault-client supports.
+	clientHelp bool
 }
 
 func (c *OperatorCommand) Synopsis() string {
@@ -21,6 +25,10 @@ func (c *OperatorCommand) Synopsis() string {
 }
 
 func (c *OperatorCommand) Help() string {
+	if c.clientHelp {
+		return c.clientHelpText()
+	}
+
 	helpText := `
 Usage: ` + c.BinaryName + ` operator <subcommand> [options] [args]
 
@@ -39,6 +47,34 @@ Usage: ` + c.BinaryName + ` operator <subcommand> [options] [args]
   Rotate Vault's underlying encryption key:
 
       $ ` + c.BinaryName + ` operator rotate
+
+  Please see the individual subcommand help for detailed usage information.
+`
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *OperatorCommand) clientHelpText() string {
+	helpText := `
+Usage: ` + c.BinaryName + ` operator <subcommand> [options] [args]
+
+  This command groups subcommands for operators interacting with Vault. Most
+  users will not need to interact with these commands. Here are examples of
+  the supported operator commands:
+
+  Show information about Vault's active encryption key:
+
+      $ ` + c.BinaryName + ` operator key-status
+
+  Rotate Vault's underlying encryption key:
+
+      $ ` + c.BinaryName + ` operator rotate
+
+  Provide an unseal key to unseal a Vault server:
+
+      $ ` + c.BinaryName + ` operator unseal
+
+  Other operator subcommands require the full Vault Server image.
 
   Please see the individual subcommand help for detailed usage information.
 `

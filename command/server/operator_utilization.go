@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -73,25 +73,25 @@ func (c *OperatorUtilizationCommand) Flags() *base.FlagSets {
 
 func (c *OperatorUtilizationCommand) Help() string {
 	helpText := `
-Usage: vault operator utilization [options]
+Usage: ` + c.BinaryName + ` operator utilization [options]
 
 Produces a bundle of snapshots that contains license utilization data. If no snapshots were persisted in the last 24 hrs, it takes a snapshot and includes it in the bundle to prevent stale data.
 
   To create a license utilization bundle that includes all persisted historical snapshots and has the default bundle name:
   
-  $ vault operator utilization
+  $ ` + c.BinaryName + ` operator utilization
 
   To create a license utilization bundle with a message about the bundle (Note: this message is not included in the bundle but only included in server logs): 
 
-  $ vault operator utilization -message="Change Control 654987"
+  $ ` + c.BinaryName + ` operator utilization -message="Change Control 654987"
 
   To create a license utilization bundle with only today's snapshot:
 
-  $ vault operator utilization -today-only
+  $ ` + c.BinaryName + ` operator utilization -today-only
 
   To create a license utilization bundle with a specific name:
 
-  $ vault operator utilization -output="/utilization/reports/latest.json"
+  $ ` + c.BinaryName + ` operator utilization -output="/utilization/reports/latest.json"
 
 ` + c.Flags().Help()
 

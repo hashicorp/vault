@@ -28,7 +28,17 @@ export default class LeasesShowRoute extends Route {
 
   async model(params) {
     const { lease_id } = params;
-    const leaseData = await this.api.sys.leasesReadLease({ lease_id });
+    let leaseData;
+    try {
+      leaseData = await this.api.sys.leasesReadLease({ lease_id });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status !== undefined) {
+        error.httpStatus = status;
+      }
+      throw error;
+    }
+
     // isAuthLease is derived from the lease id prefix (previously a computed on the model)
     leaseData.isAuthLease = /^auth/.test(lease_id);
 
@@ -54,8 +64,8 @@ export default class LeasesShowRoute extends Route {
 
   @action
   error(error) {
-    const { lease_id } = this.paramsFor(this.routeName);
-    error.keyId = lease_id;
+    const { lease_id: leaseId } = this.paramsFor(this.routeName);
+    error.keyId = leaseId;
     return true;
   }
 

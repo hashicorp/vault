@@ -152,7 +152,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     // delete config by choosing "no filter" on the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
-    await click('#no-filtering');
+    await click('[data-test-filter-mode="none"]');
     await click('[data-test-config-save]');
     await settled(); // eslint-disable-line
     assert.strictEqual(

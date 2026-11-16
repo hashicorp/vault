@@ -705,6 +705,8 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	// getting the cached response Auth. We should note that the entry is
 	// removed from the queue, and if any error happens before the validation
 	// and creating a token succeed, we need to push the entry back to the queue.
+	// The push-back follows the pending limits, so it can fail; the push error
+	// is appended to the returned error.
 	cachedResponseAuth, err := b.Core.PopMFAResponseAuthByID(mfaReqID)
 	if err != nil || cachedResponseAuth == nil {
 		return logical.ErrorResponse("invalid request ID"), nil

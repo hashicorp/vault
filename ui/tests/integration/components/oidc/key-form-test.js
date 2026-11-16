@@ -10,7 +10,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import OidcKeyForm from 'vault/forms/oidc/key';
 import sinon from 'sinon';
@@ -49,20 +48,10 @@ module('Integration | Component | oidc/key-form', function (hooks) {
         />
       `);
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it should save new key', async function (assert) {
-    assert.expect(8);
+    assert.expect(9);
 
     await this.renderComponent();
     assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
@@ -80,7 +69,13 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       .dom(SELECTORS.inlineAlert)
       .hasText('There are 2 errors with this form.', 'Renders form error count');
 
-    assert.dom('[data-test-oidc-radio="limited"] input').isDisabled('limit radio button disabled on create');
+    assert.dom('[data-test-oidc-radio="limited"]').isDisabled('limit radio button disabled on create');
+    assert
+      .dom('[data-test-oidc-radio-description="limited"]')
+      .hasText(
+        'This option has been disabled for now. To limit access, you must first create an application that references this key.',
+        'description explains why limit radio button is disabled on create'
+      );
     await fillIn('[data-test-input="name"]', 'test-key');
 
     await click(SELECTORS.keySaveButton);
@@ -89,13 +84,22 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   });
 
   test('it should update key and limit access to selected applications', async function (assert) {
-    assert.expect(11);
+    assert.expect(13);
 
     await this.renderComponent({ name: 'test-key', allowed_client_ids: ['*'] });
     assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
-    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"]').isChecked('Allow all radio button is selected');
+    assert
+      .dom('[data-test-oidc-radio="limited"]')
+      .isNotDisabled('limit radio button is enabled when editing');
+    assert
+      .dom('[data-test-oidc-radio-description="limited"]')
+      .hasText(
+        'Only selected applications can use this key for authentication requests.',
+        'default description renders when editing'
+      );
 
     await click('[data-test-oidc-radio="limited"]');
     assert

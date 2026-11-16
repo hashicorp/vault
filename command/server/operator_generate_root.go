@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -54,12 +54,12 @@ func (c *OperatorGenerateRootCommand) Synopsis() string {
 
 func (c *OperatorGenerateRootCommand) Help() string {
 	helpText := `
-Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
-       vault operator generate-root [options] [-nonce=... KEY]
-       vault operator generate-root [options] -decode=... -otp=...
-       vault operator generate-root [options] -generate-otp
-       vault operator generate-root [options] -status
-       vault operator generate-root [options] -cancel
+Usage: ` + c.BinaryName + ` operator generate-root [options] -init [-otp=...] [-pgp-key=...]
+       ` + c.BinaryName + ` operator generate-root [options] [-nonce=... KEY]
+       ` + c.BinaryName + ` operator generate-root [options] -decode=... -otp=...
+       ` + c.BinaryName + ` operator generate-root [options] -generate-otp
+       ` + c.BinaryName + ` operator generate-root [options] -status
+       ` + c.BinaryName + ` operator generate-root [options] -cancel
 
   Generates a new root token by combining a quorum of share holders.
 
@@ -84,20 +84,20 @@ Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
 
         The Vault server will generate a suitable OTP for you, and return it:
 
-            $ vault operator generate-root -init
+            $ ` + c.BinaryName + ` operator generate-root -init
 
         Vault versions before 0.11.2, released in 2018, required you to
         generate your own OTP (see the "-generate-otp" form) and pass it in,
         but this is no longer necessary. The command is still supported for
         compatibility, though:
 
-            $ vault operator generate-root -init -otp="..."
+            $ ` + c.BinaryName + ` operator generate-root -init -otp="..."
 
       - A PGP key. The resulting token is encrypted with this public key.
         The key may be specified as a path to a file, or a string of the
         form "keybase:<username>" to fetch the key from the keybase.io API.
 
-            $ vault operator generate-root -init -pgp-key="..."
+            $ ` + c.BinaryName + ` operator generate-root -init -pgp-key="..."
 
   Form 2 (no option) - Enter an unseal key to progress root token generation:
 
@@ -105,24 +105,24 @@ Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
     automatically look up the nonce of the currently active generation
     operation, and will prompt for the key to be entered:
 
-        $ vault operator generate-root
+        $ ` + c.BinaryName + ` operator generate-root
 
     In the sub-form intended for automation, the operation nonce must be
     explicitly provided, and the key is provided directly on the command line
 
-        $ vault operator generate-root -nonce=... KEY
+        $ ` + c.BinaryName + ` operator generate-root -nonce=... KEY
 
     If key is specified as "-", the command will read from stdin.
 
   Form 3 (-decode) - Decode a generated token protected with an OTP:
 
-        $ vault operator generate-root -decode=ENCODED_TOKEN -otp=OTP
+        $ ` + c.BinaryName + ` operator generate-root -decode=ENCODED_TOKEN -otp=OTP
 
     If encoded token is specified as "-", the command will read from stdin.
 
   Form 4 (-generate-otp) - Generate an OTP code for the final token:
 
-        $ vault operator generate-root -generate-otp
+        $ ` + c.BinaryName + ` operator generate-root -generate-otp
 
     Since changes in Vault 0.11.2 in 2018, there is no longer any reason to
     use this form, as a suitable OTP will be returned as part of the "-init"
@@ -130,7 +130,7 @@ Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
 
   Form 5 (-status) - Get the status of a token generation that is in progress:
 
-        $ vault operator generate-root -status
+        $ ` + c.BinaryName + ` operator generate-root -status
 
     This form also returns the length of the a correct OTP, for the running
     version and configuration of Vault.
@@ -140,7 +140,7 @@ Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
     This would be used to remove an in progress generation operation, so that
     a new one can be started with different parameters.
 
-        $ vault operator generate-root -cancel
+        $ ` + c.BinaryName + ` operator generate-root -cancel
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
@@ -470,7 +470,7 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, ki
 	if !status.Started {
 		c.UI.Error(base.WrapAtLength(
 			"No root generation is in progress. Start a root generation by " +
-				"running \"vault operator generate-root -init\"."))
+				"running \"" + c.BinaryName + " operator generate-root -init\"."))
 		c.UI.Warn(base.WrapAtLength(fmt.Sprintf(
 			"If starting root generation using the OTP method and generating "+
 				"your own OTP, the length of the OTP string needs to be %d "+

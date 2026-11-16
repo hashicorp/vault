@@ -6,7 +6,6 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { paginate } from 'core/utils/paginate-list';
 import { IdentityApiEntityListByIdListEnum } from '@hashicorp/vault-client-typescript';
 
 export default class IdentityIndexRoute extends Route {
@@ -20,10 +19,13 @@ export default class IdentityIndexRoute extends Route {
     pageFilter: {
       refreshModel: true,
     },
+    pageSize: {
+      refreshModel: true,
+    },
   };
 
   async model(params) {
-    const { pageFilter, page } = params;
+    const { page, pageSize } = params;
 
     const [{ canUpdate: canCreateEntity }, { canUpdate: canMergeEntities }] = await Promise.all([
       this.capabilities.for('identityEntity'),
@@ -85,7 +87,9 @@ export default class IdentityIndexRoute extends Route {
     });
 
     return {
-      entities: paginate(itemsWithCapabilities, { page, filter: pageFilter }),
+      entities: itemsWithCapabilities,
+      page,
+      pageSize,
       canCreateEntity,
       canMergeEntities,
     };
@@ -98,13 +102,15 @@ export default class IdentityIndexRoute extends Route {
 
     controller.setProperties({
       filter: pageFilter || '',
-      page: resolvedModel?.entities?.meta?.currentPage || 1,
+      page: resolvedModel.page || 1,
       identityType: 'entity',
     });
   }
 
   resetController(controller, isExiting) {
     if (isExiting) {
+      controller.set('page', 1);
+      controller.set('pageSize', 10);
       controller.set('pageFilter', null);
       controller.set('filter', null);
     }

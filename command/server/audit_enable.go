@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -32,18 +32,18 @@ func (c *AuditEnableCommand) Synopsis() string {
 
 func (c *AuditEnableCommand) Help() string {
 	helpText := `
-Usage: vault audit enable [options] TYPE [CONFIG K=V...]
+Usage: ` + c.BinaryName + ` audit enable [options] TYPE [CONFIG K=V...]
 
   Enables an audit device at a given path.
 
   This command enables an audit device of TYPE. Additional options for
   configuring the audit device can be specified after the type in the same
-  format as the "vault write" command in key/value pairs.
+  format as the "` + c.BinaryName + ` write" command in key/value pairs.
 
   For example, to configure the file audit device to write audit logs at the
   path "/var/log/audit.log":
 
-      $ vault audit enable file file_path=/var/log/audit.log
+      $ ` + c.BinaryName + ` audit enable file file_path=/var/log/audit.log
 
 ` + c.Flags().Help()
 

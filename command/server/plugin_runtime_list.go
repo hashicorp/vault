@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -31,18 +31,18 @@ func (c *PluginRuntimeListCommand) Synopsis() string {
 
 func (c *PluginRuntimeListCommand) Help() string {
 	helpText := `
-Usage: vault plugin runtime list [options]
+Usage: ` + c.BinaryName + ` plugin runtime list [options]
 
   Lists available plugin runtimes registered in the catalog. This does not list whether
   plugin runtimes are in use, but rather just their availability.
 
   List all available plugin runtimes in the catalog:
 
-      $ vault plugin runtime list
+      $ ` + c.BinaryName + ` plugin runtime list
 
   List all available container plugin runtimes in the catalog:
 
-      $ vault plugin runtime list -type=container
+      $ ` + c.BinaryName + ` plugin runtime list -type=container
 
 ` + c.Flags().Help()
 

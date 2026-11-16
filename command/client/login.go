@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -193,10 +193,10 @@ func (c *LoginCommand) Run(args []string) int {
 	authHandler, ok := c.Handlers[authMethod]
 	if !ok {
 		c.UI.Error(base.WrapAtLength(fmt.Sprintf(
-			"Unknown auth method: %s. Use \"vault auth list\" to see the "+
+			"Unknown auth method: %s. Use \"%s auth list\" to see the "+
 				"complete list of auth methods. Additionally, some "+
 				"auth methods are only available via the HTTP API.",
-			authMethod)))
+			authMethod, c.BinaryName)))
 		return 1
 	}
 
@@ -357,7 +357,7 @@ func (c *LoginCommand) Run(args []string) int {
 		c.UI.Output(base.WrapAtLength(
 			"Success! You are now authenticated. The token information displayed "+
 				"below is already stored in the token helper. You do NOT need to run "+
-				"\"vault login\" again. Future Vault requests will automatically use "+
+				"\""+c.BinaryName+" login\" again. Future Vault requests will automatically use "+
 				"this token.") + "\n")
 	}
 

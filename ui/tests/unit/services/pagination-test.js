@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,6 +10,8 @@ import { dasherize } from '@ember/string';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
 import Sinon from 'sinon';
+import Model from '@ember-data/model';
+import ApplicationSerializer from 'vault/serializers/application';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
@@ -17,6 +19,8 @@ module('Unit | Service | pagination', function (hooks) {
   setupTest(hooks);
 
   hooks.beforeEach(function () {
+    this.owner.register('model:pagination-test', class extends Model {});
+    this.owner.register('serializer:pagination-test', ApplicationSerializer);
     this.pagination = this.owner.lookup('service:pagination');
     this.store = this.owner.lookup('service:store');
   });
@@ -95,24 +99,27 @@ module('Unit | Service | pagination', function (hooks) {
     const arr = ['one', 'two'];
     const arr2 = ['one', 'two', 'three', 'four'];
     this.pagination.storeDataset('data', { id: 1 }, {}, arr);
-    this.pagination.storeDataset('transit-key', { id: 2 }, {}, arr2);
+    this.pagination.storeDataset('pagination-test', { id: 2 }, {}, arr2);
     assert.strictEqual(this.pagination.get('lazyCaches').size, 2, 'it stores both keys');
 
-    this.pagination.clearDataset('transit-key');
+    this.pagination.clearDataset('pagination-test');
     assert.strictEqual(this.pagination.get('lazyCaches').size, 1, 'deletes one key');
-    assert.notOk(this.pagination.get('lazyCaches').has('transit-key'), 'cache is no longer stored');
+    assert.notOk(this.pagination.get('lazyCaches').has('pagination-test'), 'cache is no longer stored');
   });
 
   test('pagination.clearDataset with no args clears entire cache', function (assert) {
     const arr = ['one', 'two'];
     const arr2 = ['one', 'two', 'three', 'four'];
     this.pagination.storeDataset('data', { id: 1 }, {}, arr);
-    this.pagination.storeDataset('transit-key', { id: 2 }, {}, arr2);
+    this.pagination.storeDataset('pagination-test', { id: 2 }, {}, arr2);
     assert.strictEqual(this.pagination.get('lazyCaches').size, 2, 'it stores both keys');
 
     this.pagination.clearDataset();
     assert.strictEqual(this.pagination.get('lazyCaches').size, 0, 'deletes all of the keys');
-    assert.notOk(this.pagination.get('lazyCaches').has('transit-key'), 'first cache key is no longer stored');
+    assert.notOk(
+      this.pagination.get('lazyCaches').has('pagination-test'),
+      'first cache key is no longer stored'
+    );
     assert.notOk(this.pagination.get('lazyCaches').has('data'), 'second cache key is no longer stored');
   });
 
@@ -165,10 +172,10 @@ module('Unit | Service | pagination', function (hooks) {
       page: 1,
       responsePath: 'data.keys',
     };
-    this.pagination.storeDataset('transit-key', query, data, keys);
+    this.pagination.storeDataset('pagination-test', query, data, keys);
 
     let result;
-    result = await this.pagination.fetchPage('transit-key', query);
+    result = await this.pagination.fetchPage('pagination-test', query);
     assert.strictEqual(result.get('length'), pageSize, 'returns the correct number of items');
     assert.deepEqual(
       result.map((r) => r.id),
@@ -190,7 +197,7 @@ module('Unit | Service | pagination', function (hooks) {
       'returns correct meta values'
     );
 
-    result = await this.pagination.fetchPage('transit-key', {
+    result = await this.pagination.fetchPage('pagination-test', {
       size: pageSize,
       page: 3,
       responsePath: 'data.keys',
@@ -203,7 +210,7 @@ module('Unit | Service | pagination', function (hooks) {
       'returns the third page of items'
     );
 
-    result = await this.pagination.fetchPage('transit-key', {
+    result = await this.pagination.fetchPage('pagination-test', {
       size: pageSize,
       page: 99,
       responsePath: 'data.keys',
@@ -215,7 +222,7 @@ module('Unit | Service | pagination', function (hooks) {
       'returns the last page when the page value is beyond the of bounds'
     );
 
-    result = await this.pagination.fetchPage('transit-key', {
+    result = await this.pagination.fetchPage('pagination-test', {
       size: pageSize,
       page: 0,
       responsePath: 'data.keys',
@@ -245,9 +252,9 @@ module('Unit | Service | pagination', function (hooks) {
     Sinon.stub(this.pagination, 'fetchPage').callsFake(() => {});
     const query = { page: 1, size: 1, responsePath: 'data' };
 
-    await this.pagination.lazyPaginatedQuery('transit-key', query);
+    await this.pagination.lazyPaginatedQuery('pagination-test', query);
     assert.deepEqual(
-      this.pagination.getDataset('transit-key', query),
+      this.pagination.getDataset('pagination-test', query),
       { response: { data: null }, dataset: ['foo'] },
       'stores returned dataset'
     );
@@ -257,14 +264,14 @@ module('Unit | Service | pagination', function (hooks) {
 
     assert.throws(
       () => {
-        this.pagination.lazyPaginatedQuery('transit-key', {});
+        this.pagination.lazyPaginatedQuery('pagination-test', {});
       },
       /responsePath is required/,
       'requires responsePath'
     );
     assert.throws(
       () => {
-        this.pagination.lazyPaginatedQuery('transit-key', { responsePath: 'foo' });
+        this.pagination.lazyPaginatedQuery('pagination-test', { responsePath: 'foo' });
       },
       /page is required/,
       'requires page'

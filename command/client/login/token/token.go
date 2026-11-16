@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package token
@@ -15,6 +15,9 @@ import (
 )
 
 type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+
 	// for tests
 	testStdin  io.Reader
 	testStdout io.Writer
@@ -139,8 +142,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 }
 
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login TOKEN [CONFIG K=V...]
+Usage: ` + binaryName + ` login TOKEN [CONFIG K=V...]
 
   The token auth method allows logging in directly with a token. This
   can be a token from the "token-create" command or API. There are no
@@ -148,20 +155,20 @@ Usage: vault login TOKEN [CONFIG K=V...]
 
   Authenticate using a token:
 
-      $ vault login 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ ` + binaryName + ` login 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   Authenticate but do not lookup information about the token:
 
-      $ vault login token=96ddf4bc-d217-f3ba-f9bd-017055595017 lookup=false
+      $ ` + binaryName + ` login token=96ddf4bc-d217-f3ba-f9bd-017055595017 lookup=false
 
   This token usually comes from a different source such as the API or via the
-  built-in "vault token create" command.
+  built-in "` + binaryName + ` token create" command.
 
 Configuration:
 
   token=<string>
       The token to use for authentication. This is usually provided directly
-      via the "vault login" command.
+      via the "` + binaryName + ` login" command.
 
   lookup=<bool>
       Perform a lookup of the token's metadata and policies.

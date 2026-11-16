@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -33,7 +33,7 @@ func (c *PluginReloadCommand) Synopsis() string {
 
 func (c *PluginReloadCommand) Help() string {
 	helpText := `
-Usage: vault plugin reload [options]
+Usage: ` + c.BinaryName + ` plugin reload [options]
 
   Reloads mounted plugins. Either the plugin name or the desired plugin 
   mount(s) must be provided, but not both. In case the plugin name is provided,
@@ -44,11 +44,11 @@ Usage: vault plugin reload [options]
 
   Reload the secret plugin named "my-custom-plugin" on the current node:
 
-      $ vault plugin reload -type=secret -plugin=my-custom-plugin
+      $ ` + c.BinaryName + ` plugin reload -type=secret -plugin=my-custom-plugin
 
   Reload the secret plugin named "my-custom-plugin" across all nodes and replicated clusters:
 
-      $ vault plugin reload -type=secret -plugin=my-custom-plugin -scope=global
+      $ ` + c.BinaryName + ` plugin reload -type=secret -plugin=my-custom-plugin -scope=global
 
 ` + c.Flags().Help()
 

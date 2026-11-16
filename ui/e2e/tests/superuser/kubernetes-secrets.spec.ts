@@ -209,7 +209,7 @@ test('kubernetes tune workflow', async ({ page }) => {
   });
 
   await test.step('configure kubernetes plugin settings', async () => {
-    await page.locator('div').filter({ hasText: 'Manual configuration Generate' }).nth(4).click();
+    await page.getByRole('radio', { name: 'Manual configuration Generate' }).check();
     await page.getByRole('textbox', { name: 'Kubernetes host' }).fill('https://192.168.99.100:8443');
     await page.getByRole('textbox', { name: 'Service account JWT' }).fill('test-jwt');
     await page.getByRole('textbox', { name: 'Kubernetes CA Certificate' }).fill('-----CERTIFICATE-----');

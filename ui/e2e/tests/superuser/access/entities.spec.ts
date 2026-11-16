@@ -3,9 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from '../../../fixtures/demo';
 
 test('entities workflow', async ({ page }) => {
+  let entityUrl = '';
+
   await test.step('should display entities page', async () => {
     await page.goto('dashboard');
     await page.getByRole('link', { name: 'Access control' }).click();
@@ -31,7 +34,7 @@ test('entities workflow', async ({ page }) => {
   });
 
   await test.step('create entity', async () => {
-    await page.getByRole('link', { name: 'Create entity' }).click();
+    await page.getByRole('link', { name: 'Create new entity' }).click();
     await page.getByRole('textbox', { name: 'Name' }).fill('entity-1');
     await page.getByRole('textbox', { name: 'Key' }).fill('hello');
     await page.getByRole('textbox', { name: 'Value' }).fill('world');
@@ -42,6 +45,7 @@ test('entities workflow', async ({ page }) => {
 
   await test.step('should display entity detail page', async () => {
     await expect(page.getByRole('heading', { name: 'entity-' })).toContainText('entity-1');
+    entityUrl = page.url();
     await page.locator('div:nth-child(2) > .column.is-flex-center').click();
     await expect(page.getByText('Name entity-')).toBeVisible();
   });
@@ -58,8 +62,8 @@ test('entities workflow', async ({ page }) => {
     await expect(page.locator('section')).toContainText('test-policy');
     await page.getByRole('link', { name: 'test-policy' }).first().click();
     await expect(page.getByText('Vault ACL policies test-policy test-policy Download policy')).toBeVisible();
-    await page.getByRole('link', { name: 'Entities' }).click();
-    await page.getByRole('link', { name: 'entity-1', exact: true }).click();
+    // clicking an entity in the list opens a flyout, so return to the detail page by url
+    await page.goto(entityUrl);
 
     // Groups tab
     await expect(page.getByRole('link', { name: 'Groups' }).nth(1)).toBeVisible();
@@ -76,7 +80,7 @@ test('entities workflow', async ({ page }) => {
 
   await test.step('create and view aliases', async () => {
     await page.getByRole('link', { name: 'Add alias' }).click();
-    await expect(page.getByRole('heading', { name: 'Create Entity for' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Create alias for entity-1' })).toBeVisible();
     await page.getByRole('textbox', { name: 'Name' }).fill('alias-1');
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.locator('.hds-page-header__title-wrapper')).toBeVisible();
@@ -88,12 +92,11 @@ test('entities workflow', async ({ page }) => {
     await expect(alias).toHaveValue('alias-1');
   });
 
-  await test.step('cleanup by deleting entities if it was not deleted in previous step', async () => {
+  await test.step('delete entity and confirm the list is empty', async () => {
     await page.getByLabel('breadcrumbs').getByRole('link', { name: 'Entities' }).click();
-    await page.getByRole('button', { name: 'Alias management options' }).click();
-    await page.getByRole('button', { name: 'Remove' }).click();
+    await page.getByRole('button', { name: 'More options' }).first().click();
+    await page.getByRole('button', { name: 'Delete entity' }).click();
     await page.getByRole('button', { name: 'Confirm' }).click();
-    await expect(page.getByRole('heading', { name: 'No entity aliases yet' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Identity: entities and groups' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No entities yet' })).toBeVisible();
   });
 });

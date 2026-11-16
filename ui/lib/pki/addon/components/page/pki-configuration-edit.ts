@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,8 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { capitalize } from '@ember/string';
+import { generateErrorCountMessage } from 'vault/utils/forms/validate';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -19,7 +21,7 @@ import type PkiConfigAcmeForm from 'vault/forms/secrets/pki/config/acme';
 import type PkiConfigClusterForm from 'vault/forms/secrets/pki/config/cluster';
 import type PkiConfigCrlForm from 'vault/forms/secrets/pki/config/crl';
 import type PkiConfigUrlsForm from 'vault/forms/secrets/pki/config/urls';
-import type { FormField, TtlEvent } from 'vault/app-types';
+import type { FormField, TtlEvent, ValidationMap } from 'vault/app-types';
 import type ApiService from 'vault/services/api';
 
 interface Args {
@@ -55,6 +57,15 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
 
   @tracked invalidFormAlert = '';
   @tracked errors: Array<ErrorObject> = [];
+  @tracked acmeValidations: ValidationMap | null = null;
+
+  // Durations the form loaded with, used to replace a hidden duration that is too large.
+  initialCrlData: Record<string, unknown>;
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    this.initialCrlData = { ...args.crlForm.data };
+  }
 
   get isEnterprise() {
     return this.version.isEnterprise;
@@ -66,6 +77,15 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
       // first clear errors and sticky flash messages
       this.errors = [];
       this.flashMessages.clearMessages();
+      this.invalidFormAlert = '';
+
+      // validate every form before saving any so an invalid form never leaves the config partly saved
+      const { acmeState, errorCount } = this.validateForms();
+      this.acmeValidations = acmeState;
+      if (errorCount) {
+        this.invalidFormAlert = generateErrorCountMessage(errorCount);
+        return;
+      }
 
       for (const type of ['cluster', 'acme', 'urls', 'crl']) {
         // skip saving and continue to next iteration if user does not have permission
@@ -95,6 +115,37 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
       }
     })
   );
+
+  // Vault rejects a duration it can't store even when its toggle is off, but a toggled-off or hidden picker
+  // can't show an error. Replace those values so they neither block saving nor get sent.
+  resetInactiveCrlTtls() {
+    const { crlForm } = this.args;
+    const data = crlForm.data as unknown as Record<string, unknown>;
+    for (const { name, options } of crlForm.formFields) {
+      const { editType, mapToBoolean, isOppositeValue } = options;
+      if (editType !== 'ttl') continue;
+      const toggle = data[mapToBoolean as string];
+      const isEnabled = isOppositeValue ? !toggle : !!toggle;
+      // disabling the CRL hides every picker except the expiry ones
+      const isHidden = !['expiry', 'ocsp_expiry'].includes(name) && !!data['disable'];
+      if ((!isEnabled || isHidden) && isDurationOverMax(data[name])) {
+        data[name] = this.initialCrlData[name];
+      }
+    }
+  }
+
+  validateForms() {
+    this.resetInactiveCrlTtls();
+    const { acmeForm, crlForm, capabilities } = this.args;
+    const acme = capabilities['canSetAcme'] ? acmeForm.toJSON() : null;
+    const crl = capabilities['canSetCrl'] ? crlForm.toJSON() : null;
+    const errorCount = [acme, crl].reduce(
+      (count, form) =>
+        count + Object.values(form?.state ?? {}).reduce((total, { errors }) => total + errors.length, 0),
+      0
+    );
+    return { acmeState: acme && !acme.isValid ? acme.state : null, errorCount };
+  }
 
   @action
   cancel() {

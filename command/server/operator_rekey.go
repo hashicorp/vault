@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -54,7 +54,7 @@ func (c *OperatorRekeyCommand) Synopsis() string {
 
 func (c *OperatorRekeyCommand) Help() string {
 	helpText := `
-Usage: vault operator rekey [options] [KEY]
+Usage: ` + c.BinaryName + ` operator rekey [options] [KEY]
 
   Generates a new set of unseal keys. This can optionally change the total
   number of key shares or the required threshold of those key shares to
@@ -70,14 +70,14 @@ Usage: vault operator rekey [options] [KEY]
 
   Initialize a rekey:
 
-      $ vault operator rekey \
+      $ ` + c.BinaryName + ` operator rekey \
           -init \
           -key-shares=15 \
           -key-threshold=9
 
   Rekey and encrypt the resulting unseal keys with PGP:
 
-      $ vault operator rekey \
+      $ ` + c.BinaryName + ` operator rekey \
           -init \
           -key-shares=3 \
           -key-threshold=2 \
@@ -85,18 +85,18 @@ Usage: vault operator rekey [options] [KEY]
 
   Store encrypted PGP keys in Vault's core:
 
-      $ vault operator rekey \
+      $ ` + c.BinaryName + ` operator rekey \
           -init \
           -pgp-keys="..." \
           -backup
 
   Retrieve backed-up unseal keys:
 
-      $ vault operator rekey -backup-retrieve
+      $ ` + c.BinaryName + ` operator rekey -backup-retrieve
 
   Delete backed-up unseal keys:
 
-      $ vault operator rekey -backup-delete
+      $ ` + c.BinaryName + ` operator rekey -backup-delete
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
@@ -468,7 +468,7 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	if !started {
 		c.UI.Error(base.WrapAtLength(
 			"No rekey is in progress. Start a rekey process by running " +
-				"\"vault operator rekey -init\"."))
+				"\"" + c.BinaryName + " operator rekey -init\"."))
 		return 1
 	}
 
@@ -732,17 +732,19 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 		switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 		case "barrier":
 			c.UI.Output(base.WrapAtLength(fmt.Sprintf(
-				"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\" " +
-					"in the storage backend. Remove these keys at any time using " +
-					"\"vault operator rekey -backup-delete\". Vault does not automatically " +
+				"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\" "+
+					"in the storage backend. Remove these keys at any time using "+
+					"\"%s operator rekey -backup-delete\". Vault does not automatically "+
 					"remove these keys.",
+				c.BinaryName,
 			)))
 		case "recovery", "hsm":
 			c.UI.Output(base.WrapAtLength(fmt.Sprintf(
-				"The encrypted recovery keys are backed up to \"core/recovery-keys-backup\" " +
-					"in the storage backend. Remove these keys at any time using " +
-					"\"vault operator rekey -backup-delete -target=recovery\". Vault does not automatically " +
+				"The encrypted recovery keys are backed up to \"core/recovery-keys-backup\" "+
+					"in the storage backend. Remove these keys at any time using "+
+					"\"%s operator rekey -backup-delete -target=recovery\". Vault does not automatically "+
 					"remove these keys.",
+				c.BinaryName,
 			)))
 		}
 	}

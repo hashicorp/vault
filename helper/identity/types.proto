@@ -82,6 +82,28 @@ message Group {
   // an IGA) can only be performed by the client that owns the resource.
   // @inject_tag: sentinel:"-"
   string scim_client_id = 14;
+
+  // AgentRegistryCohort identifies the agent registry cohort that created
+  // this group and owns it. The cohort manages the group's name, policies,
+  // and membership, and the group can't be deleted while the cohort exists.
+  // @inject_tag: sentinel:"-"
+  AgentRegistryCohort agent_registry_cohort = 15;
+}
+
+// AgentRegistryCohort identifies an agent registry cohort. The cohort's
+// provider config is in the namespace of the group that references it.
+message AgentRegistryCohort {
+  // ProviderType is the type of the cohort's provider config.
+  // @inject_tag: sentinel:"-"
+  string provider_type = 1;
+
+  // ProviderName is the name of the cohort's provider config.
+  // @inject_tag: sentinel:"-"
+  string provider_name = 2;
+
+  // CohortName is the name of the cohort.
+  // @inject_tag: sentinel:"-"
+  string cohort_name = 3;
 }
 
 // LocalAliases holds the aliases belonging to an entity that are local to the

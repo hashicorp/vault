@@ -49,7 +49,6 @@ scenario "dr_replication" {
     artifact_type     = global.artifact_types
     config_mode       = global.config_modes
     consul_edition    = global.consul_editions
-    consul_version    = global.consul_versions
     distro            = global.distros_aws
     edition           = global.enterprise_editions
     ip_version        = global.ip_versions
@@ -359,7 +358,7 @@ scenario "dr_replication" {
       license         = (matrix.primary_backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       }
     }
   }
@@ -422,7 +421,7 @@ scenario "dr_replication" {
       cluster_name            = step.create_primary_cluster_targets.cluster_name
       consul_release = matrix.primary_backend == "consul" ? {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
       hosts                = step.create_primary_cluster_targets.hosts
@@ -485,7 +484,7 @@ scenario "dr_replication" {
       license         = (matrix.secondary_backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       }
     }
   }
@@ -527,7 +526,7 @@ scenario "dr_replication" {
       cluster_name            = step.create_secondary_cluster_targets.cluster_name
       consul_release = matrix.secondary_backend == "consul" ? {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
       hosts                = step.create_secondary_cluster_targets.hosts

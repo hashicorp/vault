@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -22,7 +22,7 @@ func (c *AuditCommand) Synopsis() string {
 
 func (c *AuditCommand) Help() string {
 	helpText := `
-Usage: vault audit <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` audit <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault's audit devices.
   Users can list, enable, and disable audit devices.
@@ -33,11 +33,11 @@ Usage: vault audit <subcommand> [options] [args]
 
   List all enabled audit devices:
 
-      $ vault audit list
+      $ ` + c.BinaryName + ` audit list
 
   Enable a new audit device "file";
 
-       $ vault audit enable file file_path=/var/log/audit.log
+       $ ` + c.BinaryName + ` audit enable file file_path=/var/log/audit.log
 
   Please see the individual subcommand help for detailed usage information.
 `

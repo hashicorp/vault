@@ -27,7 +27,7 @@
       </ToolbarActions>
     </Toolbar>
   {{/if}}
-  <form {{action (nav-to-route "vault.cluster.access.control-group-accessor" this.model.id) on="submit"}}>
+  <form {{action this.lookup on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <p class="has-text-grey is-size-8">
         Approval workflows add additional authorization factors to be required before satisfying a request. If you have a
@@ -43,12 +43,12 @@
           autocomplete="off"
           spellcheck="false"
           name="accessor"
-          @value={{this.model.id}}
+          @value={{this.accessor}}
         />
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <Hds::Button @text="Lookup" type="submit" disabled={{not this.model.id}} />
+      <Hds::Button @text="Lookup" type="submit" disabled={{not this.accessor}} />
     </div>
   </form>
 {{else}}

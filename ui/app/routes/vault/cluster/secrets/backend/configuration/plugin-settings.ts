@@ -10,7 +10,6 @@ import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type Controller from '@ember/controller';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type Transition from '@ember/routing/transition';
 import type ApiService from 'vault/services/api';
 import type VersionService from 'vault/services/version';
@@ -19,7 +18,7 @@ import engineDisplayData from 'vault/helpers/engines-display-data';
 import RouterService from '@ember/routing/router-service';
 
 interface RouteModel {
-  secretsEngine: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   versions: string[];
   config: Record<string, unknown>;
 }

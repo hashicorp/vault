@@ -33,3 +33,13 @@ test('read-only user cannot enable or delete secrets engines', async ({ page }) 
     });
   }
 });
+
+// Read-only users still need the mount data returned by the secrets-engine list route.
+test('read-only user can read a mounted secrets engine', async ({ page }) => {
+  await page.goto('secrets-engines');
+
+  const mountLink = page.getByRole('link', { name: `${KV_PATH}/`, exact: true });
+  await expect(mountLink).toBeVisible();
+  await page.reload();
+  await expect(mountLink).toBeVisible();
+});

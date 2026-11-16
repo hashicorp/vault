@@ -268,7 +268,7 @@ func (c *ProxyCommand) Run(args []string) int {
 		// configuration, but we should still let the user know.
 		serverVersion := serverHealth.Version
 		proxyVersion := version.GetVersion().VersionNumber()
-		if serverVersion != proxyVersion {
+		if !IsCompatibleVersion(proxyVersion, serverVersion) {
 			c.UI.Info("==> Note: Vault Proxy version does not match Vault server version. " +
 				fmt.Sprintf("Vault Proxy version: %s, Vault server version: %s", proxyVersion, serverVersion))
 		}

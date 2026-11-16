@@ -589,6 +589,123 @@ func testACLAllowOperation(t *testing.T, ns *namespace.Namespace) {
 	}
 }
 
+// TestACL_ExactDenyTrailingSlashBypass verifies that an exact deny rule written
+// without a trailing slash (e.g. "sys/mounts/protected") cannot be bypassed by
+// appending a trailing slash to the request path. Before the fix, the exact
+// lookup for "sys/mounts/protected/" would miss the "sys/mounts/protected" key,
+// fall through to the broader wildcard delete grant, and allow the operation.
+// The fix mirrors the existing LIST behaviour: when the first exact lookup
+// misses on a path that has a trailing slash, a second lookup is attempted with
+// the slash stripped.
+func TestACL_ExactDenyTrailingSlashBypass(t *testing.T) {
+	t.Parallel()
+
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	// Policy mirrors the real-world attacker setup:
+	//   - wildcard DELETE on all sys/mounts/* (the broad grant)
+	//   - exact DENY on the canonical path WITHOUT a trailing slash
+	//     (as a policy author would naturally write it)
+	const policy = `
+path "sys/mounts/*" {
+  capabilities = ["delete"]
+}
+path "sys/mounts/protected" {
+  capabilities = ["deny"]
+}
+`
+	parsed, err := ParseACLPolicy(ns, policy)
+	require.NoError(t, err, "policy should parse without error")
+
+	acl, err := NewACL(ctx, []*Policy{parsed})
+	require.NoError(t, err, "ACL construction should succeed")
+
+	cases := []struct {
+		name        string
+		path        string
+		wantAllowed bool
+	}{
+		{
+			// Canonical path — exact deny key matches directly; must be blocked.
+			name:        "canonical path without slash is denied",
+			path:        "sys/mounts/protected",
+			wantAllowed: false,
+		},
+		{
+			// Trailing-slash variant — previously bypassed the exact deny.
+			// After the fix the slash-stripped second lookup must find the deny.
+			name:        "trailing slash path is denied",
+			path:        "sys/mounts/protected/",
+			wantAllowed: false,
+		},
+		{
+			// A sibling path that is NOT explicitly denied must still be allowed
+			// by the wildcard grant — the fix must not break normal operation.
+			name:        "unprotected sibling path is allowed",
+			path:        "sys/mounts/other",
+			wantAllowed: true,
+		},
+		{
+			// Sibling with trailing slash — also allowed by wildcard.
+			name:        "unprotected sibling path with slash is allowed",
+			path:        "sys/mounts/other/",
+			wantAllowed: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			req := &logical.Request{
+				Operation: logical.DeleteOperation,
+				Path:      tc.path,
+			}
+			result := acl.AllowOperation(ctx, req, false)
+			require.Equal(t, tc.wantAllowed, result.Allowed,
+				"AllowOperation(%q, DELETE).Allowed", tc.path)
+		})
+	}
+
+	// A less-specific segment-wildcard deny (sys/+/+) must not win over a
+	// more-specific prefix allow (sys/mounts/protected*) via the alternate
+	// slash form check. Specificity ordering must be preserved.
+	t.Run("segment wildcard deny specificity preserved", func(t *testing.T) {
+		t.Parallel()
+		const pol = `
+path "sys/+/+" {
+  capabilities = ["deny"]
+}
+path "sys/mounts/protected*" {
+  capabilities = ["delete"]
+}
+`
+		p2, err := ParseACLPolicy(ns, pol)
+		require.NoError(t, err)
+		acl2, err := NewACL(ctx, []*Policy{p2})
+		require.NoError(t, err)
+
+		for _, tc := range []struct {
+			path        string
+			wantAllowed bool
+		}{
+			// More-specific prefix allow must win on both slash forms.
+			{"sys/mounts/protected", true},
+			{"sys/mounts/protected/", true},
+			// Path only matched by the broad deny must still be denied.
+			{"sys/auth/token/", false},
+		} {
+			t.Run(tc.path, func(t *testing.T) {
+				t.Parallel()
+				req := &logical.Request{Operation: logical.DeleteOperation, Path: tc.path}
+				result := acl2.AllowOperation(ctx, req, false)
+				require.Equal(t, tc.wantAllowed, result.Allowed,
+					"AllowOperation(%q, DELETE).Allowed", tc.path)
+			})
+		}
+	})
+}
+
 func TestACL_ValuePermissions(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()

@@ -1,10 +1,11 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { guidFor } from '@ember/object/internals';
 import { tracked } from '@glimmer/tracking';
 
 /**
@@ -27,6 +28,7 @@ export default class AutocompleteInputComponent extends Component {
   @tracked showOptions = false;
   rootElement;
   inputElement;
+  inputId = `autocomplete-input-${guidFor(this)}`;
 
   @action
   setElement(element) {

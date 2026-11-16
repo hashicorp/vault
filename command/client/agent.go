@@ -277,7 +277,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// We don't exit on error here, as this is not worth stopping Agent over
 		serverVersion := serverHealth.Version
 		agentVersion := version.GetVersion().VersionNumber()
-		if serverVersion != agentVersion {
+		if !IsCompatibleVersion(agentVersion, serverVersion) {
 			c.UI.Info("==> Note: Vault Agent version does not match Vault server version. " +
 				fmt.Sprintf("Vault Agent version: %s, Vault server version: %s", agentVersion, serverVersion))
 		}
@@ -289,7 +289,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// A customer could have a listener defined but only be using e.g. the cache-clear API,
 		// even though the API proxy is something they have available.
 		c.UI.Warn("==> Note: Vault Agent will be deprecating API proxy functionality in a future " +
-			"release, and this functionality has moved to a new subcommand, vault proxy. If you rely on this " +
+			"release, and this functionality has moved to a new subcommand, " + c.BinaryName + " proxy. If you rely on this " +
 			"functionality, plan to move to Vault Proxy instead.")
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ export const TTL_PICKER = {
   subtext: '[data-test-ttl-form-subtext]',
   ttlValue: '[data-test-ttl-value]',
   ttlUnit: '[data-test-select="ttl-unit"]',
+  error: '[data-test-ttl-error]',
   valueInputByLabel: (label: string) => `[data-test-ttl-value="${label}"]`,
   unitInputByLabel: (label: string) => `[data-test-ttl-unit="${label}"] [data-test-select="ttl-unit"]`,
 };

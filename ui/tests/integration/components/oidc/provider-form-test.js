@@ -10,7 +10,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { SELECTORS, CLIENT_LIST_RESPONSE } from 'vault/tests/helpers/oidc-config';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import OidcProviderForm from 'vault/forms/oidc/provider';
 import sinon from 'sinon';
@@ -44,16 +43,6 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
         />
       `);
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-      },
-    });
   });
 
   test('it should save new provider', async function (assert) {
@@ -124,7 +113,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-input="name"]')
       .hasValue('test-provider', 'Name input is populated with model value');
     assert.dom('[data-test-selected-option]').hasText('test-scope', 'model scope is selected');
-    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"]').isChecked('Allow all radio button is selected');
     await click(SELECTORS.providerSaveButton);
 
     assert.true(this.onSave.called, 'onSave callback fires on save success');

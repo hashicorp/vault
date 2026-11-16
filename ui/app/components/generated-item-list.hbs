@@ -26,6 +26,9 @@
     </div>
   {{/if}}
 {{/let}}
+{{#if this.controlGroupError}}
+  <ControlGroupInlineError @error={{this.controlGroupError}} class="has-top-margin-s has-bottom-margin-s" />
+{{/if}}
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink
@@ -83,30 +86,26 @@
             @route="vault.cluster.access.method.item.edit"
             @models={{array @methodModel.id @itemType list.item.id}}
           >Edit {{singularize @itemType}}</dd.Interactive>
-          <dd.Interactive @color="critical" {{on "click" (fn (mut this.itemToDelete) list.item)}}>
+          <dd.Interactive
+            @color="critical"
+            {{on "click" (fn (mut this.itemToDelete) list.item)}}
+            data-test-popup-menu="delete"
+          >
             Delete
             {{singularize @itemType}}
           </dd.Interactive>
         </Hds::Dropdown>
+        {{! Inside Item.menu so it renders once; ListItem yields its block for both the row link and the menu. }}
+        {{#if (eq list.item this.itemToDelete)}}
+          <ConfirmModal
+            @color="critical"
+            @onClose={{fn (mut this.itemToDelete) null}}
+            @onConfirm={{perform this.deleteItem this.itemToDelete}}
+            @confirmTitle="Delete {{singularize @itemType}}?"
+            @confirmMessage="Are you sure you want to delete {{singularize @itemType}} {{this.itemToDelete.id}}?"
+          />
+        {{/if}}
       </Item.menu>
-      {{#if (eq list.item this.itemToDelete)}}
-        <ConfirmModal
-          @color="critical"
-          @onClose={{fn (mut this.itemToDelete) null}}
-          @onConfirm={{action
-            (perform
-              Item.callMethod
-              "destroyRecord"
-              this.itemToDelete
-              (concat "Successfully deleted " (singularize @itemType) " " this.itemToDelete.id ".")
-              (concat "There was an error deleting this " (singularize @itemType))
-              (action "refreshItemList")
-            )
-          }}
-          @confirmTitle="Delete {{singularize @itemType}}?"
-          @confirmMessage="Are you sure you want to delete {{singularize @itemType}} {{this.itemToDelete.id}}?"
-        />
-      {{/if}}
     </ListItem>
   {{/if}}
 </ListView>

@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, find } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
@@ -53,6 +53,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           seconds: 600,
           timeString: '10m',
           goSafeTimeString: '10m',
+          isValid: true,
         }),
         'Passes the values back to onChange'
       );
@@ -113,6 +114,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           seconds: 3600,
           timeString: '60m',
           goSafeTimeString: '60m',
+          isValid: true,
         }),
         'Passes the values back to onChange'
       );
@@ -141,6 +143,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           seconds: 1800,
           timeString: '30m',
           goSafeTimeString: '30m',
+          isValid: true,
         }),
         'Passes the values back to onChange'
       );
@@ -166,6 +169,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           seconds: 600,
           timeString: '10m',
           goSafeTimeString: '10m',
+          isValid: true,
         }),
         'Passes the values back to onChange'
       );
@@ -217,7 +221,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
 
       await fillIn(TTL_PICKER.ttlValue, '');
 
-      assert.dom('.ttl-value-error').hasText('This field is required');
+      assert.dom(TTL_PICKER.error).hasText('This field is required');
       assert.false(this.onChange.called, 'no value is reported while the input is empty');
     });
 
@@ -234,13 +238,86 @@ module('Integration | Component | ttl-picker', function (hooks) {
 
       await fillIn(TTL_PICKER.ttlValue, '');
 
-      assert.dom('.ttl-value-error').doesNotExist('an empty input is valid');
+      assert.dom(TTL_PICKER.error).doesNotExist('an empty input is valid');
       assert.dom(TTL_PICKER.ttlValue).hasNoValue('the input is left empty rather than snapping to 0');
       assert.propEqual(
         this.onChange.lastCall.args[0],
-        { enabled: true, seconds: 0, timeString: 's', goSafeTimeString: '0s' },
+        { enabled: true, seconds: 0, timeString: 's', goSafeTimeString: '0s', isValid: true },
         'zero seconds is reported to the consumer'
       );
+    });
+
+    test('it shows an error and reports the value as invalid when it is longer than Vault supports', async function (assert) {
+      await render(hbs`
+        <TtlPicker
+          @label="Rotation period"
+          @hideToggle={{this.hideToggle}}
+          @onChange={{this.onChange}}
+        />
+      `);
+
+      await fillIn(TTL_PICKER.ttlUnit, 'd');
+      await fillIn(TTL_PICKER.ttlValue, '9999999999');
+
+      assert
+        .dom(TTL_PICKER.error)
+        .hasText('Rotation period is too large. Maximum allowed value is 106,751 days.');
+      assert.dom(TTL_PICKER.ttlValue).hasClass('has-error', 'input is styled as invalid');
+      assert
+        .dom(TTL_PICKER.ttlValue)
+        .hasAttribute('aria-describedby', find(TTL_PICKER.error).id, 'input is described by the error');
+      assert.propEqual(
+        this.onChange.lastCall.args[0],
+        {
+          enabled: true,
+          seconds: 863999999913600,
+          timeString: '9999999999d',
+          goSafeTimeString: '239999999976h',
+          isValid: false,
+        },
+        'the value is still reported so the parent never holds a stale value'
+      );
+
+      await fillIn(TTL_PICKER.ttlValue, '106751');
+
+      assert.dom(TTL_PICKER.error).doesNotExist('error clears once the value is valid');
+      assert.true(this.onChange.lastCall.args[0].isValid, 'the valid value is reported as valid');
+    });
+
+    test('it flags a value that goes over the maximum when the unit changes', async function (assert) {
+      await render(hbs`
+        <TtlPicker
+          @label="Rotation period"
+          @hideToggle={{this.hideToggle}}
+          @onChange={{this.onChange}}
+        />
+      `);
+      await fillIn(TTL_PICKER.ttlValue, '2562048');
+      assert.dom(TTL_PICKER.error).doesNotExist('2562048 seconds is valid');
+
+      // 2562048 seconds is not a whole number of hours, so the number is kept and becomes 2562048 hours.
+      await fillIn(TTL_PICKER.ttlUnit, 'h');
+
+      assert
+        .dom(TTL_PICKER.error)
+        .hasText('Rotation period is too large. Maximum allowed value is 106,751 days.');
+      assert.false(this.onChange.lastCall.args[0].isValid, 'the value is reported as invalid');
+    });
+
+    test('it hides the max error but still reports validity when validateMax is false', async function (assert) {
+      await render(hbs`
+        <TtlPicker
+          @label="Rotation period"
+          @hideToggle={{this.hideToggle}}
+          @validateMax={{false}}
+          @onChange={{this.onChange}}
+        />
+      `);
+
+      await fillIn(TTL_PICKER.ttlValue, '9223372037');
+
+      assert.dom(TTL_PICKER.error).doesNotExist('no message is rendered by the picker');
+      assert.false(this.onChange.lastCall.args[0].isValid, 'the value is still reported as invalid');
     });
 
     test('it yields in place of label if block is present', async function (assert) {
@@ -324,6 +401,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           seconds: 600,
           timeString: '10m',
           goSafeTimeString: '10m',
+          isValid: true,
         }),
         'Passes the values back to onChange'
       );
@@ -388,6 +466,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           seconds: 172800,
           timeString: '2d',
           goSafeTimeString: '48h',
+          isValid: true,
         }),
         'Converts day unit to go safe time'
       );

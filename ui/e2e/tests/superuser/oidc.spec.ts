@@ -81,7 +81,7 @@ test('oidc workflow', async ({ page }) => {
       .getByLabel('Number of units')
       .fill('30');
     await page.getByLabel('TTL unit for Verification TTL').selectOption('m');
-    await expect(page.locator('.radio-card').nth(1)).toHaveClass(/is-disabled/);
+    await expect(page.getByRole('radio', { name: 'Limit access to selected' })).toBeDisabled();
     await page.getByRole('button', { name: 'Create' }).click();
 
     await expect(page.getByRole('heading', { name: 'test-oidc-key' })).toBeVisible();

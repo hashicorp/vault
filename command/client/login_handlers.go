@@ -22,30 +22,33 @@ import (
 	"github.com/hashicorp/vault/command/client/login/userpass"
 )
 
-// LoginHandlers returns the CLI handlers used by `login` and `auth help`,
-// keyed by auth method type. Both vault and vault-client use this set.
-func LoginHandlers() map[string]base.LoginHandler {
+// LoginHandlers returns the CLI handlers that `login` and `auth help` support,
+// keyed by auth method type. The in-repo handlers name binaryName in their
+// help, and an empty name means "vault".
+func LoginHandlers(binaryName string) map[string]base.LoginHandler {
 	handlers := map[string]base.LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
-		"aws":      &aws.CLIHandler{},
-		"cert":     &cert.CLIHandler{},
+		"aws":      &aws.CLIHandler{BinaryName: binaryName},
+		"cert":     &cert.CLIHandler{BinaryName: binaryName},
 		"cf":       &credCF.CLIHandler{},
 		"gcp":      &credGcp.CLIHandler{},
-		"github":   &github.CLIHandler{},
+		"github":   &github.CLIHandler{BinaryName: binaryName},
 		"kerberos": &credKerb.CLIHandler{},
-		"ldap":     &ldap.CLIHandler{},
+		"ldap":     &ldap.CLIHandler{BinaryName: binaryName},
 		"oci":      &credOCI.CLIHandler{},
 		"oidc":     &credOIDC.CLIHandler{},
-		"okta":     &okta.CLIHandler{},
+		"okta":     &okta.CLIHandler{BinaryName: binaryName},
 		"pcf":      &credCF.CLIHandler{}, // Deprecated.
 		"radius": &userpass.CLIHandler{
 			DefaultMount: "radius",
+			BinaryName:   binaryName,
 		},
-		"spiffe": &spiffe.CLIHandler{},
-		"token":  &token.CLIHandler{},
-		"tpm":    &tpm.CLIHandler{},
+		"spiffe": &spiffe.CLIHandler{BinaryName: binaryName},
+		"token":  &token.CLIHandler{BinaryName: binaryName},
+		"tpm":    &tpm.CLIHandler{BinaryName: binaryName},
 		"userpass": &userpass.CLIHandler{
 			DefaultMount: "userpass",
+			BinaryName:   binaryName,
 		},
 	}
 	entExtendLoginHandlers(handlers)

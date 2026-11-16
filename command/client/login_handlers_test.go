@@ -38,7 +38,7 @@ func TestLoginHandlers(t *testing.T) {
 		"userpass",
 	}, entLoginHandlers...)
 
-	require.ElementsMatch(t, expected, slices.Collect(maps.Keys(LoginHandlers())))
+	require.ElementsMatch(t, expected, slices.Collect(maps.Keys(LoginHandlers("vault"))))
 }
 
 // TestInitClientCommands_LoginHandlers verifies that the `login` and
@@ -49,7 +49,7 @@ func TestInitClientCommands_LoginHandlers(t *testing.T) {
 
 	ui := cli.NewMockUi()
 	commands := InitClientCommands(ui, ui, nil)
-	want := slices.Sorted(maps.Keys(LoginHandlers()))
+	want := slices.Sorted(maps.Keys(LoginHandlers("vault")))
 
 	login, err := commands["login"]()
 	require.NoError(t, err)

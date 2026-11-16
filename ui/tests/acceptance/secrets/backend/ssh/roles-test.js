@@ -23,7 +23,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import showPage from 'vault/tests/pages/secrets/backend/ssh/show';
 import generatePage from 'vault/tests/pages/secrets/backend/ssh/generate-otp';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
@@ -103,6 +103,39 @@ module('Acceptance | ssh | roles', function (hooks) {
       },
     },
   ];
+
+  test('it filters roles by name without zero-address configuration', async function (assert) {
+    const sshPath = `ssh-${this.uid}`;
+    const filterInput = '[data-test-component="navigate-input"]';
+    await runCmd(mountEngineCmd('ssh', sshPath));
+
+    try {
+      for (const name of ['1', 'other-role']) {
+        await runCmd(`write ${sshPath}/roles/${name} key_type=otp default_user=admin cidr_list=127.0.0.1/32`);
+      }
+      await visit(`/vault/secrets-engines/${sshPath}/list`);
+      assert.dom(SES.secretLink('1')).exists('The numeric role name appears before filtering');
+      assert.dom(SES.secretLink('other-role')).exists('The other role appears before filtering');
+
+      await fillIn(filterInput, '1');
+      assert.dom(SES.secretLink('1')).exists('An exact name match remains visible');
+      assert.dom(SES.secretLink('other-role')).doesNotExist('Nonmatching roles are hidden');
+
+      await fillIn(filterInput, 'OTHER');
+      assert.dom(SES.secretLink('other-role')).exists('Partial matching is case-insensitive');
+      assert.dom(SES.secretLink('1')).doesNotExist('The previous match is no longer visible');
+
+      await fillIn(filterInput, 'missing-role');
+      assert.dom(SES.secretLink()).doesNotExist('No roles appear for an unmatched filter');
+      assert.dom(GENERAL.emptyStateTitle).includesText('There are no roles matching "missing-role".');
+
+      await fillIn(filterInput, '');
+      assert.dom(SES.secretLink('1')).exists('Clearing the filter restores the numeric role');
+      assert.dom(SES.secretLink('other-role')).exists('Clearing the filter restores the other role');
+    } finally {
+      await runCmd(`delete sys/mounts/${sshPath}`);
+    }
+  });
 
   test('it creates roles, generates keys and deletes roles', async function (assert) {
     assert.expect(28);

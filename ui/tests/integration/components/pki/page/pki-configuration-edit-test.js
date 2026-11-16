@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { PKI_CONFIG_EDIT } from 'vault/tests/helpers/pki/pki-selectors';
 import { configCapabilities } from 'vault/tests/helpers/pki/pki-helpers';
 import PkiConfigClusterForm from 'vault/forms/secrets/pki/config/cluster';
@@ -318,6 +319,96 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     assert
       .dom(`${PKI_CONFIG_EDIT.crlEditSection} ${GENERAL.emptyStateTitle}`)
       .hasText("You do not have permission to set this mount's revocation configuration");
+  });
+
+  test('it blocks saving when a CRL duration is longer than Vault supports', async function (assert) {
+    assert.expect(7);
+
+    await this.renderComponent();
+    await fillIn(PKI_CONFIG_EDIT.crlTtlInput('Expiry'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Expiry'), 'd');
+    await click(PKI_CONFIG_EDIT.saveButton);
+
+    assert
+      .dom(`${PKI_CONFIG_EDIT.crlEditSection} ${TTL_PICKER.error}`)
+      .hasText('Expiry is too large. Maximum allowed value is 106,751 days.');
+    assert.dom(PKI_CONFIG_EDIT.validationAlert).hasText('There is an error with this form.');
+    assert.true(this.clusterStub.notCalled, 'cluster config is not saved');
+    assert.true(this.acmeStub.notCalled, 'acme config is not saved');
+    assert.true(this.urlsStub.notCalled, 'urls config is not saved');
+    assert.true(this.crlStub.notCalled, 'crl config is not saved');
+
+    await fillIn(PKI_CONFIG_EDIT.crlTtlInput('Expiry'), '106751');
+    await click(PKI_CONFIG_EDIT.saveButton);
+    assert.strictEqual(this.crlStub.firstCall.args[1].expiry, '2562024h', 'the maximum whole days saves');
+  });
+
+  test('it blocks a CRL duration too long to be stored as a number', async function (assert) {
+    assert.expect(3);
+
+    await this.renderComponent();
+    // The TTL picker turns this many digits into Infinity, which it sends as the string "Infinityh".
+    await fillIn(PKI_CONFIG_EDIT.crlTtlInput('Expiry'), '9'.repeat(400));
+    await fillIn(TTL_PICKER.unitInputByLabel('Expiry'), 'd');
+    await click(PKI_CONFIG_EDIT.saveButton);
+
+    assert.dom(PKI_CONFIG_EDIT.validationAlert).hasText('There is an error with this form.');
+    assert.true(this.crlStub.notCalled, 'crl config is not saved');
+    assert.true(this.acmeStub.notCalled, 'no other config is partly saved');
+  });
+
+  test('it ignores a CRL duration that is too long once its toggle is turned off', async function (assert) {
+    assert.expect(4);
+
+    await this.renderComponent();
+    await fillIn(PKI_CONFIG_EDIT.crlTtlInput('Expiry'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Expiry'), 'd');
+    await click(PKI_CONFIG_EDIT.crlToggleInput('expiry'));
+    await click(PKI_CONFIG_EDIT.saveButton);
+
+    assert.dom(PKI_CONFIG_EDIT.validationAlert).doesNotExist('the hidden value does not block saving');
+    const [, payload] = this.crlStub.firstCall.args;
+    assert.true(payload.disable, 'the CRL is saved as disabled');
+    assert.strictEqual(payload.expiry, '72h', 'the hidden value is replaced by the one the form loaded with');
+    assert.true(this.acmeStub.calledOnce, 'the other configs save too');
+  });
+
+  test('it ignores an auto-rebuild duration that is too long when the CRL is disabled', async function (assert) {
+    assert.expect(3);
+
+    await this.renderComponent();
+    await click(PKI_CONFIG_EDIT.crlToggleInput('auto_rebuild_grace_period'));
+    await fillIn(PKI_CONFIG_EDIT.crlTtlInput('Auto-rebuild on'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Auto-rebuild on'), 'd');
+    // Turning off the expiry disables the CRL, which hides the auto-rebuild picker.
+    await click(PKI_CONFIG_EDIT.crlToggleInput('expiry'));
+    await click(PKI_CONFIG_EDIT.saveButton);
+
+    assert.dom(PKI_CONFIG_EDIT.validationAlert).doesNotExist('the hidden value does not block saving');
+    const [, payload] = this.crlStub.firstCall.args;
+    assert.true(payload.disable, 'the CRL is saved as disabled');
+    assert.strictEqual(payload.auto_rebuild_grace_period, '12h', 'the hidden value is replaced');
+  });
+
+  test('it blocks saving when the ACME max TTL is longer than Vault supports', async function (assert) {
+    assert.expect(6);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.ttl.input('Max TTL'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Max TTL'), 'd');
+    await click(PKI_CONFIG_EDIT.saveButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('max_ttl'))
+      .hasText('Max TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.dom(PKI_CONFIG_EDIT.validationAlert).hasText('There is an error with this form.');
+    assert.true(this.acmeStub.notCalled, 'acme config is not saved');
+    assert.true(this.crlStub.notCalled, 'no other config is partly saved');
+
+    await fillIn(GENERAL.ttl.input('Max TTL'), '106751');
+    await click(PKI_CONFIG_EDIT.saveButton);
+    assert.true(this.acmeStub.calledOnce, 'acme config saves once the TTL is valid');
+    assert.dom(PKI_CONFIG_EDIT.validationAlert).doesNotExist('the form alert clears');
   });
 
   test('it renders alert banner and endpoint respective error', async function (assert) {

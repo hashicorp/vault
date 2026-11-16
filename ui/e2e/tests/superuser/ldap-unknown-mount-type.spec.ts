@@ -4,11 +4,10 @@
  */
 
 import { expect } from '@playwright/test';
-import { test } from '../../fixtures/demo';
+import { highlightText, holdForVideo, test } from '../../fixtures/demo';
 import { ensureMount, rootApi } from '../../fixtures/root-api';
-import { isVideoEnabled } from '../../video-config';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 const LDAP_PATH = 'ldap-unknown-type';
 const POLICY = 'ldap-role-writer';
@@ -27,43 +26,6 @@ path "${LDAP_PATH}/role" { capabilities = ["list"] }
 `;
 
 let writerToken = '';
-
-// Drags the mouse from the start of `fromText` to the end of `toText` inside `scope`, so the recording
-// selects exactly the text being demoed. Text nodes are searched in document order.
-const dragSelect = async (page: Page, scope: Locator, fromText: string, toText = fromText) => {
-  const bounds = await scope.evaluate(
-    (root, { fromText, toText }) => {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      let start: { node: Node; offset: number } | undefined;
-      let end: { node: Node; offset: number } | undefined;
-      for (let node = walker.nextNode(); node && !end; node = walker.nextNode()) {
-        const text = node.textContent ?? '';
-        if (!start && text.includes(fromText)) start = { node, offset: text.indexOf(fromText) };
-        if (start && text.includes(toText)) end = { node, offset: text.indexOf(toText) + toText.length };
-      }
-      if (!start || !end) return null;
-      root.scrollIntoView({ block: 'center' });
-      const range = document.createRange();
-      range.setStart(start.node, start.offset);
-      range.setEnd(end.node, end.offset);
-      const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
-      const first = rects[0];
-      const last = rects[rects.length - 1];
-      return {
-        from: { x: first.left + 1, y: first.top + first.height / 2 },
-        to: { x: last.right - 1, y: last.top + last.height / 2 },
-      };
-    },
-    { fromText, toText }
-  );
-  if (!bounds) throw new Error(`Text "${fromText}" was not found to highlight`);
-  await page.mouse.move(bounds.from.x, bounds.from.y, { steps: 15 });
-  await page.waitForTimeout(400);
-  await page.mouse.down();
-  await page.mouse.move(bounds.to.x, bounds.to.y, { steps: 40 });
-  await page.mouse.up();
-  await page.waitForTimeout(1_800);
-};
 
 test.beforeAll(async ({ playwright }, testInfo) => {
   const api = await rootApi(playwright, testInfo);
@@ -106,7 +68,7 @@ test('LDAP create role flags an unknown mount type when the config cannot be rea
     await expect(page.getByRole('heading', { name: 'Create static role', level: 1 })).toBeVisible();
     await expect(page.getByText(NOTICE_TITLE)).toHaveCount(0);
     await expect(page.getByRole('radio', { name: /Static role/ })).toHaveCount(0);
-    if (isVideoEnabled) await page.waitForTimeout(1_500);
+    await holdForVideo(page);
   });
 
   await useToken(page, writerToken, [POLICY]);
@@ -124,9 +86,7 @@ test('LDAP create role flags an unknown mount type when the config cannot be rea
     // Both role types stay available because the mount could be root-managed.
     await expect(page.getByRole('radio', { name: /Static role/ })).toBeVisible();
     await expect(page.getByRole('radio', { name: /Dynamic role/ })).toBeVisible();
-    if (isVideoEnabled) {
-      const notice = page.locator('.hds-alert').filter({ hasText: NOTICE_TITLE });
-      await dragSelect(page, notice, NOTICE_TITLE, 'when creating static roles.');
-    }
+    const notice = page.locator('.hds-alert').filter({ hasText: NOTICE_TITLE });
+    await highlightText(page, notice, NOTICE_TITLE, 'when creating static roles.');
   });
 });

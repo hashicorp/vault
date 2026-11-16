@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cert
@@ -11,7 +11,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	var data struct {
@@ -42,17 +45,21 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 }
 
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login -method=cert [CONFIG K=V...]
+Usage: ` + binaryName + ` login -method=cert [CONFIG K=V...]
 
   The certificate auth method allows users to authenticate with a
   client certificate passed with the request. The -client-cert and -client-key
-  flags are included with the "vault login" command, NOT as configuration to the
+  flags are included with the "` + binaryName + ` login" command, NOT as configuration to the
   auth method.
 
   Authenticate using a local client certificate:
 
-      $ vault login -method=cert -client-cert=cert.pem -client-key=key.pem
+      $ ` + binaryName + ` login -method=cert -client-cert=cert.pem -client-key=key.pem
 
 Configuration:
 

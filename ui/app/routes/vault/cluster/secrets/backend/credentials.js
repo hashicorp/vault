@@ -91,8 +91,9 @@ export default Route.extend({
     try {
       return await this.api.secrets.awsReadRole(id, backend);
     } catch (e) {
-      // swallow error, non-essential data
-      return;
+      const { status } = await this.api.parseError(e);
+      if (status === 403) return;
+      throw e;
     }
   },
 

@@ -1,13 +1,15 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
 import { tracked } from '@glimmer/tracking';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
+import { singularize } from 'ember-inflector';
 
 /**
  * @module GeneratedItemList
@@ -22,12 +24,16 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} itemType - The type of item displayed.
  * @param {array} paths - Relevant to the link for the LinkTo element.
  * @param {class} methodModel - Model for the particular method selected.
+ * @param {object} urls - Item request paths from the generated-item-urls util.
  */
 
 export default class GeneratedItemList extends Component {
+  @service api;
+  @service controlGroup;
+  @service flashMessages;
   @service router;
-  @service pagination;
   @tracked itemToDelete = null;
+  @tracked controlGroupError = null;
 
   get breadcrumbs() {
     return [
@@ -44,10 +50,25 @@ export default class GeneratedItemList extends Component {
     ];
   }
 
-  @action
-  refreshItemList() {
-    const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
-    this.pagination.clearDataset();
-    route.refresh();
-  }
+  deleteItem = task(
+    waitFor(async (item) => {
+      const itemType = singularize(this.args.itemType);
+      this.controlGroupError = null;
+      try {
+        await this.api.request.delete(this.args.urls.delete(item.id));
+      } catch (error) {
+        const { message, response } = await this.api.parseError(error);
+        // A delete behind a Control Group needs approval; save the token so a retry after approval unwraps it.
+        if (response?.isControlGroupError) {
+          this.controlGroup.saveTokenFromError(response);
+          this.controlGroupError = this.controlGroup.logFromError(response);
+        } else {
+          this.flashMessages.danger(`There was an error deleting this ${itemType} ${message}`);
+        }
+        return;
+      }
+      this.flashMessages.success(`Successfully deleted ${itemType} ${item.id}.`);
+      getOwner(this).lookup(`route:${this.router.currentRouteName}`).refresh();
+    })
+  );
 }

@@ -1911,6 +1911,18 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 
 	require.NoError(t, err)
 
+	// After a duplicate-triggered reload, the store must stay in case-sensitive
+	// mode but go back to the original errorResolver instead of keeping the
+	// duplicateReportingErrorResolver installed.
+	c.identityStore.lock.RLock()
+	resolverAfterLoad := c.identityStore.conflictResolver
+	caseSensitiveNames := c.identityStore.disableLowerCasedNames
+	c.identityStore.lock.RUnlock()
+
+	require.True(t, caseSensitiveNames, "duplicate load must preserve case-sensitive names")
+	require.IsType(t, &errorResolver{}, resolverAfterLoad,
+		"load-only duplicate reporter must not remain installed for runtime upserts")
+
 	// Identity store should be loaded now. Check it's contents.
 
 	// We don't expect any actual behavior change just logs reporting duplicates.

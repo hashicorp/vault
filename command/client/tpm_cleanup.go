@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -37,7 +37,7 @@ func (c *TPMCleanupCommand) Help() string {
 Usage: ` + c.BinaryName + ` tpm cleanup [options]
 
   Removes the certificate and key material written to the state directory by
-  "vault tpm attest". The directory itself is preserved. Any other files in
+  "` + c.BinaryName + ` tpm attest". The directory itself is preserved. Any other files in
   the directory are not affected.
 
   The following files are removed:

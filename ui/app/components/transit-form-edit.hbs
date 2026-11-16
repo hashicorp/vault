@@ -1,10 +1,10 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 <form data-test-transit-edit-form onsubmit={{this.save}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @model={{@form}} />
+    <MessageError @errorMessage={{this.errorBanner}} />
     <NamespaceReminder @mode="edit" @noun="transit key" />
 
     {{#each @form.formFields as |attr|}}
@@ -27,9 +27,9 @@
               <select
                 name="min_decryption_version"
                 id="min_decryption_version"
-                onchange={{action (mut @form.data.min_decryption_version) value="target.value"}}
+                {{on "change" (fn this.updateVersion "min_decryption_version")}}
               >
-                {{#each @form.data.keyVersions as |version|}}
+                {{#each @form.keyVersions as |version|}}
                   <option selected={{loose-equal @form.data.min_decryption_version version}} value={{version}}>
                     <code>{{version}}</code>
                   </option>
@@ -50,14 +50,14 @@
               <select
                 name="min_encryption_version"
                 id="min_encryption_version"
-                onchange={{action (mut @form.data.min_encryption_version) value="target.value"}}
+                {{on "change" (fn this.updateVersion "min_encryption_version")}}
               >
                 <option selected={{loose-equal @form.data.min_encryption_version 0}} value={{0}}>
                   <code>Latest</code>
                   (currently
                   {{@form.data.latest_version}})
                 </option>
-                {{#each @form.data.encryptionKeyVersions as |version|}}
+                {{#each @form.encryptionKeyVersions as |version|}}
                   <option selected={{loose-equal @form.data.min_encryption_version version}} value={{version}}>
                     <code>{{version}}</code>
                   </option>
@@ -80,7 +80,7 @@
     <div class="field is-grouped">
       {{#if @capabilities.canUpdate}}
         <div class="control">
-          <Hds::Button @text="Update transit key" type="submit" />
+          <Hds::Button @text="Update transit key" type="submit" data-test-submit />
         </div>
       {{/if}}
       <div class="control">

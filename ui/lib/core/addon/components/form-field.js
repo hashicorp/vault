@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -188,6 +188,11 @@ export default class FormFieldComponent extends Component {
   get isReadOnly() {
     const readonly = this.args.attr.options?.readOnly || this.args.attr.options?.editDisabled || false;
     return readonly && this.args.mode === 'edit';
+  }
+
+  // Defer to the form's own validation error once it renders, so the field never shows both.
+  get showTtlMaxError() {
+    return !this.validationError;
   }
 
   get validationError() {

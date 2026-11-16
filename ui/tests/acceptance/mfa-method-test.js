@@ -29,7 +29,9 @@ module('Acceptance | mfa-method', function (hooks) {
   });
 
   test('it should display landing page when no methods exist', async function (assert) {
-    this.server.get('/identity/mfa/method/', () => new Response(404, {}, { errors: [] }));
+    const notFound = () => new Response(404, {}, { errors: [] });
+    this.server.get('/identity/mfa/method/', notFound);
+    this.server.get('/identity/mfa/method', notFound);
     await visit('/vault/access/mfa/methods');
     assert.strictEqual(
       currentRouteName(),
@@ -100,17 +102,30 @@ module('Acceptance | mfa-method', function (hooks) {
 
   test('it should display method details', async function (assert) {
     // ensure methods are tied to an enforcement
-    this.server.get('/identity/mfa/login-enforcement', () => {
+    const enforcementHandler = () => {
       const record = this.server.create('mfa-login-enforcement', {
         mfa_method_ids: this.getMethods().map((m) => m.id),
       });
-      return {
-        data: {
-          key_info: { [record.name]: record },
-          keys: [record.name],
+      const methodIds = this.getMethods().map((m) => m.id);
+      const enfName = record.name || 'test-enforcement';
+      const payload = {
+        key_info: {
+          [enfName]: {
+            name: enfName,
+            id: enfName,
+            mfa_method_ids: methodIds,
+            auth_method_accessors: ['auth_userpass_bb95c2b1'],
+            auth_method_types: ['userpass'],
+            identity_entity_ids: ['f831667b-7392-7a1c-c0fc-33d48cb1c57d'],
+            identity_group_ids: ['34db6b52-591e-bc22-8af0-4add5e167326'],
+          },
         },
+        keys: [enfName],
       };
-    });
+      return { data: payload, ...payload };
+    };
+    this.server.get('/identity/mfa/login-enforcement', enforcementHandler);
+    this.server.get('/identity/mfa/login-enforcement/', enforcementHandler);
     await visit('/vault/access/mfa/methods');
     await click('[data-test-mfa-method-list-item]');
     assert.dom('[data-test-tab="config"]').hasClass('active', 'Configuration tab is active by default');
@@ -166,7 +181,9 @@ module('Acceptance | mfa-method', function (hooks) {
   });
 
   test('it should delete method that is not associated with any login enforcements', async function (assert) {
-    this.server.get('/identity/mfa/login-enforcement', () => new Response(404, {}, { errors: [] }));
+    const notFound = () => new Response(404, {}, { errors: [] });
+    this.server.get('/identity/mfa/login-enforcement', notFound);
+    this.server.get('/identity/mfa/login-enforcement/', notFound);
 
     await visit('/vault/access/mfa/methods');
     const methodCount = this.element.querySelectorAll('[data-test-mfa-method-list-item]').length;

@@ -159,21 +159,21 @@ func (c *ServerCommand) Synopsis() string {
 
 func (c *ServerCommand) Help() string {
 	helpText := `
-Usage: vault server [options]
+Usage: ` + c.BinaryName + ` server [options]
 
   This command starts a Vault server that responds to API requests. By default,
   Vault will start in a "sealed" state. The Vault cluster must be initialized
-  before use, usually by the "vault operator init" command. Each Vault server must
-  also be unsealed using the "vault operator unseal" command or the API before the
+  before use, usually by the "` + c.BinaryName + ` operator init" command. Each Vault server must
+  also be unsealed using the "` + c.BinaryName + ` operator unseal" command or the API before the
   server can respond to requests.
 
   Start a server with a configuration file:
 
-      $ vault server -config=/etc/vault/config.hcl
+      $ ` + c.BinaryName + ` server -config=/etc/vault/config.hcl
 
   Run in "dev" mode:
 
-      $ vault server -dev -dev-root-token-id="root"
+      $ ` + c.BinaryName + ` server -dev -dev-root-token-id="root"
 
   For a full list of examples, please see the documentation.
 
@@ -2409,8 +2409,8 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 			if migrationStatus != nil {
 				startTime := migrationStatus.Start.Format(time.RFC3339)
 				c.UI.Error(base.WrapAtLength(fmt.Sprintf("ERROR! Storage migration in progress (started: %s). "+
-					"Server startup is prevented until the migration completes. Use 'vault operator migrate -reset' "+
-					"to force clear the migration lock.", startTime)))
+					"Server startup is prevented until the migration completes. Use '%s operator migrate -reset' "+
+					"to force clear the migration lock.", startTime, c.BinaryName)))
 				return true
 			}
 			return false

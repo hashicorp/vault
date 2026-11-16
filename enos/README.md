@@ -7,7 +7,7 @@ of the `build` workflow. While intended to be executed via Github Actions using
 the results of the `build` workflow, scenarios are also executable from a developer
 machine that has the requisite dependencies and configuration.
 
-Refer to the [Enos documentation](https://github.com/hashicorp/Enos-Docs)
+Refer to the [Enos documentation](https://hashicorp.atlassian.net/wiki/x/GQCKOwE)
 for further information regarding installation, execution or composing Enos scenarios.
 
 ## When to use Enos
@@ -99,7 +99,7 @@ enos scenario run upgrade artifact_source:local
 # To run the same scenario variants that are run in CI, refer to the scenarios listed
 # in json files under .github/enos-run-matrices directory,
 # adding `artifact_source:local` to run locally.
-enos scenario run smoke backend:consul consul_version:1.12.3 distro:ubuntu seal:awskms artifact_source:local arch:amd64 edition:oss
+enos scenario run smoke backend:consul distro:ubuntu seal:awskms artifact_source:local arch:amd64 edition:oss
 # Launch an individual scenario but leave infrastructure up after execution
 enos scenario launch smoke artifact_source:local
 # Check an individual scenario for validity. This is useful during scenario

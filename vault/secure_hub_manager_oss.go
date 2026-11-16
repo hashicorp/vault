@@ -8,6 +8,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 const (
@@ -15,6 +16,12 @@ const (
 )
 
 type SecureHubManager struct{}
+
+// recordBillingStreamFailure is a no-op in CE.
+func (c *Core) recordBillingStreamFailure(err error, now time.Time) {}
+
+// recordBillingStreamSuccess is a no-op in CE.
+func (c *Core) recordBillingStreamSuccess(now time.Time) {}
 
 // GetSecureHubManager returns the node's SecureHubManager. It returns nil if
 // the manager has not been initialized yet.

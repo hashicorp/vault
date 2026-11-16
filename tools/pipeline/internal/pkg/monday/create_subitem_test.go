@@ -107,6 +107,64 @@ func TestCreateSubitemReq_Run(t *testing.T) {
 	}
 	subitemRes := &CreateSubitemRes{SubitemID: "3333333333"}
 
+	// A status is sent in the same call as column_values, as a label on the
+	// "status" column. The mutation text is unchanged because create_subitem
+	// already declares column_values.
+	for name, tc := range map[string]struct {
+		status     string
+		wantValues string
+	}{
+		"status: label is sent as column_values": {status: "Not started", wantValues: `{"status":{"label":"Not started"}}`},
+		"status: label case is preserved":        {status: "Not Started", wantValues: `{"status":{"label":"Not Started"}}`},
+		"status: quotes in label are escaped":    {status: `Say "hi"`, wantValues: `{"status":{"label":"Say \"hi\""}}`},
+		"status: backslash in label is escaped":  {status: `a\b`, wantValues: `{"status":{"label":"a\\b"}}`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			req := &CreateSubitemReq{ParentItemID: "1210003", ItemName: "Release Checklist", Status: tc.status, retryDelay: time.Millisecond}
+			res, reqs, err := run(t, req, []serverReply{ok}, false)
+			require.NoError(t, err)
+			require.Equal(t, subitemRes, res)
+			require.Len(t, reqs, 1, "expected a single call")
+			require.Equal(t, createSubitemMutation, reqs[0].Query)
+			require.Equal(t, map[string]any{
+				"parentItemId": "1210003",
+				"itemName":     "Release Checklist",
+				"columnValues": tc.wantValues,
+			}, reqs[0].Variables)
+		})
+	}
+
+	// Every retry attempt must carry the same status.
+	t.Run("status: retried attempts keep the status", func(t *testing.T) {
+		t.Parallel()
+
+		req := &CreateSubitemReq{ParentItemID: "1210003", ItemName: "Release Checklist", Status: "Not started", retryDelay: time.Millisecond}
+		res, reqs, err := run(t, req, []serverReply{httpErr(429), httpErr(503), ok}, false)
+		require.NoError(t, err)
+		require.Equal(t, subitemRes, res)
+		require.Len(t, reqs, 3)
+		for _, r := range reqs {
+			require.Equal(t, `{"status":{"label":"Not started"}}`, r.Variables["columnValues"])
+		}
+	})
+
+	// Monday.com rejects an unknown or wrong-case label with a GraphQL error
+	// (for example missingLabel). Retrying cannot fix it, so it must surface
+	// after a single attempt.
+	t.Run("status: rejected label fails immediately without retrying", func(t *testing.T) {
+		t.Parallel()
+
+		missingLabel := serverReply{status: 200, body: `{"errors":[{"message":"missingLabel","extensions":{"code":"ColumnValueException"}}],"data":{"create_subitem":null}}`}
+		req := &CreateSubitemReq{ParentItemID: "1210003", ItemName: "Release Checklist", Status: "not started", retryDelay: time.Millisecond}
+		res, reqs, err := run(t, req, []serverReply{missingLabel}, false)
+		require.Nil(t, res)
+		require.ErrorContains(t, err, createSubitemErrorPrefix)
+		require.ErrorContains(t, err, "missingLabel")
+		require.Len(t, reqs, 1)
+	})
+
 	for name, tc := range map[string]struct {
 		req             *CreateSubitemReq
 		replies         []serverReply // the last reply repeats

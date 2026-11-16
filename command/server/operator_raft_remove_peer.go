@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -29,11 +29,11 @@ func (c *OperatorRaftRemovePeerCommand) Synopsis() string {
 
 func (c *OperatorRaftRemovePeerCommand) Help() string {
 	helpText := `
-Usage: vault operator raft remove-peer <server_id>
+Usage: ` + c.BinaryName + ` operator raft remove-peer <server_id>
 
   Removes a node from the Raft cluster.
 
-	  $ vault operator raft remove-peer node1
+	  $ ` + c.BinaryName + ` operator raft remove-peer node1
 
 ` + c.Flags().Help()
 

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -30,7 +30,7 @@ func (c *PluginInfoCommand) Synopsis() string {
 
 func (c *PluginInfoCommand) Help() string {
 	helpText := `
-Usage: vault plugin info [options] TYPE NAME
+Usage: ` + c.BinaryName + ` plugin info [options] TYPE NAME
 
   Displays information about a plugin in the catalog with the given name. If
   the plugin does not exist, an error is returned. The argument of type
@@ -38,7 +38,7 @@ Usage: vault plugin info [options] TYPE NAME
 
   Get info about a plugin:
 
-      $ vault plugin info database mysql-database-plugin
+      $ ` + c.BinaryName + ` plugin info database mysql-database-plugin
 
 ` + c.Flags().Help()
 

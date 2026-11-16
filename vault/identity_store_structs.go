@@ -125,6 +125,7 @@ type IdentityStore struct {
 	syntheticAliasAccessorValidator SyntheticAliasAccessorValidator
 	mfaBackend                      *LoginMFABackend
 	billingCounter                  BillingCounter
+	cohortChecker                   AgentRegistryCohortChecker
 
 	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
 	// which is name + accessor
@@ -210,6 +211,15 @@ type MountLister interface {
 }
 
 var _ MountLister = &Core{}
+
+// AgentRegistryCohortChecker reports whether an agent registry cohort exists,
+// so the identity store can protect the group the cohort owns. The cohort's
+// provider config is in the namespace identified by namespaceID.
+type AgentRegistryCohortChecker interface {
+	agentRegistryCohortExists(ctx context.Context, namespaceID string, cohort *identity.AgentRegistryCohort) (bool, error)
+}
+
+var _ AgentRegistryCohortChecker = &Core{}
 
 // resolvedProfileRef describes the OAuth Resource Server profile that an alias
 // profile reference ('profile_name', 'config_id' or a synthetic 'mount_accessor')

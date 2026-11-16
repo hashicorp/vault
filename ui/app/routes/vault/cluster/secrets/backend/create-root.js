@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2025, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
 import TransitKeyForm from 'vault/forms/transit/key';
 import SshRoleForm from 'vault/forms/ssh/role';
+import RoleAwsForm from 'vault/forms/aws-role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
 import TemplateForm from 'vault/forms/transform/template';
 import RoleForm from 'vault/forms/transform/role';
@@ -82,6 +83,9 @@ export default EditBase.extend({
         { backend, key_type: 'ca', not_before_duration: '30s', port: 22 },
         { isNew: true }
       );
+    }
+    if (modelType === 'role-aws') {
+      return new RoleAwsForm({ backend, credential_type: 'iam_user' }, { isNew: true });
     }
     if (modelType === 'transform/alphabet') {
       return new AlphabetForm({ backend }, { isNew: true });

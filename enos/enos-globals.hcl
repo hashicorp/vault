@@ -17,7 +17,6 @@ globals {
   }
   config_modes    = ["env", "file"]
   consul_editions = ["ce", "ent"]
-  consul_versions = ["1.18.2", "1.19.2", "1.20.6", "1.21.1"]
   distros_aws     = ["amzn", "rhel", "sles", "ubuntu"]
   distros_fyre    = ["centos", "rhel", "rocky", "sles", "ubuntu"]
   // Different distros may require different packages, or use different aliases for the same package

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -28,11 +28,11 @@ func (c *PluginReloadStatusCommand) Synopsis() string {
 
 func (c *PluginReloadStatusCommand) Help() string {
 	helpText := `
-Usage: vault plugin reload-status RELOAD_ID
+Usage: ` + c.BinaryName + ` plugin reload-status RELOAD_ID
 
   Retrieves the status of a recent cluster plugin reload.  The reload id must be provided.
 
-	  $ vault plugin reload-status d60a3e83-a598-4f3a-879d-0ddd95f11d4e
+	  $ ` + c.BinaryName + ` plugin reload-status d60a3e83-a598-4f3a-879d-0ddd95f11d4e
 
 ` + c.Flags().Help()
 

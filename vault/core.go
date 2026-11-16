@@ -121,6 +121,14 @@ const (
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
 
+	// maxPendingMFAPerEntity, maxPendingMFAPerSourceIP and maxPendingMFAGlobal
+	// cap the number of live (unexpired) pending MFA entries per entity, per
+	// source IP and across the whole queue. They are hard-coded for now;
+	// making them configurable is planned as a follow-up.
+	maxPendingMFAPerEntity   = 100
+	maxPendingMFAPerSourceIP = 1000
+	maxPendingMFAGlobal      = 100000
+
 	// defaultMaxTOTPValidateAttempts is the default value for the number
 	// of failed attempts to validate a request subject to TOTP MFA. If the
 	// number of failed totp passcode validations exceeds this max value, the
@@ -491,7 +499,10 @@ type Core struct {
 	// inFlightReqMap is used to store info about in-flight requests
 	inFlightReqData *InFlightRequests
 
-	// mfaResponseAuthQueue is used to cache the auth response per request ID
+	// mfaResponseAuthQueue caches the first-factor auth response for each
+	// pending MFA login request. It is nil after teardownLoginMFA, so access it
+	// under mfaResponseAuthQueueLock via PopMFAResponseAuthByID and
+	// SaveMFAResponseAuth, which handle the nil case.
 	mfaResponseAuthQueue     *LoginMFAPriorityQueue
 	mfaResponseAuthQueueLock sync.Mutex
 
@@ -4313,6 +4324,14 @@ type MFACachedAuthResponse struct {
 	SelfEnrollmentMFASecret *selfEnrollmentPendingMFASecret
 }
 
+// isExpired reports whether the cached first-factor authentication has outlived
+// ttl at the given time. An entry is expired at exactly TimeOfStorage + ttl. A
+// zero TimeOfStorage is treated as expired, so an entry that was never given a
+// storage time is rejected rather than accepted.
+func (r *MFACachedAuthResponse) isExpired(ttl time.Duration, now time.Time) bool {
+	return !now.Before(r.TimeOfStorage.Add(ttl))
+}
+
 // selfEnrollmentPendingMFASecret holds information about a TOTP Login MFA secret
 // that has been generated during a login request with self-enrollment enabled.
 // This secret is temporarily stored in memory until the user successfully
@@ -4326,6 +4345,9 @@ type selfEnrollmentPendingMFASecret struct {
 	Key string
 }
 
+// setupCachedMFAResponseAuth initializes the MFA auth response queue and
+// starts a goroutine that, every 5 seconds, removes expired entries in
+// bounded batches until the active context is cancelled.
 func (c *Core) setupCachedMFAResponseAuth() {
 	c.mfaResponseAuthQueueLock.Lock()
 	c.mfaResponseAuthQueue = NewLoginMFAPriorityQueue()
@@ -4514,20 +4536,52 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 	return lockedAliasesCount, nil
 }
 
-// PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
-// it returns the cached auth response or an error
+// PopMFAResponseAuthByID removes the entry with the given request ID from the
+// mfaResponseAuthQueue and returns the cached auth response. It returns
+// (nil, nil) if the queue is not initialized, the ID is not found, or the
+// entry has expired. The expiry check is needed because background cleanup
+// removes expired entries in bounded batches, so an expired entry can still be
+// in the queue. An expired entry is removed from the queue and not returned.
 func (c *Core) PopMFAResponseAuthByID(reqID string) (*MFACachedAuthResponse, error) {
 	c.mfaResponseAuthQueueLock.Lock()
 	defer c.mfaResponseAuthQueueLock.Unlock()
-	return c.mfaResponseAuthQueue.PopByKey(reqID)
+
+	if c.mfaResponseAuthQueue == nil {
+		return nil, nil
+	}
+
+	resp, err := c.mfaResponseAuthQueue.PopByKey(reqID)
+	if err != nil || resp == nil {
+		return nil, err
+	}
+
+	if resp.isExpired(defaultMFAAuthResponseTTL, time.Now()) {
+		return nil, nil
+	}
+	return resp, nil
 }
 
 // SaveMFAResponseAuth pushes an MFACachedAuthResponse to the mfaResponseAuthQueue.
-// it returns an error in case of failure
+// The per-entity, per-source-IP and global pending limits apply, including when
+// re-pushing an entry after a failed validation. A rejection returns an
+// *mfaPendingLimitError and increments the core.mfa.pending_rejected metric,
+// labeled with the scope that was full. It returns an error if the queue is not
+// initialized, for example after teardownLoginMFA has run, or if the push fails.
 func (c *Core) SaveMFAResponseAuth(respAuth *MFACachedAuthResponse) error {
 	c.mfaResponseAuthQueueLock.Lock()
 	defer c.mfaResponseAuthQueueLock.Unlock()
-	return c.mfaResponseAuthQueue.Push(respAuth)
+
+	if c.mfaResponseAuthQueue == nil {
+		return errors.New("login MFA response queue is not initialized")
+	}
+	err := c.mfaResponseAuthQueue.Push(respAuth)
+	var limitErr *mfaPendingLimitError
+	if errors.As(err, &limitErr) {
+		metrics.IncrCounterWithLabels([]string{"core", "mfa", "pending_rejected"}, 1,
+			[]metrics.Label{{Name: "scope", Value: limitErr.scope}})
+		c.Logger().Debug("rejected pending MFA entry: limit reached", "scope", limitErr.scope)
+	}
+	return err
 }
 
 type InFlightRequests struct {

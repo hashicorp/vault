@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -55,7 +55,7 @@ func (c *OperatorInitCommand) Synopsis() string {
 
 func (c *OperatorInitCommand) Help() string {
 	helpText := `
-Usage: vault operator init [options]
+Usage: ` + c.BinaryName + ` operator init [options]
 
   Initializes a Vault server. Initialization is the process by which Vault's
   storage backend is prepared to receive data. Since Vault servers share the
@@ -72,18 +72,18 @@ Usage: vault operator init [options]
 
   Start initialization with the default options:
 
-      $ vault operator init
+      $ ` + c.BinaryName + ` operator init
 
   Initialize, but encrypt the unseal keys with pgp keys:
 
-      $ vault operator init \
+      $ ` + c.BinaryName + ` operator init \
           -key-shares=3 \
           -key-threshold=2 \
           -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
 
   Encrypt the initial root token using a pgp key:
 
-      $ vault operator init -root-token-pgp-key="keybase:hashicorp"
+      $ ` + c.BinaryName + ` operator init -root-token-pgp-key="keybase:hashicorp"
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
@@ -418,8 +418,8 @@ func (c *OperatorInitCommand) consulAuto(client *api.Client, req *api.InitReques
 		c.UI.Output(base.WrapAtLength(fmt.Sprintf(
 			"Discovered %d uninitialized Vault servers with Consul service name "+
 				"%q. To initialize these Vaults, set any one of the following "+
-				"environment variables and run \"vault operator init\":",
-			len(uninitedVaults), c.flagConsulService)))
+				"environment variables and run \"%s operator init\":",
+			len(uninitedVaults), c.flagConsulService, c.BinaryName)))
 		c.UI.Output("")
 
 		// Print valid commands to make setting the variables easier
@@ -491,7 +491,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		c.UI.Output("")
 		c.UI.Output(base.WrapAtLength(
 			"It is possible to generate new unseal keys, provided you have a quorum " +
-				"of existing unseal keys shares. See \"vault operator rekey\" for " +
+				"of existing unseal keys shares. See \"" + c.BinaryName + " operator rekey\" for " +
 				"more information."))
 	} else {
 		c.UI.Output("")

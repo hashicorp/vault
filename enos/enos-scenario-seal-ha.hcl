@@ -48,7 +48,6 @@ scenario "seal_ha" {
     backend         = global.backends
     config_mode     = global.config_modes
     consul_edition  = global.consul_editions
-    consul_version  = global.consul_versions
     distro          = global.distros_aws
     edition         = global.enterprise_editions
     ip_version      = global.ip_versions
@@ -318,7 +317,7 @@ scenario "seal_ha" {
       license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       }
     }
   }
@@ -379,7 +378,7 @@ scenario "seal_ha" {
       consul_license          = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
       hosts                = step.create_vault_cluster_targets.hosts

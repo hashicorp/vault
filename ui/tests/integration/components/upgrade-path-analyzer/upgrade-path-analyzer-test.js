@@ -44,22 +44,16 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
     );
     assert.dom(GENERAL.breadcrumbs).exists('Breadcrumbs are rendered');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Upgrade path analyzer', 'Page title is correct');
+    assert
+      .dom(`${GENERAL.hdsPageHeaderDescription} a`)
+      .exists('Feedback link is rendered in header description');
+    assert
+      .dom(`${GENERAL.hdsPageHeaderDescription} a`)
+      .hasAttribute('href', FEEDBACK_SURVEY_URL, 'Feedback link points to the survey URL');
     assert.dom(GENERAL.cardContainer('version-selection')).exists('Card container is rendered');
     assert
       .dom(GENERAL.cardContainer('Known issues'))
       .doesNotExist('Known issues card is not rendered during the initial state');
-  });
-
-  test('it renders a beta banner with a feedback link', async function (assert) {
-    await render(
-      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
-    );
-    assert.dom('[data-test-beta-banner]').exists('Beta banner is rendered');
-    assert.dom('[data-test-beta-banner]').containsText('Beta feature', 'Beta banner title is correct');
-    assert.dom('[data-test-feedback-link]').exists('Feedback link is rendered inside the beta banner');
-    assert
-      .dom('[data-test-feedback-link]')
-      .hasAttribute('href', FEEDBACK_SURVEY_URL, 'Feedback link points to the survey URL');
   });
 
   test('Analyze button is enabled on page load with the latest version pre-selected', async function (assert) {

@@ -47,7 +47,7 @@ test('generated-user fields preserve create, edit and delete outcomes', async ({
     await page.getByRole('textbox', { name: 'Username', exact: true }).fill(username);
     await page.getByRole('textbox', { name: 'password', exact: true }).fill('disposable-password');
     await page.getByRole('button', { name: 'Tokens', exact: true }).click();
-    await page.locator('[data-test-input="tokenPolicies"] textarea').first().fill('default');
+    await page.locator('[data-test-input="token_policies"] textarea').first().fill('default');
     const saved = page.waitForResponse(
       (response) => response.url().endsWith(userPath) && response.request().method() === 'POST'
     );
@@ -66,8 +66,8 @@ test('generated-user fields preserve create, edit and delete outcomes', async ({
     await expect(page.getByRole('heading', { name: username, exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Edit user', exact: true }).click();
     await page.getByRole('button', { name: 'Tokens', exact: true }).click();
-    await expect(page.locator('[data-test-input="tokenPolicies"] textarea').first()).toHaveValue('default');
-    await page.locator('[data-test-input="tokenPolicies"] textarea').nth(1).fill('metadata-policy');
+    await expect(page.locator('[data-test-input="token_policies"] textarea').first()).toHaveValue('default');
+    await page.locator('[data-test-input="token_policies"] textarea').nth(1).fill('metadata-policy');
     const saved = page.waitForResponse(
       (response) => response.url().endsWith(userPath) && response.request().method() === 'PUT'
     );
@@ -79,13 +79,13 @@ test('generated-user fields preserve create, edit and delete outcomes', async ({
     expect((await response.json()).data.token_policies).toEqual(['default', 'metadata-policy']);
     await page.goto(`${listRoute}/edit/${username}`);
     await page.getByRole('button', { name: 'Tokens', exact: true }).click();
-    await expect(page.locator('[data-test-input="tokenPolicies"] textarea').nth(1)).toHaveValue(
+    await expect(page.locator('[data-test-input="token_policies"] textarea').nth(1)).toHaveValue(
       'metadata-policy'
     );
     await page.reload();
     await page.getByRole('button', { name: 'Tokens', exact: true }).click();
-    await expect(page.locator('[data-test-input="tokenPolicies"] textarea').first()).toHaveValue('default');
-    await expect(page.locator('[data-test-input="tokenPolicies"] textarea').nth(1)).toHaveValue(
+    await expect(page.locator('[data-test-input="token_policies"] textarea').first()).toHaveValue('default');
+    await expect(page.locator('[data-test-input="token_policies"] textarea').nth(1)).toHaveValue(
       'metadata-policy'
     );
   });
@@ -178,8 +178,10 @@ test('generated-user read-only token cannot change persisted data', async ({ pag
     await test.step('read-only values render but a UI update is denied without changing state', async () => {
       await page.goto(`access/${mount}/item/user/edit/readonly-user`);
       await page.getByRole('button', { name: 'Tokens', exact: true }).click();
-      await expect(page.locator('[data-test-input="tokenPolicies"] textarea').first()).toHaveValue('default');
-      await page.locator('[data-test-input="tokenPolicies"] textarea').first().fill('unauthorized-policy');
+      await expect(page.locator('[data-test-input="token_policies"] textarea').first()).toHaveValue(
+        'default'
+      );
+      await page.locator('[data-test-input="token_policies"] textarea').first().fill('unauthorized-policy');
       const rejected = page.waitForResponse(
         (response) => response.url().endsWith(userPath) && response.request().method() === 'PUT'
       );
@@ -191,7 +193,9 @@ test('generated-user read-only token cannot change persisted data', async ({ pag
       expect((await response.json()).data.token_policies).toEqual(['default']);
       await page.reload();
       await page.getByRole('button', { name: 'Tokens', exact: true }).click();
-      await expect(page.locator('[data-test-input="tokenPolicies"] textarea').first()).toHaveValue('default');
+      await expect(page.locator('[data-test-input="token_policies"] textarea').first()).toHaveValue(
+        'default'
+      );
     });
 
     await test.step('denied UI create does not create backend data', async () => {
@@ -217,12 +221,9 @@ test('generated-user read-only token cannot change persisted data', async ({ pag
       const rejected = page.waitForResponse(
         (response) => response.url().endsWith(userPath) && response.request().method() === 'DELETE'
       );
-      // ListItem yields twice; the menu's second dialog owns its callMethod task.
-      await page
-        .getByRole('dialog', { name: 'Delete user?', exact: true })
-        .last()
-        .getByRole('button', { name: 'Confirm', exact: true })
-        .click();
+      const dialog = page.getByRole('dialog', { name: 'Delete user?', exact: true });
+      await expect(dialog).toHaveCount(1);
+      await dialog.getByRole('button', { name: 'Confirm', exact: true }).click();
       expect((await rejected).status()).toBe(403);
       await expect(page.getByText('There was an error deleting this user', { exact: false })).toBeVisible();
       expect((await (await api.get(userPath)).json()).data.token_policies).toEqual(['default']);

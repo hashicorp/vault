@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import Sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { PKI_ROLE_GENERATE } from 'vault/tests/helpers/pki/pki-selectors';
 import PkiCertificateForm from 'vault/forms/secrets/pki/certificate';
 
@@ -81,5 +82,37 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     assert
       .dom(GENERAL.infoRowValue('Serial number'))
       .hasText('abcd-efgh-ijkl', 'shows serial number info row');
+  });
+
+  test('it blocks a TTL longer than Vault supports', async function (assert) {
+    assert.expect(6);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.ttl.input('TTL'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL_PICKER.error).hasText('TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.dom(PKI_ROLE_GENERATE.alert).hasText('There is an error with this form.');
+    assert.true(this.issueStub.notCalled, 'no certificate is issued');
+    assert.dom(PKI_ROLE_GENERATE.form).exists('the form stays open');
+
+    await fillIn(GENERAL.ttl.input('TTL'), '106751');
+    await click(GENERAL.submitButton);
+    assert.true(this.issueStub.calledOnce, 'the certificate is issued once the TTL is valid');
+    assert.strictEqual(this.issueStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
+  });
+
+  test('it blocks a TTL too long to be stored as a number', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    // The TTL picker turns this many digits into Infinity, which it sends as the string "Infinityh".
+    await fillIn(GENERAL.ttl.input('TTL'), '9'.repeat(400));
+    await fillIn(TTL_PICKER.unitInputByLabel('TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(PKI_ROLE_GENERATE.alert).hasText('There is an error with this form.');
+    assert.true(this.issueStub.notCalled, 'no certificate is issued');
   });
 });

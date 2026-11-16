@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -31,7 +31,7 @@ func (c *TPMInspectCommand) Help() string {
 	helpText := `
 Usage: ` + c.BinaryName + ` tpm inspect [options]
 
-  Reads the attestation state directory written by "vault tpm attest" and
+  Reads the attestation state directory written by "` + c.BinaryName + ` tpm attest" and
   displays information about the stored certificate and key material without
   contacting Vault or opening the TPM device:
 

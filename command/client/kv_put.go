@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -51,7 +51,7 @@ Usage: ` + c.BinaryName + ` kv put [options] KEY [DATA]
 
   Or it can be read from stdin using the "-" symbol:
 
-      $ echo "abcd1234" | vault kv put -mount=secret foo bar=-
+      $ echo "abcd1234" | ` + c.BinaryName + ` kv put -mount=secret foo bar=-
 
   To perform a Check-And-Set operation, specify the -cas flag with the
   appropriate version number corresponding to the key you want to perform

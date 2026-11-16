@@ -4,9 +4,8 @@
  */
 
 import { expect } from '@playwright/test';
-import { test } from '../../fixtures/demo';
+import { holdForVideo, test } from '../../fixtures/demo';
 import { ensureMount, rootApi } from '../../fixtures/root-api';
-import { isVideoEnabled } from '../../video-config';
 
 import type { APIRequestContext } from '@playwright/test';
 
@@ -55,7 +54,7 @@ test('privileged user is offered the Manage menu on LDAP role details', async ({
       await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 
       await page.getByRole('button', { name: 'Manage' }).click();
-      if (isVideoEnabled) await page.waitForTimeout(1_500);
+      await holdForVideo(page);
       // HDS renders the items as links and buttons inside the opened list.
       for (const action of actions) {
         await expect(page.getByRole('listitem').filter({ hasText: action })).toBeVisible();

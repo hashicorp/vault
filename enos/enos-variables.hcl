@@ -68,6 +68,12 @@ variable "blackbox_test_filter" {
   default     = []
 }
 
+variable "consul_version" {
+  description = "The version of Consul to use when the storage backend is Consul"
+  type        = string
+  default     = "1.21.1"
+}
+
 variable "fyre_expiration" {
   type        = string
   description = "The Fyre VM expiration time in hours"

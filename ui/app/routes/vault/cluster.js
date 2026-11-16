@@ -61,7 +61,7 @@ export default class ClusterRoute extends Route {
   @service store;
   @service version;
 
-  modelTypes = ['node', 'secret', 'secret-engine'];
+  modelTypes = ['node', 'secret'];
 
   queryParams = {
     namespaceQueryParam: {

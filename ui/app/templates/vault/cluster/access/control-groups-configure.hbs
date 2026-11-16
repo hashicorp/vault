@@ -16,7 +16,7 @@
     </:breadcrumbs>
   </Page::Header>
 
-  <EditForm @model={{this.model}} @onSave={{action "onSave"}} />
+  <ControlGroupConfigForm @form={{this.model}} />
 {{else}}
   <UpgradePage @title="Approval workflow" @minimumEdition="Vault Enterprise Premium" />
 {{/if}}

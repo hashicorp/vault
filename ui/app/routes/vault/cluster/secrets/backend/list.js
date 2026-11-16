@@ -18,15 +18,18 @@ import { getKeymgmtProviderIcon } from 'vault/utils/keymgmt-provider-utils';
 import { getModelTypeForEngine } from 'vault/utils/model-helpers/secret-engine-helpers';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { resolve } from 'rsvp';
+import RoleAwsResource from 'vault/resources/aws-role';
 import {
   SecretsApiKeyManagementListKeysListEnum,
   SecretsApiKeyManagementListKmsProvidersListEnum,
   SecretsApiTotpListKeysListEnum,
   SecretsApiSshListRolesListEnum,
+  SecretsApiAwsListRolesListEnum,
   SecretsApiTransformListTransformationsListEnum,
   SecretsApiTransformListRolesListEnum,
   SecretsApiTransformListTemplatesListEnum,
   SecretsApiTransformListAlphabetsListEnum,
+  SecretsApiTransitListKeysListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
@@ -105,6 +108,8 @@ export default Route.extend({
       effectiveType === 'keymgmt' ||
       effectiveType === 'totp' ||
       effectiveType === 'ssh' ||
+      effectiveType === 'aws' ||
+      effectiveType === 'transit' ||
       effectiveType === 'transform'
     ) {
       return resolve();
@@ -116,6 +121,33 @@ export default Route.extend({
 
   getModelType(type, tab) {
     return getModelTypeForEngine(type, { tab });
+  },
+
+  async fetchTransitKeys(backend, page, pageFilter) {
+    let response;
+    try {
+      response = await this.api.secrets.transitListKeys(backend, SecretsApiTransitListKeysListEnum.TRUE);
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return paginate([], { page });
+      }
+      throw error;
+    }
+
+    const keys = response.keys || [];
+    const paths = keys.map((name) => this.capabilitiesService.pathFor('transitKey', { backend, name }));
+    const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+    const items = keys.map((name) => {
+      const path = this.capabilitiesService.pathFor('transitKey', { backend, name });
+      return {
+        id: name,
+        backend,
+        canRead: capabilities[path]?.canRead === true,
+        canEdit: capabilities[path]?.canUpdate === true,
+      };
+    });
+    return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
   },
 
   async fetchTotpKeys(backend, page, pageFilter) {
@@ -137,7 +169,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -182,7 +214,7 @@ export default Route.extend({
   async fetchKeymgmtKeys(backend, page, pageFilter) {
     try {
       const { keysList } = await this.fetchKeysWithCapabilities(backend);
-      return paginate(keysList, { page, filter: pageFilter });
+      return paginate(keysList, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -236,7 +268,7 @@ export default Route.extend({
   async fetchKeymgmtProviders(backend, page, pageFilter) {
     try {
       const { providersList } = await this.fetchProvidersWithCapabilities(backend);
-      return paginate(providersList, { page, filter: pageFilter });
+      return paginate(providersList, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -302,12 +334,41 @@ export default Route.extend({
   async fetchSshRoles(backend, page, pageFilter) {
     try {
       const roles = await this.fetchSshRolesWithCapabilities(backend);
-      return paginate(roles, { page, filter: pageFilter });
+      return paginate(roles, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
         return [];
       }
+      throw error;
+    }
+  },
+
+  async fetchAwsRoles(backend, page, pageFilter) {
+    try {
+      const response = await this.api.secrets.awsListRoles(backend, SecretsApiAwsListRolesListEnum.TRUE);
+      const names = response.keys || [];
+      const paths = names.flatMap((name) => [`${backend}/roles/${name}`, `${backend}/creds/${name}`]);
+      const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+      const roles = names.map((name) => {
+        const role = capabilities[`${backend}/roles/${name}`];
+        const credentials = capabilities[`${backend}/creds/${name}`];
+        return new RoleAwsResource(
+          {
+            name,
+            backend,
+            canRead: role?.canRead || false,
+            canEdit: role?.canUpdate || false,
+            canDelete: role?.canDelete || false,
+            canGenerate: credentials?.canUpdate || false,
+          },
+          this
+        );
+      });
+      return paginate(roles, { page, filter: pageFilter, filterKey: 'name' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) return [];
       throw error;
     }
   },
@@ -337,7 +398,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -372,7 +433,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -409,7 +470,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -446,7 +507,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -463,9 +524,12 @@ export default Route.extend({
     const effectiveType = getEffectiveEngineType(backendModel.engineType);
     const modelType = this.getModelType(effectiveType, params.tab);
 
-    // Handle TOTP, keymgmt and ssh resources with API service
+    // API-backed resources bypass legacy model adapters and store pagination.
     let secrets;
-    if (effectiveType === 'totp') {
+    if (effectiveType === 'transit') {
+      secrets = await this.fetchTransitKeys(backend, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    } else if (effectiveType === 'totp') {
       const page = getValidPage(params.page);
       secrets = await this.fetchTotpKeys(backend, page, params.pageFilter);
       this.set('has404', false);
@@ -477,6 +541,9 @@ export default Route.extend({
           ? await this.fetchKeymgmtProviders(backend, page, filter)
           : await this.fetchKeymgmtKeys(backend, page, filter);
 
+      this.set('has404', false);
+    } else if (effectiveType === 'aws') {
+      secrets = await this.fetchAwsRoles(backend, getValidPage(params.page), params.pageFilter);
       this.set('has404', false);
     } else if (effectiveType === 'ssh') {
       const page = getValidPage(params.page);

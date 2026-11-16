@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -27,7 +27,7 @@ func (c *OperatorStepDownCommand) Synopsis() string {
 
 func (c *OperatorStepDownCommand) Help() string {
 	helpText := `
-Usage: vault operator step-down [options]
+Usage: ` + c.BinaryName + ` operator step-down [options]
 
   Forces the Vault server at the given address to step down from active duty.
   While the affected node will have a delay before attempting to acquire the
@@ -37,7 +37,7 @@ Usage: vault operator step-down [options]
 
   Force Vault to step down as the leader:
 
-      $ vault operator step-down
+      $ ` + c.BinaryName + ` operator step-down
 
 ` + c.Flags().Help()
 

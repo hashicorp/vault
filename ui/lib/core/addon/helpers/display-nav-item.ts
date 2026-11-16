@@ -116,7 +116,10 @@ export default class NavBar extends Helper {
   }
 
   get supportsSnapshots() {
-    return (this.cluster && !this.cluster?.dr?.isSecondary) || !this.flags.isHvdManaged;
+    return (
+      (this.cluster && !this.cluster?.dr?.isSecondary && !this.namespace.inHvdAdminNamespace) ||
+      !this.flags.isHvdManaged
+    );
   }
 
   get canAccessVaultUsageDashboard() {

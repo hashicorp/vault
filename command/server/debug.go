@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -202,7 +202,7 @@ func (c *DebugCommand) Flags() *base.FlagSets {
 
 func (c *DebugCommand) Help() string {
 	helpText := `
-Usage: vault debug [options]
+Usage: ` + c.BinaryName + ` debug [options]
 
   Probes a specific Vault server node for a specified period of time, recording
   information about the node, its cluster, and its host environment. The
@@ -216,17 +216,17 @@ Usage: vault debug [options]
   To create a debug package using default duration and interval values in the
   current directory that captures all applicable targets:
 
-  $ vault debug
+  $ ` + c.BinaryName + ` debug
 
   To create a debug package with a specific duration and interval in the current
   directory that capture all applicable targets:
 
-  $ vault debug -duration=10m -interval=1m
+  $ ` + c.BinaryName + ` debug -duration=10m -interval=1m
 
   To create a debug package in the current directory with a specific sub-set of
   targets:
 
-  $ vault debug -target=host -target=metrics
+  $ ` + c.BinaryName + ` debug -target=host -target=metrics
 
 ` + c.Flags().Help()
 

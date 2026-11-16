@@ -11,7 +11,6 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
@@ -47,13 +46,6 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
         }
       );
     };
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it should render tab page header', async function (assert) {

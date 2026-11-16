@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -14,6 +14,9 @@ import (
 )
 
 type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+
 	// for tests
 	testStdout io.Writer
 }
@@ -69,8 +72,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 }
 
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login -method=github [CONFIG K=V...]
+Usage: ` + binaryName + ` login -method=github [CONFIG K=V...]
 
   The GitHub auth method allows users to authenticate using a GitHub
   personal access token. Users can generate a personal access token from the
@@ -78,13 +85,13 @@ Usage: vault login -method=github [CONFIG K=V...]
 
   Authenticate using a GitHub token:
 
-      $ vault login -method=github token=abcd1234
+      $ ` + binaryName + ` login -method=github token=abcd1234
 
 Configuration:
 
   mount=<string>
       Path where the GitHub credential method is mounted. This is usually
-      provided via the -path flag in the "vault login" command, but it can be
+      provided via the -path flag in the "` + binaryName + ` login" command, but it can be
       specified here as well. If specified here, it takes precedence over the
       value for -path. The default value is "github".
 

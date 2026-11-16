@@ -9,7 +9,8 @@
 
 globals {
   sample_attributes = {
-    aws_region              = ["us-east-1", "us-east-2", "us-west-2"]
+    aws_region              = ["us-east-1", "us-west-2"]
+    consul_version          = ["1.18.2", "1.19.2", "1.20.6", "1.21.1"]
     distro_version_amzn     = ["2023"]
     distro_version_rhel     = ["8.10", "9.7", "10.1"]
     distro_version_sles     = ["15.7", "16.0"]

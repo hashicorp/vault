@@ -36,7 +36,8 @@
           @value={{this.time}}
           @type="text"
           name="time"
-          class="input {{if this.errorMessage 'has-error'}}"
+          class="input {{if this.validationMessage 'has-error'}}"
+          aria-describedby={{if this.validationMessage (concat "error-time-" this.elementId)}}
           oninput={{perform this.updateTime value="target.value"}}
           pattern="[0-9]*"
           data-test-ttl-value={{this.label}}
@@ -54,17 +55,14 @@
           data-test-ttl-unit={{this.label}}
         />
       </div>
-      {{#if this.errorMessage}}
-        <div class="columns is-mobile is-variable is-1 ttl-value-error">
-          <div class="is-narrow message-icon">
-            <Icon @name="x-square-fill" class="has-text-danger" />
-          </div>
-          <div class="has-text-danger">
-            {{this.errorMessage}}
-          </div>
-        </div>
-      {{/if}}
     </fieldset>
+    {{#if this.validationMessage}}
+      <Hds::Form::Error
+        @controlId={{concat "time-" this.elementId}}
+        class="ttl-value-error"
+        data-test-ttl-error={{this.label}}
+      >{{this.validationMessage}}</Hds::Form::Error>
+    {{/if}}
   {{else}}
     <Toggle
       @name={{this.label}}
@@ -107,7 +105,8 @@
               @value={{this.time}}
               @type="text"
               name="time"
-              class="input {{if this.errorMessage 'has-error'}}"
+              class="input {{if this.validationMessage 'has-error'}}"
+              aria-describedby={{if this.validationMessage (concat "error-time-" this.elementId)}}
               oninput={{perform this.updateTime value="target.value"}}
               pattern="[0-9]*"
               data-test-ttl-value={{this.label}}
@@ -125,18 +124,15 @@
               data-test-ttl-unit={{this.label}}
             />
           </div>
-          {{#if this.errorMessage}}
-            <div class="columns is-mobile is-variable is-1 ttl-value-error">
-              <div class="is-narrow message-icon">
-                <Icon @name="x-square-fill" class="has-text-danger" />
-              </div>
-              <div class="has-text-danger">
-                {{this.errorMessage}}
-              </div>
-            </div>
-          {{/if}}
         {{/if}}
       </fieldset>
+      {{#if (and (or this.enableTTL @hideToggle) this.validationMessage)}}
+        <Hds::Form::Error
+          @controlId={{concat "time-" this.elementId}}
+          class="ttl-value-error"
+          data-test-ttl-error={{this.label}}
+        >{{this.validationMessage}}</Hds::Form::Error>
+      {{/if}}
     </Toggle>
   {{/if}}
 </div>

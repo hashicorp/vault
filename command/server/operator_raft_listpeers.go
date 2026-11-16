@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -29,16 +29,16 @@ func (c *OperatorRaftListPeersCommand) Synopsis() string {
 
 func (c *OperatorRaftListPeersCommand) Help() string {
 	helpText := `
-Usage: vault operator raft list-peers
+Usage: ` + c.BinaryName + ` operator raft list-peers
 
   Provides the details of all the peers in the Raft cluster.
 
-	  $ vault operator raft list-peers
+	  $ ` + c.BinaryName + ` operator raft list-peers
 
   Provides the details of all the peers in the Raft cluster of a DR secondary
   cluster. This command should be invoked on the DR secondary nodes.
 
-      $ vault operator raft list-peers -dr-token <dr-operation-token>
+      $ ` + c.BinaryName + ` operator raft list-peers -dr-token <dr-operation-token>
 
 ` + c.Flags().Help()
 

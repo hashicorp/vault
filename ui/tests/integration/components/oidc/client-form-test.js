@@ -13,7 +13,6 @@ import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { SELECTORS } from 'vault/tests/helpers/oidc-config';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import OidcClientForm from 'vault/forms/oidc/client';
@@ -73,16 +72,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         />
       `);
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it should save new client', async function (assert) {
@@ -93,9 +82,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
     assert.strictEqual(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
-    assert
-      .dom('[data-test-oidc-radio="allow-all"] input')
-      .isChecked('Allow all radio button selected by default');
+    assert.dom('[data-test-oidc-radio="allow-all"]').isChecked('Allow all radio button selected by default');
     assert.dom('[data-test-ttl-value="ID Token TTL"]').hasValue('1', 'ttl defaults to 24h');
     assert.dom('[data-test-ttl-value="Access Token TTL"]').hasValue('1', 'ttl defaults to 24h');
     assert.dom('[data-test-selected-option]').hasText('default', 'Search select has default key selected');
@@ -149,7 +136,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert
       .dom('[data-test-input-group="client_type"] input#public')
       .isChecked('Correct radio button is selected');
-    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"]').isChecked('Allow all radio button is selected');
     await click(SELECTORS.clientSaveButton);
     assert.true(this.apiStub.calledWith('test-app'), 'API called with correct parameters');
     assert.true(this.onSave.called, 'onSave callback is called on successful save');

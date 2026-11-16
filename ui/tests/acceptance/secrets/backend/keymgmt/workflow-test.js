@@ -7,12 +7,15 @@ import { click, currentRouteName, fillIn, settled, visit, waitUntil } from '@emb
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupApplicationTest } from 'ember-qunit';
 import { module, test } from 'qunit';
+import { v4 as uuidv4 } from 'uuid';
 
 import { create } from 'ember-cli-page-object';
 import secretsNavTestHelper from 'vault/tests/acceptance/secrets/secrets-nav-test-helper';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
@@ -32,6 +35,56 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
   });
 
   secretsNavTestHelper(test, 'keymgmt');
+
+  for (const tab of ['Keys', 'Providers']) {
+    test(`it filters Key Management ${tab.toLowerCase()} by name`, async function (assert) {
+      const backend = `keymgmt-${uuidv4()}`;
+      const names = ['test-item', 'other-item'];
+      const filterInput = '[data-test-component="navigate-input"]';
+
+      if (tab === 'Providers') {
+        this.server.get(`/${backend}/kms`, () => ({ data: { keys: names } }));
+        for (const name of names) {
+          this.server.get(`/${backend}/kms/${name}`, () => ({
+            data: { provider: 'azurekeyvault', key_collection: 'test-keyvault' },
+          }));
+        }
+      }
+
+      await runCmd(mountEngineCmd('keymgmt', backend));
+      try {
+        if (tab === 'Keys') {
+          for (const name of names) {
+            await runCmd(`write ${backend}/key/${name} type=rsa-2048`);
+          }
+        }
+        await visit(`/vault/secrets-engines/${backend}/list`);
+        await click(GENERAL.secretTab(tab));
+        assert.dom(SES.secretLink('test-item')).exists('The matching item appears before filtering');
+        assert.dom(SES.secretLink('other-item')).exists('The other item appears before filtering');
+
+        await fillIn(filterInput, 'test-item');
+        assert.dom(SES.secretLink('test-item')).exists('An exact name match remains visible');
+        assert.dom(SES.secretLink('other-item')).doesNotExist('Nonmatching items are hidden');
+
+        await fillIn(filterInput, 'OTHER');
+        assert.dom(SES.secretLink('other-item')).exists('Partial matching is case-insensitive');
+        assert.dom(SES.secretLink('test-item')).doesNotExist('The previous match is no longer visible');
+
+        await fillIn(filterInput, 'missing-item');
+        assert.dom(SES.secretLink()).doesNotExist('No items appear for an unmatched filter');
+        assert
+          .dom(GENERAL.emptyStateTitle)
+          .includesText(`There are no ${tab.toLowerCase()} matching "missing-item".`);
+
+        await fillIn(filterInput, '');
+        assert.dom(SES.secretLink('test-item')).exists('Clearing the filter restores the matching item');
+        assert.dom(SES.secretLink('other-item')).exists('Clearing the filter restores the other item');
+      } finally {
+        await runCmd(`delete sys/mounts/${backend}`);
+      }
+    });
+  }
 
   test('it should display keymgmt configuration and tune keymgmt in the general settings form', async function (assert) {
     await consoleComponent.runCommands([

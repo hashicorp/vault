@@ -380,26 +380,29 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			resp, err = client.Logical().Read(fmt.Sprintf("transit/keys/%s", keyName))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp == nil {
+				t.Fatal("expected non-nil response")
+			}
+			gotRaw, ok := resp.Data["auto_rotate_period"].(json.Number)
+			if !ok {
+				t.Fatal("returned value is of unexpected type")
+			}
+			got, err := gotRaw.Int64()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var want int64 = 0
 			if !test.shouldError {
-				resp, err = client.Logical().Read(fmt.Sprintf("transit/keys/%s", keyName))
-				if err != nil {
-					t.Fatal(err)
-				}
-				if resp == nil {
-					t.Fatal("expected non-nil response")
-				}
-				gotRaw, ok := resp.Data["auto_rotate_period"].(json.Number)
-				if !ok {
-					t.Fatal("returned value is of unexpected type")
-				}
-				got, err := gotRaw.Int64()
-				if err != nil {
-					t.Fatal(err)
-				}
-				want := int64(test.expectedValue.Seconds())
-				if got != want {
-					t.Fatalf("incorrect auto_rotate_period returned, got: %d, want: %d", got, want)
-				}
+				want = int64(test.expectedValue.Seconds())
+			}
+
+			if got != want {
+				t.Fatalf("incorrect auto_rotate_period returned, got: %d, want: %d", got, want)
 			}
 		})
 	}

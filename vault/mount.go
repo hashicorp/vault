@@ -1727,7 +1727,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
-			c.logger.Error("failed to mount entry", "path", entry.Path, "error", err)
+			c.logger.Error("failed to mount entry", "path", entry.Path, "namespace_id", entry.NamespaceID, "error", err)
 			return errLoadMountsFailed
 		}
 
@@ -1804,6 +1804,7 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	c.mounts = nil
 	c.router.reset()
 	c.systemBarrierView = nil
+	c.agentRegistry = nil
 	return nil
 }
 

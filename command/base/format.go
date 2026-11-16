@@ -138,18 +138,27 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 }
 
 // An output formatter for raw output of the original request object
-type RawFormatter struct{}
+type RawFormatter struct {
+	binaryName string
+}
 
 func (r RawFormatter) Format(data interface{}) ([]byte, error) {
 	byte_data, ok := data.([]byte)
 	if !ok {
-		return nil, fmt.Errorf("This command does not support the -format=raw option; only `vault read` does.")
+		name := r.binaryName
+		if name == "" {
+			name = "vault"
+		}
+		return nil, fmt.Errorf("This command does not support the -format=raw option; only `%s read` does.", name)
 	}
 
 	return byte_data, nil
 }
 
 func (r RawFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	if ui, ok := ui.(*VaultUI); ok {
+		r.binaryName = ui.binaryName
+	}
 	b, err := r.Format(data)
 	if err != nil {
 		return err

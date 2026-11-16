@@ -4,33 +4,21 @@
  */
 
 import { service } from '@ember/service';
-import { or } from '@ember/object/computed';
-import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
 import { task, waitForEvent } from 'ember-concurrency';
-import { set } from '@ember/object';
 
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'core/utils/keys';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, {
   router: service(),
   mode: null,
-  onDataChange() {},
   onRefresh() {},
-  key: null,
-  errorMessage: '',
-  autoRotateInvalid: false,
-  requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
-  willDestroyElement() {
-    if (this.key && this.key.isError && !this.key.isDestroyed && !this.key.isDestroying) {
-      this.key.rollbackAttributes();
-    }
-    this._super(...arguments);
+  get keyData() {
+    return this.mode === 'show' ? this.key : this.form.data;
   },
 
   get breadcrumbs() {
@@ -45,25 +33,25 @@ export default Component.extend(FocusOnInsertMixin, {
         route: 'vault.cluster.secrets',
       },
       {
-        label: this.form.data.backend,
+        label: this.keyData.backend,
         route: 'vault.cluster.secrets.backend.list-root',
-        model: this.form.data.backend,
+        model: this.keyData.backend,
       },
     ];
     if (this.mode === 'show') {
       return [
         ...baseCrumbs,
         {
-          label: this.form.data.id,
+          label: this.keyData.id,
         },
       ];
     } else if (this.mode === 'edit') {
       return [
         ...baseCrumbs,
         {
-          label: this.form.data.id,
+          label: this.keyData.id,
           route: 'vault.cluster.secrets.backend.show',
-          models: [this.form.data.backend, this.form.data.id],
+          models: [this.keyData.backend, this.keyData.id],
           query: { tab: 'details' },
         },
         { label: 'Edit' },
@@ -87,7 +75,7 @@ export default Component.extend(FocusOnInsertMixin, {
   get subtitle() {
     if (this.mode === 'create' || this.mode === 'edit') return '';
 
-    return this.form.data.id;
+    return this.keyData.id;
   },
 
   waitForKeyUp: task(function* () {
@@ -111,73 +99,9 @@ export default Component.extend(FocusOnInsertMixin, {
     this.transitionToRoute(LIST_ROOT_ROUTE);
   },
 
-  hasDataChanges() {
-    this.onDataChange(this.key.hasDirtyAttributes);
-  },
-
-  persistKey(method, successCallback) {
-    const key = this.key;
-    return key[method]().then(() => {
-      if (!key.isError) {
-        successCallback(key);
-      }
-    });
-  },
-
   actions: {
-    createOrUpdateKey(type, event) {
-      event.preventDefault();
-      // reset error message
-      set(this, 'errorMessage', '');
-
-      const keyId = this.key.id || this.key.name;
-
-      if (type === 'create' && isBlank(keyId)) {
-        // manually set error message
-        set(this, 'errorMessage', 'Name is required.');
-        return;
-      }
-
-      this.persistKey(
-        'save',
-        () => {
-          this.hasDataChanges();
-          this.transitionToRoute(SHOW_ROUTE, keyId, { queryParams: { tab: 'details' } });
-        },
-        type === 'create'
-      );
-    },
-
-    setValueOnKey(key, event) {
-      set(this.key, key, event.target.checked);
-    },
-
-    handleAutoRotateChange(ttlObj) {
-      if (ttlObj.enabled) {
-        set(this.key, 'autoRotatePeriod', ttlObj.goSafeTimeString);
-        this.set('autoRotateInvalid', ttlObj.seconds < 3600);
-      } else {
-        set(this.key, 'autoRotatePeriod', 0);
-      }
-    },
-
-    derivedChange(val) {
-      this.key.setDerived(val);
-    },
-
-    convergentEncryptionChange(val) {
-      this.key.setConvergentEncryption(val);
-    },
-
     refresh() {
       this.onRefresh();
-    },
-
-    deleteKey() {
-      this.persistKey('destroyRecord', () => {
-        this.hasDataChanges();
-        this.transitionToRoute(LIST_ROOT_ROUTE);
-      });
     },
   },
 });

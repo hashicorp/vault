@@ -229,6 +229,16 @@ module('Unit | Helper | displayNavItem', function (hooks) {
 
       assert.true(supportsSecretsRecovery);
     });
+
+    test('it returns false when user is in the HVD admin namespace on a primary cluster', function (assert) {
+      this.currentCluster.setCluster({ dr: { isSecondary: false } });
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      this.namespace.setNamespace('admin');
+
+      const supportsSecretsRecovery = computeNavBar(this, RouteName.SECRETS_RECOVERY);
+
+      assert.false(supportsSecretsRecovery);
+    });
   });
 
   module('seal', function () {

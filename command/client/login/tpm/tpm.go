@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package tpm
@@ -13,7 +13,10 @@ import (
 	sdktpm "github.com/hashicorp/vault/sdk/helper/tpm"
 )
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+}
 
 // AuthWithFlags satisfies command.LoginHandlerWithFlags. It reads tpm-state-dir
 // and tpm-device-path from the parsed CLI flags on the login command, falling
@@ -71,20 +74,24 @@ func (h *CLIHandler) AuthWithFlags(c *api.Client, m map[string]string, flags plu
 }
 
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login -method=tpm [CONFIG K=V...]
+Usage: ` + binaryName + ` login -method=tpm [CONFIG K=V...]
 
   The TPM auth method allows machines to authenticate using a TPM-backed TLS certificate. 
   The certificate and associated state files must have been generated in advance by running 
-  "vault tpm attest".
+  "` + binaryName + ` tpm attest".
 
   Authenticate using a TPM-backed certificate:
 
-      $ vault login -method=tpm -tpm-state-dir=/path/to/state role_name=my-role
+      $ ` + binaryName + ` login -method=tpm -tpm-state-dir=/path/to/state role_name=my-role
 
   Specify a custom TPM device:
 
-      $ vault login -method=tpm -tpm-state-dir=/path/to/state -tpm-device-path=/dev/tpm0 role_name=my-role
+      $ ` + binaryName + ` login -method=tpm -tpm-state-dir=/path/to/state -tpm-device-path=/dev/tpm0 role_name=my-role
 
 Configuration:
 
