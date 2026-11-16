@@ -334,15 +334,30 @@ export default class ApiService extends Service {
   // this should only be used in cases where it's not possible to use the client
   // Runs the same middleware as the generated client so raw requests also get control group unwrapping and detection,
   // response warnings and last-fetch tracking, not just headers.
-  private async rawRequest(path: string, method: HTTPMethod, body?: unknown, headers?: HeadersInit) {
+  private async rawRequest(
+    path: string,
+    method: HTTPMethod,
+    body?: unknown,
+    headers?: HeadersInit,
+    signal?: AbortSignal
+  ) {
     let url = `${this.configuration.basePath}${path.charAt(0) === '/' ? path : `/${path}`}`;
     let init: RequestInit = { method };
 
     if (body) {
-      init.body = JSON.stringify(body);
+      // binary and form bodies are sent unchanged so the browser sets the correct content type
+      const isRawBody =
+        body instanceof Blob ||
+        body instanceof ArrayBuffer ||
+        ArrayBuffer.isView(body) ||
+        body instanceof FormData;
+      init.body = isRawBody ? (body as BodyInit) : JSON.stringify(body);
     }
     if (headers) {
       init.headers = headers;
+    }
+    if (signal) {
+      init.signal = signal;
     }
 
     const fetch = this.configuration.fetchApi as FetchAPI;
@@ -368,8 +383,8 @@ export default class ApiService extends Service {
   }
   request = {
     get: (path: string, headers?: HeadersInit) => this.rawRequest(path, 'GET', undefined, headers),
-    post: (path: string, body?: unknown, headers?: HeadersInit) =>
-      this.rawRequest(path, 'POST', body, headers),
+    post: (path: string, body?: unknown, headers?: HeadersInit, signal?: AbortSignal) =>
+      this.rawRequest(path, 'POST', body, headers, signal),
     put: (path: string, body?: unknown, headers?: HeadersInit) => this.rawRequest(path, 'PUT', body, headers),
     patch: (path: string, body?: unknown, headers?: HeadersInit) =>
       this.rawRequest(path, 'PATCH', body, headers),

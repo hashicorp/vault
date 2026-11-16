@@ -5,8 +5,7 @@
 
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
-import Service from '@ember/service';
-import { getOwner } from '@ember/owner';
+import Service, { service } from '@ember/service';
 import { shiftCommandIndex } from 'vault/lib/console-helpers';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { sanitizePath, ensureTrailingSlash } from 'core/utils/sanitize-path';
@@ -21,17 +20,14 @@ const VERBS = {
 };
 
 export default class ConsoleService extends Service {
+  @service api;
+
   @tracked isOpen = false;
   @tracked commandIndex = null;
   @tracked log = [];
 
   get commandHistory() {
     return this.log.filter((log) => log.type === 'command');
-  }
-
-  // Not a getter so it can be stubbed in tests
-  adapter() {
-    return getOwner(this).lookup('adapter:console');
   }
 
   shiftCommandIndex(key, setCommandFn = () => {}) {
@@ -66,15 +62,25 @@ export default class ConsoleService extends Service {
     this.log = log;
   }
 
-  ajax(operation, path, options = {}) {
+  async ajax(operation, path, options = {}) {
     const verb = VERBS[operation];
-    const adapter = this.adapter();
-    const url = adapter.buildURL(encodePath(path));
     const { data, wrapTTL } = options;
-    return adapter.ajax(url, verb, {
-      data,
-      wrapTTL,
-    });
+    const headers = wrapTTL ? { 'X-Vault-Wrap-TTL': wrapTTL } : undefined;
+    let url = encodePath(path);
+
+    // The console accepts arbitrary paths so there is no generated API method to call (pattern guide §1c).
+    let response;
+    if (verb === 'GET') {
+      if (data) {
+        url = `${url}?${new URLSearchParams(data)}`;
+      }
+      response = await this.api.request.get(url, headers);
+    } else {
+      response = await this.api.request[verb.toLowerCase()](url, data, headers);
+    }
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : undefined;
   }
 
   kvGet(path, data, flags = {}) {

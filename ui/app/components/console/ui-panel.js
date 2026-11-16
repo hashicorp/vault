@@ -11,7 +11,6 @@ import { schedule } from '@ember/runloop';
 import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';
 import { buildWaiter } from '@ember/test-waiters';
-import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
   logFromResponse,
@@ -25,6 +24,7 @@ import {
 const waiter = buildWaiter('web-repl');
 
 export default Component.extend({
+  api: service(),
   console: service(),
   router: service(),
   controlGroup: service(),
@@ -94,11 +94,12 @@ export default Component.extend({
       const resp = yield service[camelize(method)].call(service, path, data, flags);
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
-      if (error instanceof ControlGroupError) {
+      const parsedError = yield this.api.parseError(error);
+      if (parsedError.response?.isControlGroupError) {
         waiter.endAsync(waiterToken);
-        return this.logAndOutput(command, this.controlGroup.logFromError(error));
+        return this.logAndOutput(command, this.controlGroup.logFromError(parsedError.response));
       }
-      this.logAndOutput(command, logFromError(error, path, method));
+      this.logAndOutput(command, logFromError(parsedError, path, method));
     }
     waiter.endAsync(waiterToken);
   }),

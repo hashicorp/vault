@@ -8,7 +8,7 @@ import { parse } from 'shell-quote';
 import argTokenizer from './arg-tokenizer';
 
 import type { StringMap } from 'vault/app-types';
-import type AdapterError from '@ember-data/adapter/error';
+import type { ApiParsedError } from 'vault/api';
 
 // Add new commands to `log-help` component for visibility
 const supportedCommands = ['read', 'write', 'list', 'delete', 'kv-get'];
@@ -188,9 +188,10 @@ export function logFromResponse(response: LogResponse, path: string, method: str
   return { type: 'object', content: secret };
 }
 
-export function logFromError(error: AdapterError, vaultPath: string, method: string) {
+export function logFromError(error: ApiParsedError, vaultPath: string, method: string) {
   let content;
-  const { httpStatus, path } = error;
+  const { status, path, response } = error;
+  const errors = response?.errors;
   const verbClause = {
     read: 'reading from',
     'kv-get': 'reading secret',
@@ -199,10 +200,10 @@ export function logFromError(error: AdapterError, vaultPath: string, method: str
     delete: 'deleting at',
   }[method];
 
-  content = `Error ${verbClause}: ${vaultPath}.\nURL: ${path}\nCode: ${httpStatus}`;
+  content = `Error ${verbClause}: ${vaultPath}.\nURL: ${path}\nCode: ${status}`;
 
-  if (typeof error.errors[0] === 'string') {
-    content = `${content}\nErrors:\n  ${error.errors.join('\n  ')}`;
+  if (typeof errors?.[0] === 'string') {
+    content = `${content}\nErrors:\n  ${errors.join('\n  ')}`;
   }
 
   return { type: 'error', content };
