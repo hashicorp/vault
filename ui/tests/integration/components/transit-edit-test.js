@@ -13,12 +13,15 @@ import TransitKeyForm from 'vault/forms/transit/key';
 import TransitKeyResource from 'vault/resources/transit/key';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 
+const CREATE_BUTTON = '[data-test-transit-key="create"]';
 const SELECTORS = {
   createForm: '[data-test-transit-create-form]',
   editForm: '[data-test-transit-edit-form]',
   ttlToggle: '[data-test-ttl-toggle="Auto-rotation period"]',
   ttlValue: '[data-test-ttl-value="Auto-rotation period"]',
+  ttlUnit: TTL_PICKER.unitInputByLabel('Auto-rotation period'),
 };
 module('Integration | Component | transit-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -205,5 +208,102 @@ module('Integration | Component | transit-edit', function (hooks) {
 
     await fillIn(SELECTORS.ttlValue, '10');
     assert.strictEqual(this.form.data.auto_rotate_period, '10h');
+  });
+
+  module('auto-rotation period longer than Vault supports', function (hooks) {
+    hooks.beforeEach(function () {
+      const { secrets } = this.owner.lookup('service:api');
+      this.createStub = sinon.stub(secrets, 'transitCreateKey').resolves();
+      this.configureStub = sinon.stub(secrets, 'transitConfigureKey').resolves();
+      sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+    });
+
+    const enterPeriod = async (value) => {
+      await click(SELECTORS.ttlToggle);
+      await fillIn(SELECTORS.ttlValue, value);
+      await fillIn(SELECTORS.ttlUnit, 'd');
+    };
+
+    test('create blocks it', async function (assert) {
+      assert.expect(4);
+      this.form = new TransitKeyForm({ backend: 'transit', name: 'new-key' }, { isNew: true });
+      await render(hbs`<TransitEdit @form={{this.form}} @mode="create" @root={{this.backendCrumb}} />`);
+
+      await enterPeriod('9999999999');
+      await click(CREATE_BUTTON);
+      assert
+        .dom(TTL_PICKER.error)
+        .hasText('Auto-rotation period is too large. Maximum allowed value is 106,751 days.');
+      assert.true(this.createStub.notCalled, 'the key is not created');
+
+      await fillIn(SELECTORS.ttlValue, '106751');
+      await click(CREATE_BUTTON);
+      assert.true(this.createStub.calledOnce, 'the key is created once the period is valid');
+      assert.strictEqual(this.createStub.firstCall.args[2].auto_rotate_period, '2562024h');
+    });
+
+    test('create blocks one too long to be stored as a number', async function (assert) {
+      assert.expect(2);
+      this.form = new TransitKeyForm({ backend: 'transit', name: 'new-key' }, { isNew: true });
+      await render(hbs`<TransitEdit @form={{this.form}} @mode="create" @root={{this.backendCrumb}} />`);
+
+      await enterPeriod('9'.repeat(400));
+      await click(CREATE_BUTTON);
+      assert.dom(TTL_PICKER.error).exists('the picker shows its error');
+      assert.true(this.createStub.notCalled, 'the key is not created');
+    });
+
+    test('create keeps the entered period and its error when the key type changes', async function (assert) {
+      assert.expect(4);
+      this.form = new TransitKeyForm({ backend: 'transit', name: 'new-key' }, { isNew: true });
+      await render(hbs`<TransitEdit @form={{this.form}} @mode="create" @root={{this.backendCrumb}} />`);
+
+      await enterPeriod('9999999999');
+      // Changing the type rebuilds the form fields, which must not reset the picker and hide its error.
+      await fillIn(GENERAL.inputByAttr('type'), 'ed25519');
+      assert.dom(SELECTORS.ttlToggle).isChecked('the picker stays on');
+      assert.dom(SELECTORS.ttlValue).hasValue('9999999999', 'the picker keeps the entered value');
+      await click(CREATE_BUTTON);
+      assert.dom(TTL_PICKER.error).exists('the error is still shown');
+      assert.true(this.createStub.notCalled, 'the key is not created');
+    });
+
+    test('edit blocks it', async function (assert) {
+      assert.expect(4);
+      this.form.data.name = 'some-key';
+      this.form.data.auto_rotate_period = 0;
+      this.form.data.keys = { 1: 1684882652000 };
+      await render(
+        hbs`<TransitEdit @form={{this.form}} @mode="edit" @root={{this.backendCrumb}} @capabilities={{hash canUpdate=true}} />`
+      );
+
+      await enterPeriod('9999999999');
+      await click(GENERAL.submitButton);
+      assert
+        .dom(TTL_PICKER.error)
+        .hasText('Auto-rotation period is too large. Maximum allowed value is 106,751 days.');
+      assert.true(this.configureStub.notCalled, 'the key is not updated');
+
+      await fillIn(SELECTORS.ttlValue, '106751');
+      await click(GENERAL.submitButton);
+      assert.true(this.configureStub.calledOnce, 'the key is updated once the period is valid');
+      assert.strictEqual(this.configureStub.firstCall.args[2].auto_rotate_period, '2562024h');
+    });
+
+    test('edit saves when the over-limit period is toggled off', async function (assert) {
+      assert.expect(2);
+      this.form.data.name = 'some-key';
+      this.form.data.auto_rotate_period = 0;
+      this.form.data.keys = { 1: 1684882652000 };
+      await render(
+        hbs`<TransitEdit @form={{this.form}} @mode="edit" @root={{this.backendCrumb}} @capabilities={{hash canUpdate=true}} />`
+      );
+
+      await enterPeriod('9999999999');
+      await click(SELECTORS.ttlToggle);
+      await click(GENERAL.submitButton);
+      assert.true(this.configureStub.calledOnce, 'the key is updated');
+      assert.strictEqual(this.configureStub.firstCall.args[2].auto_rotate_period, '0s', 'rotation stays off');
+    });
   });
 });

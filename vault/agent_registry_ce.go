@@ -17,6 +17,8 @@ import (
 
 var ErrAgentRegistrationRequired = errors.New("enterprise build required")
 
+var ErrAgentRegistrationNotUsable = errors.New("enterprise build required")
+
 type AgentRegistry struct {
 	*framework.Backend
 }

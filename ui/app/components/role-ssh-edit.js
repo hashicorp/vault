@@ -18,6 +18,8 @@ export default Component.extend({
 
   mode: null,
   form: null,
+  modelValidations: null,
+  invalidFormMessage: '',
 
   breadcrumbs: computed('root', 'title', function () {
     return [
@@ -52,12 +54,16 @@ export default Component.extend({
       event.preventDefault();
 
       const { form } = this;
-      const { name, backend, ...roleData } = form.data;
+      const { isValid, state, invalidFormMessage, data } = form.toJSON();
+      const { name, backend, ...roleData } = data;
 
       if (type === 'create' && isBlank(name)) {
         this.flashMessages.danger('Role name is required');
         return;
       }
+
+      this.setProperties({ modelValidations: isValid ? null : state, invalidFormMessage });
+      if (!isValid) return;
 
       try {
         await this.api.secrets.sshWriteRole(name, backend, roleData);

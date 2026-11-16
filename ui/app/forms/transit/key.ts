@@ -7,7 +7,7 @@ import Form from 'vault/forms/form';
 import FormField from 'vault/utils/forms/field';
 import type { TransitCreateKeyRequest } from '@hashicorp/vault-client-typescript';
 import { Validations } from 'vault/vault/app-types';
-import { durationToSeconds } from 'core/utils/duration-utils';
+import { durationToSeconds, isDurationOverMax } from 'core/utils/duration-utils';
 import TransitKeyResource, { TransitKeyData } from 'vault/resources/transit/key';
 
 type TransitKeyFormData = Omit<TransitCreateKeyRequest, 'auto_rotate_period'> &
@@ -113,7 +113,8 @@ export default class TransitKeyForm extends Form<TransitKeyFormData> {
       {
         validator(data: TransitKeyFormData) {
           const { auto_rotate_period } = data;
-          if (auto_rotate_period === undefined) {
+          // a period over Vault's maximum is reported by the picker, so don't also report it as too short
+          if (auto_rotate_period === undefined || isDurationOverMax(auto_rotate_period)) {
             return true;
           } else {
             const duration = durationToSeconds(String(auto_rotate_period));

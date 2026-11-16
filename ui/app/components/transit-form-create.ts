@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,7 +12,7 @@ import FlashMessageService from 'vault/services/flash-messages';
 import ApiService from 'vault/services/api';
 import RouterService from '@ember/routing/router-service';
 import TransitKeyForm from 'vault/forms/transit/key';
-import { ValidationMap } from 'vault/vault/app-types';
+import { TtlEvent, ValidationMap } from 'vault/vault/app-types';
 import { task } from 'ember-concurrency';
 
 interface Args {
@@ -25,10 +25,12 @@ export default class TransitFormCreate extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked modelValidations: ValidationMap | null = null;
+  @tracked isAutoRotateValid = true;
 
   @action
-  handleAutoRotateChange(ttlObj: { enabled: boolean; goSafeTimeString: string }) {
+  handleAutoRotateChange(ttlObj: TtlEvent) {
     const { data } = this.args.form;
+    this.isAutoRotateValid = ttlObj.isValid;
     if (ttlObj.enabled) {
       data.auto_rotate_period = ttlObj.goSafeTimeString;
     } else {
@@ -44,7 +46,8 @@ export default class TransitFormCreate extends Component<Args> {
       const { data, isValid, state } = this.args.form.toJSON();
       this.modelValidations = isValid ? null : state;
 
-      if (isValid) {
+      // the picker explains an over-limit period, so it only needs to stop the save
+      if (isValid && this.isAutoRotateValid) {
         yield this.api.secrets.transitCreateKey(data['name'] as string, data['backend'] as string, data);
 
         this.flashMessages.success('Key successfully created.');

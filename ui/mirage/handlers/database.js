@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -33,7 +33,7 @@ export default function (server) {
 
   // Connection mgmt
   server.get('/:backend/config/:name', (schema, req) => {
-    return getRecord(schema, req, 'database/connections');
+    return getRecord(schema, req, 'databaseConnections');
   });
   server.get('/:backend/config', (schema) => {
     const keys = schema.db['databaseConnections'].map((record) => record.name);
@@ -60,10 +60,10 @@ export default function (server) {
         }
       );
     }
-    return createOrUpdateRecord(schema, req, 'database/connections');
+    return createOrUpdateRecord(schema, req, 'databaseConnections');
   });
   server.delete('/:backend/config/:name', (schema, req) => {
-    return deleteRecord(schema, req, 'database-connection');
+    return deleteRecord(schema, req, 'databaseConnections');
   });
   // Rotate root
   server.post('/:backend/rotate-root/:name', (schema, req) => {

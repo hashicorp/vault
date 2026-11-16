@@ -65,6 +65,14 @@ export interface FieldOptions {
   defaultShown?: string;
   example?: string;
   mode?: string;
+  // for editType "json": an emptied input is saved as an empty string
+  allowReset?: boolean;
+  theme?: string;
+  // for editType "searchSelect": model types to fetch options from, and how the selection behaves
+  models?: string[];
+  fallbackComponent?: string;
+  selectLimit?: number;
+  onlyAllowExisting?: boolean;
 }
 
 export default class FormField {

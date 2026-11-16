@@ -272,10 +272,10 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 
 		if !isValidEnterpriseJwt {
-			// currently only internal error and error missing from agent registration required have dedicated
+			// currently only internal errors and agent registration errors have dedicated
 			// error body and http code, everything else gets normalize into "permission denied" with http code 403
 			// when reaching back to client
-			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) {
+			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) || errors.Is(err, ErrAgentRegistrationNotUsable) {
 				return nil, nil, nil, nil, err
 			}
 			return nil, nil, nil, nil, logical.ErrPermissionDenied

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -22,7 +22,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'tls_server_name', group: 'pluginConfig' },
       { attr: 'insecure', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
     ],
   },
   {
@@ -38,7 +38,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'password', group: 'pluginConfig', show: false },
       { attr: 'write_concern', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'root_rotation_statements', group: 'statements' },
@@ -59,7 +59,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_open_connections', group: 'pluginConfig' },
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
@@ -78,7 +78,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'root_rotation_statements', group: 'statements' },
@@ -99,7 +99,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'root_rotation_statements', group: 'statements' },
@@ -120,7 +120,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'root_rotation_statements', group: 'statements' },
@@ -141,7 +141,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'root_rotation_statements', group: 'statements' },
@@ -162,7 +162,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
@@ -188,7 +188,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'disable_escaping', group: 'pluginConfig' },
       { attr: 'root_rotation_statements', group: 'statements' },
       { attr: 'self_managed', group: 'pluginConfig', isEnterprise: true },
-      { attr: 'skip_static_role_rotation_import', group: 'pluginConfig', isEnterprise: true },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'private_key', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_certificate', group: 'pluginConfig', subgroup: 'TLS options' },

@@ -95,7 +95,7 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
 
   test('it shows appropriate fields based on roleType and db plugin', async function (assert) {
     this.set('roleType', 'static');
-    this.set('dbParams', { plugin_name: '', skip_static_role_rotation_import: false });
+    this.set('dbParams', { plugin_name: '', skip_static_role_import_rotation: false });
     await render(hbs`
       <DatabaseRoleSettingForm
         @attrs={{this.model.attrs}}
@@ -107,7 +107,7 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
     for (const testCase of testCases) {
       const staticFields = getFields(testCase.staticRoleFields);
       const dynamicFields = getFields(testCase.dynamicRoleFields);
-      this.set('dbParams', { plugin_name: testCase.pluginType, skip_static_role_rotation_import: false });
+      this.set('dbParams', { plugin_name: testCase.pluginType, skip_static_role_import_rotation: false });
       this.set('roleType', 'static');
       staticFields.show.forEach((attr) => {
         assert

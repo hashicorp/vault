@@ -21,7 +21,7 @@
             @color="tertiary"
             @icon="arrow-up-right"
             data-test-check-out
-            {{on "click" (fn (mut this.showCheckOutPrompt) true)}}
+            {{on "click" (fn this.toggleCheckOutPrompt true)}}
           />
         {{/if}}
       </Hds::Layout::Flex>
@@ -75,7 +75,7 @@
 </div>
 
 {{#if this.showCheckOutPrompt}}
-  <Hds::Modal id="account-check-out-modal" @onClose={{fn (mut this.showCheckOutPrompt) false}} as |M|>
+  <Hds::Modal id="account-check-out-modal" @onClose={{fn this.toggleCheckOutPrompt false}} as |M|>
     <M.Header>
       Account Check-out
     </M.Header>

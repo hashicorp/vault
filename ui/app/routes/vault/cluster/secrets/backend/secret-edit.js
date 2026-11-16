@@ -19,6 +19,8 @@ import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
 import TransitKeyForm from 'vault/forms/transit/key';
 import TransitKeyResource from 'vault/resources/transit/key';
+import DatabaseConnectionForm, { normalizeDatabaseConnection } from 'vault/forms/database/connection';
+import DatabaseRoleForm, { normalizeDatabaseRole } from 'vault/forms/database/role';
 
 import SshRoleForm from 'vault/forms/ssh/role';
 import RoleAwsForm from 'vault/forms/aws-role';
@@ -40,6 +42,7 @@ export default Route.extend({
   router: service(),
   api: service(),
   capabilitiesService: service('capabilities'),
+  version: service(),
 
   secretParam() {
     const { secret } = this.paramsFor(this.routeName);
@@ -355,6 +358,120 @@ export default Route.extend({
     };
   },
 
+  async fetchDatabaseConnection(backend, name) {
+    try {
+      const { data } = await this.api.secrets.databaseReadConnectionConfiguration(name, backend);
+      const connection = normalizeDatabaseConnection(data, name, backend);
+      // the edit view changes the connection so it gets a form, the show view is read-only plain data
+      if (this.routeName.startsWith('vault.cluster.secrets.backend.edit')) {
+        return new DatabaseConnectionForm(connection, {
+          isNew: false,
+          isEnterprise: this.version.isEnterprise,
+        });
+      }
+      return connection;
+    } catch (error) {
+      const { message, status, response } = await this.api.parseError(error);
+      // the application route sends control group errors to the approval page
+      if (response?.isControlGroupError) throw response;
+      // preserve the status so the error substate can render the not found / forbidden views
+      throw Object.assign(new Error(message), { httpStatus: status, errors: [message] });
+    }
+  },
+
+  async fetchDatabaseConnectionCapabilities(backend, name) {
+    const connectionPath = this.capabilitiesService.pathFor('databaseConnection', { backend, id: name });
+    const resetPath = this.capabilitiesService.pathFor('databaseReset', { backend, id: name });
+    const rotateRootPath = this.capabilitiesService.pathFor('databaseRotateRoot', { backend, id: name });
+    const rolePath = this.capabilitiesService.pathFor('databaseRoleWildcard', { backend });
+    const staticRolePath = this.capabilitiesService.pathFor('databaseStaticRoleWildcard', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([
+      connectionPath,
+      resetPath,
+      rotateRootPath,
+      rolePath,
+      staticRolePath,
+    ]);
+    return {
+      canRead: capabilities[connectionPath]?.canRead,
+      canEdit: capabilities[connectionPath]?.canUpdate,
+      canDelete: capabilities[connectionPath]?.canDelete,
+      canReset: capabilities[resetPath]?.canUpdate || capabilities[resetPath]?.canCreate,
+      canRotateRoot: capabilities[rotateRootPath]?.canUpdate || capabilities[rotateRootPath]?.canCreate,
+      canAddRole: capabilities[rolePath]?.canCreate || capabilities[staticRolePath]?.canCreate,
+    };
+  },
+
+  // Reads a database role. A role may be static or dynamic and the route does not always know which,
+  // so both are requested unless the type is given. The edit view changes the role so it gets a form,
+  // the show view is read-only plain data.
+  async fetchDatabaseRole(backend, name, type) {
+    const readStatic = () => this.api.secrets.databaseReadStaticRole(name, backend);
+    const readDynamic = () => this.api.secrets.databaseReadRole(name, backend);
+    let staticResp, dynamicResp;
+    if (type === 'static') {
+      [staticResp] = await Promise.allSettled([readStatic()]);
+    } else if (type === 'dynamic') {
+      [dynamicResp] = await Promise.allSettled([readDynamic()]);
+    } else {
+      [staticResp, dynamicResp] = await Promise.allSettled([readStatic(), readDynamic()]);
+    }
+
+    const succeeded = [staticResp, dynamicResp].find((resp) => resp?.status === 'fulfilled');
+    if (!succeeded) {
+      const failures = [staticResp, dynamicResp].filter(Boolean);
+      const parsed = await Promise.all(failures.map((resp) => this.api.parseError(resp.reason)));
+      // the application route sends control group errors to the approval page
+      const controlGroup = parsed.find(({ response }) => response?.isControlGroupError);
+      if (controlGroup) {
+        throw controlGroup.response;
+      }
+      // prefer the error with the higher status, a 404 on one type should not hide a 403 on the other
+      const worst = parsed.reduce((a, b) => ((b.status ?? 0) > (a.status ?? 0) ? b : a));
+      // preserve the status so the error substate can render the not found / forbidden views
+      throw Object.assign(new Error(worst.message), { httpStatus: worst.status, errors: [worst.message] });
+    }
+
+    const roleType = succeeded === staticResp ? 'static' : 'dynamic';
+    const role = normalizeDatabaseRole(succeeded.value?.data, name, backend, roleType);
+    if (this.routeName.startsWith('vault.cluster.secrets.backend.edit')) {
+      return new DatabaseRoleForm(role, { isNew: false });
+    }
+    return role;
+  },
+
+  async fetchDatabaseRoleCapabilities(backend, name, type) {
+    const params = { backend, id: name };
+    const rolePath = this.capabilitiesService.pathFor(
+      type === 'static' ? 'databaseStaticRole' : 'databaseRole',
+      params
+    );
+    const credsPath = this.capabilitiesService.pathFor('databaseCreds', params);
+    const staticCredsPath = this.capabilitiesService.pathFor('databaseStaticCreds', params);
+    const rotatePath = this.capabilitiesService.pathFor('databaseRotateRole', params);
+    const dynamicWildcard = this.capabilitiesService.pathFor('databaseRoleWildcard', { backend });
+    const staticWildcard = this.capabilitiesService.pathFor('databaseStaticRoleWildcard', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([
+      rolePath,
+      credsPath,
+      staticCredsPath,
+      rotatePath,
+      dynamicWildcard,
+      staticWildcard,
+    ]);
+    return {
+      canEditRole: capabilities[rolePath]?.canUpdate,
+      canDelete: capabilities[rolePath]?.canDelete,
+      canGenerateCredentials: capabilities[credsPath]?.canRead,
+      canGetCredentials: capabilities[staticCredsPath]?.canRead,
+      canRotateRoleCredentials: capabilities[rotatePath]?.canUpdate,
+      canCreateDynamic: capabilities[dynamicWildcard]?.canCreate,
+      canCreateStatic: capabilities[staticWildcard]?.canCreate,
+    };
+  },
+
   async fetchSshRole(backend, name) {
     try {
       const { data } = await this.api.secrets.sshReadRole(name, backend);
@@ -555,7 +672,7 @@ export default Route.extend({
     } else if (modelType === 'transit-key') {
       secretModel = await this.fetchTransitKey(secret, backend);
       capabilities = await this.fetchTransitKeyCapabilities(backend, secret, secretModel);
-      if (this.routeName.split('.').pop() === 'edit') {
+      if (this.routeName.startsWith('vault.cluster.secrets.backend.edit')) {
         secretModel = new TransitKeyForm(secretModel, { isNew: false });
       }
     } else if (modelType === 'keymgmt/key') {
@@ -564,6 +681,13 @@ export default Route.extend({
     } else if (modelType === 'keymgmt/provider') {
       secretModel = await this.fetchKeymgmtProvider(backend, secret);
       capabilities = await this.fetchKeymgmtProviderCapabilities(backend, secret);
+    } else if (modelType === 'database/role') {
+      secretModel = await this.fetchDatabaseRole(backend, secret, type);
+      const roleType = secretModel.type;
+      capabilities = await this.fetchDatabaseRoleCapabilities(backend, secret, roleType);
+    } else if (modelType === 'database/connection') {
+      secretModel = await this.fetchDatabaseConnection(backend, secret);
+      capabilities = await this.fetchDatabaseConnectionCapabilities(backend, secret);
     } else if (modelType === 'role-ssh') {
       secretModel = await this.fetchSshRole(backend, secret);
       capabilities = await this.fetchSshRoleCapabilities(backend, secret);
@@ -614,9 +738,13 @@ export default Route.extend({
     // mode will be 'show', 'edit', 'create'
     const mode = this.routeName.split('.').pop().replace('-root', '');
 
-    // Form-based models do not have Ember Data's setProperties method.
+    // Form-based models and plain data do not have Ember Data's setProperties method.
     const isFormModel = model.secret instanceof Form;
-    if (!isFormModel && !(model.secret instanceof TransitKeyResource)) {
+    if (
+      !isFormModel &&
+      !(model.secret instanceof TransitKeyResource) &&
+      typeof model.secret.setProperties === 'function'
+    ) {
       model.secret.setProperties({ backend });
     }
 

@@ -23,7 +23,7 @@ import { action } from '@ember/object';
 export default class DatabaseListItem extends Component {
   @tracked roleType = '';
   @tracked actionRunning = null;
-  @service store;
+  @service api;
   @service flashMessages;
 
   get keyTypeValue() {
@@ -39,48 +39,45 @@ export default class DatabaseListItem extends Component {
   }
 
   @action
-  resetConnection(id) {
+  async resetConnection(id) {
     const { backend } = this.args.item;
-    const adapter = this.store.adapterFor('database/connection');
     this.actionRunning = 'reset';
-    adapter
-      .resetConnection(backend, id)
-      .then(() => {
-        this.flashMessages.success(`Success: ${id} connection was reset`);
-      })
-      .catch((e) => {
-        this.flashMessages.danger(e.errors);
-      })
-      .finally(() => (this.actionRunning = null));
+    try {
+      await this.api.secrets.databaseResetConnection(id, backend);
+      this.flashMessages.success(`Success: ${id} connection was reset`);
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.flashMessages.danger(message);
+    } finally {
+      this.actionRunning = null;
+    }
   }
   @action
-  rotateRootCred(id) {
+  async rotateRootCred(id) {
     const { backend } = this.args.item;
-    const adapter = this.store.adapterFor('database/connection');
     this.actionRunning = 'rotateRoot';
-    adapter
-      .rotateRootCredentials(backend, id)
-      .then(() => {
-        this.flashMessages.success(`Success: ${id} connection was rotated`);
-      })
-      .catch((e) => {
-        this.flashMessages.danger(e.errors);
-      })
-      .finally(() => (this.actionRunning = null));
+    try {
+      await this.api.secrets.databaseRotateRootCredentials(id, backend);
+      this.flashMessages.success(`Success: ${id} connection was rotated`);
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.flashMessages.danger(message);
+    } finally {
+      this.actionRunning = null;
+    }
   }
   @action
-  rotateRoleCred(id) {
+  async rotateRoleCred(id) {
     const { backend } = this.args.item;
-    const adapter = this.store.adapterFor('database/credential');
     this.actionRunning = 'rotateRole';
-    adapter
-      .rotateRoleCredentials(backend, id)
-      .then(() => {
-        this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);
-      })
-      .catch((e) => {
-        this.flashMessages.danger(e.errors);
-      })
-      .finally(() => (this.actionRunning = null));
+    try {
+      await this.api.secrets.databaseRotateStaticRoleCredentials(id, backend);
+      this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.flashMessages.danger(message);
+    } finally {
+      this.actionRunning = null;
+    }
   }
 }

@@ -9,29 +9,35 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
+import { getShowAttrs, isAvailablePlugin } from 'vault/forms/database/connection';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
-const getErrorMessage = (errors) => {
-  let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
-  if (errorMessage.indexOf('failed to verify') >= 0) {
-    errorMessage =
-      'There was a verification error for this connection. Check the Vault logs for more information.';
+const getErrorMessage = (message) => {
+  if (!message) {
+    return 'Something went wrong. Check the Vault logs for more information.';
   }
-  return errorMessage;
+  if (message.indexOf('failed to verify') >= 0) {
+    return 'There was a verification error for this connection. Check the Vault logs for more information.';
+  }
+  return message;
 };
 
 export default class DatabaseConnectionEdit extends Component {
-  @service store;
+  @service api;
   @service router;
   @service flashMessages;
+  @service version;
 
   @tracked
   showPasswordField = false; // used for edit mode
 
   @tracked
   showSaveModal = false; // used for create mode
+
+  @tracked
+  error = '';
 
   breadcrumbs = [
     { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
@@ -46,13 +52,27 @@ export default class DatabaseConnectionEdit extends Component {
     } else if (this.args?.mode === 'edit') {
       return 'Edit connection';
     } else {
-      return this.args?.model?.id;
+      return this.args?.model?.name;
     }
   }
 
-  rotateCredentials(backend, name) {
-    const adapter = this.store.adapterFor('database/connection');
-    return adapter.rotateRootCredentials(backend, name);
+  get isAvailablePlugin() {
+    return isAvailablePlugin(this.args.model.plugin_name);
+  }
+
+  // fields displayed on the show view, derived from the selected plugin
+  get showAttrs() {
+    return getShowAttrs(this.args.model.plugin_name, this.version.isEnterprise);
+  }
+
+  // Saves the connection from the form. Plugin-specific params are sent in the payload.
+  async writeConnection() {
+    const { name, backend } = this.args.model;
+    const { data } = this.args.model.toJSON();
+    // Uses api.request instead of api.secrets.databaseConfigureConnection because the generated request
+    // serializer (DatabaseConfigureConnectionRequestToJSON) only keeps the generic connection params and would
+    // drop plugin-specific ones such as connection_url, username and password.
+    await this.api.request.post(`/${backend}/config/${name}`, data);
   }
 
   transitionToRoute() {
@@ -78,12 +98,11 @@ export default class DatabaseConnectionEdit extends Component {
     waitFor(async (evt) => {
       evt.preventDefault();
       try {
-        const secret = this.args.model;
-        await secret.save();
+        await this.writeConnection();
         this.showSaveModal = true;
       } catch (e) {
-        const errorMessage = getErrorMessage(e.errors);
-        this.flashMessages.danger(errorMessage);
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(getErrorMessage(message));
       }
     })
   );
@@ -100,11 +119,12 @@ export default class DatabaseConnectionEdit extends Component {
     waitFor(async () => {
       const { backend, name } = this.args.model;
       try {
-        await this.rotateCredentials(backend, name);
+        await this.api.secrets.databaseRotateRootCredentials(name, backend);
         this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
         this.transitionToRoute(SHOW_ROUTE, name);
       } catch (e) {
-        this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(`Error rotating root credentials: ${message}`);
         this.transitionToRoute(SHOW_ROUTE, name);
       } finally {
         this.showSaveModal = false;
@@ -113,58 +133,52 @@ export default class DatabaseConnectionEdit extends Component {
   );
 
   @action
-  handleUpdateConnection(evt) {
+  async handleUpdateConnection(evt) {
     evt.preventDefault();
-    const secret = this.args.model;
-    const secretId = secret.name;
-    secret
-      .save()
-      .then(() => {
-        this.transitionToRoute(SHOW_ROUTE, secretId);
-      })
-      .catch((e) => {
-        const errorMessage = getErrorMessage(e.errors);
-        this.flashMessages.danger(errorMessage);
-      });
+    const { name } = this.args.model;
+    try {
+      await this.writeConnection();
+      this.transitionToRoute(SHOW_ROUTE, name);
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.flashMessages.danger(getErrorMessage(message));
+    }
   }
 
   @action
-  delete(evt) {
+  async delete(evt) {
     evt.preventDefault();
-    const secret = this.args.model;
-    const backend = secret.backend;
-    secret.destroyRecord().then(() => {
+    const { name, backend } = this.args.model;
+    try {
+      await this.api.secrets.databaseDeleteConnectionConfiguration(name, backend);
       this.transitionToRoute(LIST_ROOT_ROUTE, backend);
-    });
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.error = message;
+    }
   }
 
   @action
-  reset() {
+  async reset() {
     const { name, backend } = this.args.model;
-    const adapter = this.store.adapterFor('database/connection');
-    adapter
-      .resetConnection(backend, name)
-      .then(() => {
-        // TODO: Why isn't the confirmAction closing?
-        this.flashMessages.success('Successfully reset connection');
-      })
-      .catch((e) => {
-        const errorMessage = getErrorMessage(e.errors);
-        this.flashMessages.danger(errorMessage);
-      });
+    try {
+      await this.api.secrets.databaseResetConnection(name, backend);
+      this.flashMessages.success('Successfully reset connection');
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.flashMessages.danger(getErrorMessage(message));
+    }
   }
 
   @action
-  rotate() {
+  async rotate() {
     const { name, backend } = this.args.model;
-    this.rotateCredentials(backend, name)
-      .then(() => {
-        // TODO: Why isn't the confirmAction closing?
-        this.flashMessages.success('Successfully rotated credentials');
-      })
-      .catch((e) => {
-        const errorMessage = getErrorMessage(e.errors);
-        this.flashMessages.danger(errorMessage);
-      });
+    try {
+      await this.api.secrets.databaseRotateRootCredentials(name, backend);
+      this.flashMessages.success('Successfully rotated credentials');
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.flashMessages.danger(getErrorMessage(message));
+    }
   }
 }
