@@ -108,6 +108,9 @@ type IdentityStore struct {
 	// buckets
 	tpmgroupPacker *storagepacker.StoragePacker
 
+	// entityMetadataPacker is used to pack entity metadata entries into 256 buckets
+	entityMetadataPacker *storagepacker.StoragePacker
+
 	// disableLowerCaseNames: if true, Vault will NOT automatically resolve all entity names to lowercase,
 	// meaning the Vault Identity Store is operating in case sensitive mode.
 	disableLowerCasedNames bool
