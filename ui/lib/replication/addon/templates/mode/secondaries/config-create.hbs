@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -13,7 +13,7 @@
   <PathFilterConfigList @paths={{this.model.paths}} @config={{this.model.config}} />
   <Hds::Separator />
   <Hds::ButtonSet>
-    <Hds::Button @text="Create" type="submit" />
+    <Hds::Button @text="Create" type="submit" data-test-config-save />
     <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries.config-show" @model={{this.model.config.id}} />
   </Hds::ButtonSet>
 </form>

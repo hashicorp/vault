@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,7 +7,7 @@ import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { service } from '@ember/service';
 import Controller from '@ember/controller';
-import { resolve } from 'rsvp';
+import PathFilterConfigForm from 'vault/forms/path-filter-config';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import { buildWaiter } from '@ember/test-waiters';
 
@@ -18,10 +18,6 @@ const DEFAULTS = {
   errors: [],
   primary_api_addr: null,
   primary_cluster_addr: null,
-  filterConfig: {
-    mode: null,
-    paths: [],
-  },
 };
 const waiter = buildWaiter('replication-actions');
 
@@ -29,6 +25,8 @@ const waiter = buildWaiter('replication-actions');
  * @type Class
  */
 export default Controller.extend(structuredClone(DEFAULTS), {
+  api: service(),
+  filterConfig: null,
   isModalActive: false,
   isTokenCopied: false,
   expirationDate: null,
@@ -38,6 +36,11 @@ export default Controller.extend(structuredClone(DEFAULTS), {
   replicationMode: alias('rm.mode'),
   secondaryToRevoke: null,
 
+  init() {
+    this._super(...arguments);
+    this.set('filterConfig', new PathFilterConfigForm({}, { isNew: true }));
+  },
+
   submitError(e) {
     if (e.errors) {
       this.set('errors', e.errors);
@@ -46,20 +49,25 @@ export default Controller.extend(structuredClone(DEFAULTS), {
     }
   },
 
-  saveFilterConfig() {
-    const config = this.filterConfig;
-    const id = this.id;
-    config.id = id;
-    // if there is no mode, then they don't want to filter, so we don't save a filter config
-    if (!config.mode) {
-      return resolve();
+  async saveFilterConfig() {
+    const { data } = this.filterConfig.toJSON();
+    if (!data.mode) {
+      return;
     }
-    const configRecord = this.store.createRecord('path-filter-config', config);
-    return configRecord.save().catch((e) => this.submitError(e));
+    try {
+      await this.api.sys.systemWriteReplicationPerformancePrimaryPathsFilterId(this.id, data);
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      // Keep filter errors on the form without discarding an already-created secondary token.
+      this.set('errors', [message]);
+    }
   },
 
   reset() {
-    this.setProperties(structuredClone(DEFAULTS));
+    this.setProperties({
+      ...structuredClone(DEFAULTS),
+      filterConfig: new PathFilterConfigForm({}, { isNew: true }),
+    });
   },
 
   submitSuccess(resp, action) {

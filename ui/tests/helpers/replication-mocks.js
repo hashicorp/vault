@@ -114,11 +114,13 @@ export function mockReplication(server, options = {}) {
     if (!config) return new Response(404, {}, { errors: [] });
     return { data: config };
   });
-  server.put('/sys/replication/performance/primary/paths-filter/:id', (schema, request) => {
+  const savePathFilter = (schema, request) => {
     const body = record(request);
     state.pathFilters[request.params.id] = { mode: body.mode, paths: body.paths };
-    return {};
-  });
+    return new Response(204);
+  };
+  server.put('/sys/replication/performance/primary/paths-filter/:id', savePathFilter);
+  server.post('/sys/replication/performance/primary/paths-filter/:id', savePathFilter);
   server.delete('/sys/replication/performance/primary/paths-filter/:id', (schema, request) => {
     record(request);
     delete state.pathFilters[request.params.id];
