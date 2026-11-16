@@ -32,10 +32,11 @@ import (
 )
 
 const (
-	groupBucketsPrefix        = "packer/group/buckets/"
-	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
-	tpmBucketsPrefix          = "packer/tpm/buckets/"
-	tpmgroupBucketsPrefix     = "packer/tpmgroup/buckets/"
+	groupBucketsPrefix          = "packer/group/buckets/"
+	localAliasesBucketsPrefix   = "packer/local-aliases/buckets/"
+	tpmBucketsPrefix            = "packer/tpm/buckets/"
+	tpmgroupBucketsPrefix       = "packer/tpmgroup/buckets/"
+	entityMetadataBucketsPrefix = "packer/entitymetadata/buckets/"
 )
 
 var (
@@ -147,6 +148,12 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create tpmgroup packer: %w", err)
 	}
 
+	entityMetadataPackerLogger := iStore.logger.Named("storagepacker").Named("entity_metadata")
+	core.AddLogger(entityMetadataPackerLogger)
+	iStore.entityMetadataPacker, err = storagepacker.NewStoragePacker(iStore.view, entityMetadataPackerLogger, entityMetadataBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create entity_metadata packer: %w", err)
+	}
 	unauthenticatedPaths := []string{
 		"oidc/.well-known/*",
 		"oidc/+/.well-known/*",
