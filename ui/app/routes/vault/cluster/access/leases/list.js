@@ -46,8 +46,9 @@ export default class LeasesListRoute extends Route {
           };
         });
       })
-      .catch((err) => {
-        if (err.status === 404 && prefix === '') {
+      .catch(async (err) => {
+        const parsedError = await this.api.parseError(err);
+        if (parsedError.status === 404 && prefix === '') {
           return [];
         }
         throw err;
