@@ -50,14 +50,14 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/${{ github.repository }}/aws access-key-id_070182026 | AWS_ACCESS_KEY_ID_CI_070182026;
-            kv/data/github/${{ github.repository }}/aws secret-access-key_070182026 | AWS_SECRET_ACCESS_KEY_CI_070182026;
+            kv/data/github/${{ github.repository }}/aws access-key-id_11142026 | AWS_ACCESS_KEY_ID_CI_11142026;
+            kv/data/github/${{ github.repository }}/aws secret-access-key_11142026 | AWS_SECRET_ACCESS_KEY_CI_11142026;
             kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
-          aws-access-key-id: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_ACCESS_KEY_ID_CI_070182026 || steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_070182026 }}
-          aws-secret-access-key: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_SECRET_ACCESS_KEY_CI_070182026 || steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_070182026 }}
+          aws-access-key-id: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_ACCESS_KEY_ID_CI_11142026 || steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_11142026 }}
+          aws-secret-access-key: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_SECRET_ACCESS_KEY_CI_11142026 || steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_11142026 }}
           aws-region: us-east-1
           role-to-assume: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_ROLE_ARN_CI || steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
