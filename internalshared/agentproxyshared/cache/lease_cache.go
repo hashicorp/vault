@@ -46,9 +46,12 @@ const (
 	vaultPathTokenLookupSelf     = "/v1/auth/token/lookup-self"
 	vaultPathTokenRenew          = "/v1/auth/token/renew"
 	vaultPathTokenRenewSelf      = "/v1/auth/token/renew-self"
+	vaultPathTokenRenewAccessor  = "/v1/auth/token/renew-accessor"
 	vaultPathLeaseRevoke         = "/v1/sys/leases/revoke"
 	vaultPathLeaseRevokeForce    = "/v1/sys/leases/revoke-force"
 	vaultPathLeaseRevokePrefix   = "/v1/sys/leases/revoke-prefix"
+	vaultPathLeaseRenew          = "/v1/sys/leases/renew"
+	vaultPathLeaseRenewLegacy    = "/v1/sys/renew"
 )
 
 var (
@@ -62,6 +65,14 @@ var (
 		strings.TrimPrefix(vaultPathLeaseRevoke, "/v1"),
 		strings.TrimPrefix(vaultPathLeaseRevokeForce, "/v1"),
 		strings.TrimPrefix(vaultPathLeaseRevokePrefix, "/v1"),
+	}
+
+	renewalPaths = []string{
+		strings.TrimPrefix(vaultPathLeaseRenew, "/v1"),
+		strings.TrimPrefix(vaultPathLeaseRenewLegacy, "/v1"),
+		strings.TrimPrefix(vaultPathTokenRenew, "/v1"),
+		strings.TrimPrefix(vaultPathTokenRenewSelf, "/v1"),
+		strings.TrimPrefix(vaultPathTokenRenewAccessor, "/v1"),
 	}
 )
 
@@ -419,14 +430,22 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		}
 	}
 
+	// Renewal responses are never replayed from the cache, even if an entry
+	// persisted by an older version is present; see the pass-through below.
+	isRenewal := isRenewalRequest(req.Request)
+
 	// Check if the response for this request is already in the dynamic secret cache
-	cachedResp, err := c.checkCacheForDynamicSecretRequest(dynamicSecretCacheId)
-	if err != nil {
-		return nil, err
-	}
-	if cachedResp != nil {
-		c.logger.Debug("returning cached dynamic secret response", "path", req.Request.URL.Path)
-		return cachedResp, nil
+	var cachedResp *SendResponse
+	// If this is a renewal request, don't check the cache
+	if !isRenewal {
+		cachedResp, err = c.checkCacheForDynamicSecretRequest(dynamicSecretCacheId)
+		if err != nil {
+			return nil, err
+		}
+		if cachedResp != nil {
+			c.logger.Debug("returning cached dynamic secret response", "path", req.Request.URL.Path)
+			return cachedResp, nil
+		}
 	}
 
 	// Check if the response for this request is already in the static secret cache.
@@ -485,6 +504,12 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	// If this is a revocation request, do not go through cache logic.
 	if isRevocation {
+		return resp, nil
+	}
+
+	// Renewal responses should not be cached
+	if isRenewal {
+		c.logger.Debug("pass-through response; renewal request", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
 
@@ -860,6 +885,34 @@ func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo 
 		c.l.RUnlock()
 	}
 	return cachememdb.NewContextInfo(ctx)
+}
+
+// isRenewalRequest reports whether req targets one of the lease or token
+// renewal endpoints in renewalPaths. The endpoint may be preceded by a
+// namespace and, for lease renewals, followed by a lease ID, so a path matches
+// only when the endpoint ends the path or is followed by a "/".
+func isRenewalRequest(req *http.Request) bool {
+	return isRenewalPath(req.URL.Path)
+}
+
+// isRenewalPath is isRenewalRequest for a bare request path, such as the one
+// stored on a cache index.
+func isRenewalPath(path string) bool {
+	nonVersionedPath := strings.TrimPrefix(path, "/v1")
+
+	for _, p := range renewalPaths {
+		i := strings.Index(nonVersionedPath, p)
+		if i == -1 {
+			continue
+		}
+
+		end := i + len(p)
+		if end == len(nonVersionedPath) || nonVersionedPath[end] == '/' {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
@@ -1541,6 +1594,16 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 			newIndex, err := cachememdb.Deserialize(lease)
 			if err != nil {
 				errs = multierror.Append(errs, err)
+				continue
+			}
+
+			// Renewal responses persisted by older versions would be replayed
+			// with an ever-growing Age, so drop them instead of restoring.
+			if isRenewalPath(newIndex.RequestPath) {
+				c.logger.Debug("discarding persisted renewal response", "id", newIndex.ID, "path", newIndex.RequestPath)
+				if err := storage.Delete(newIndex.ID, newIndex.Type); err != nil {
+					c.logger.Warn("failed to delete persisted renewal response", "id", newIndex.ID, "error", err)
+				}
 				continue
 			}
 
