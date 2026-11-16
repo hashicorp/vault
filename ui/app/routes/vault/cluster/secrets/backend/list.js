@@ -25,6 +25,9 @@ import {
   SecretsApiTotpListKeysListEnum,
   SecretsApiSshListRolesListEnum,
   SecretsApiAwsListRolesListEnum,
+  SecretsApiDatabaseListConnectionsListEnum,
+  SecretsApiDatabaseListRolesListEnum,
+  SecretsApiDatabaseListStaticRolesListEnum,
   SecretsApiTransformListTransformationsListEnum,
   SecretsApiTransformListRolesListEnum,
   SecretsApiTransformListTemplatesListEnum,
@@ -344,6 +347,107 @@ export default Route.extend({
     }
   },
 
+  async fetchDatabaseConnections(backend, page, pageFilter) {
+    try {
+      const response = await this.api.secrets.databaseListConnections(
+        backend,
+        SecretsApiDatabaseListConnectionsListEnum.TRUE
+      );
+      const names = response.keys || [];
+      // capabilities are only fetched for the connections on the current page
+      const connections = paginate(
+        names.map((name) => ({ id: name, name, backend })),
+        { page, filter: pageFilter, filterKey: 'name' }
+      );
+      const paths = connections.flatMap(({ name }) => [
+        this.capabilitiesService.pathFor('databaseConnection', { backend, id: name }),
+        this.capabilitiesService.pathFor('databaseReset', { backend, id: name }),
+        this.capabilitiesService.pathFor('databaseRotateRoot', { backend, id: name }),
+      ]);
+      const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+      // assigned in place so the pagination metadata on the array is kept
+      connections.forEach((item) => {
+        const connection = capabilities[`${backend}/config/${item.name}`];
+        const reset = capabilities[`${backend}/reset/${item.name}`];
+        const rotateRoot = capabilities[`${backend}/rotate-root/${item.name}`];
+        Object.assign(item, {
+          canEdit: connection?.canUpdate || false,
+          canReset: reset?.canUpdate || reset?.canCreate || false,
+          canRotateRoot: rotateRoot?.canUpdate || rotateRoot?.canCreate || false,
+        });
+      });
+      return connections;
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) return [];
+      throw await this.databaseListError(error);
+    }
+  },
+
+  // The application route sends control group errors to the approval page. Other errors keep their status
+  // so the error substate can render the not found / forbidden views.
+  async databaseListError(error) {
+    const { message, status, response } = await this.api.parseError(error);
+    if (response?.isControlGroupError) return response;
+    return Object.assign(new Error(message), { httpStatus: status, errors: [message] });
+  },
+
+  // Database roles are either static or dynamic, both are listed together and each is marked with its type.
+  // The list only fails when both requests do.
+  async fetchDatabaseRoles(backend, page, pageFilter) {
+    const [staticResp, dynamicResp] = await Promise.allSettled([
+      this.api.secrets.databaseListStaticRoles(backend, SecretsApiDatabaseListStaticRolesListEnum.TRUE),
+      this.api.secrets.databaseListRoles(backend, SecretsApiDatabaseListRolesListEnum.TRUE),
+    ]);
+
+    if (staticResp.status === 'rejected' && dynamicResp.status === 'rejected') {
+      const [staticError, dynamicError] = await Promise.all([
+        this.api.parseError(staticResp.reason),
+        this.api.parseError(dynamicResp.reason),
+      ]);
+      if (staticError.response?.isControlGroupError) throw staticError.response;
+      // Otherwise the dynamic error decides the outcome. A 404 means the backend has no roles, even when the user
+      // is not allowed to list static roles (403), so the list is empty rather than an error.
+      if (dynamicError.status === 404) return paginate([], { page });
+      throw await this.databaseListError(dynamicResp.reason);
+    }
+
+    const staticNames = staticResp.status === 'fulfilled' ? staticResp.value.keys ?? [] : [];
+    const dynamicNames = dynamicResp.status === 'fulfilled' ? dynamicResp.value.keys ?? [] : [];
+    // capabilities are only fetched for the roles on the current page
+    const roles = paginate(
+      [
+        ...staticNames.map((id) => ({ id, type: 'static', path: 'static-roles', backend })),
+        ...dynamicNames.map((id) => ({ id, type: 'dynamic', path: 'roles', backend })),
+      ],
+      { page, filter: pageFilter, filterKey: 'id' }
+    );
+
+    const paths = roles.flatMap(({ id, type }) => {
+      const params = { backend, id };
+      return [
+        this.capabilitiesService.pathFor(type === 'static' ? 'databaseStaticRole' : 'databaseRole', params),
+        this.capabilitiesService.pathFor(type === 'static' ? 'databaseStaticCreds' : 'databaseCreds', params),
+        this.capabilitiesService.pathFor('databaseRotateRole', params),
+      ];
+    });
+    const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+    // assigned in place so the pagination metadata on the array is kept
+    roles.forEach((item) => {
+      const { id, type, path } = item;
+      const role = capabilities[`${backend}/${path}/${id}`];
+      const creds = capabilities[`${backend}/${type === 'static' ? 'static-creds' : 'creds'}/${id}`];
+      const rotate = capabilities[`${backend}/rotate-role/${id}`];
+      Object.assign(item, {
+        canEditRole: role?.canUpdate || false,
+        canGenerateCredentials: type === 'dynamic' ? creds?.canRead || false : false,
+        canGetCredentials: type === 'static' ? creds?.canRead || false : false,
+        canRotateRoleCredentials: rotate?.canUpdate || false,
+      });
+    });
+    return roles;
+  },
+
   async fetchAwsRoles(backend, page, pageFilter) {
     try {
       const response = await this.api.secrets.awsListRoles(backend, SecretsApiAwsListRolesListEnum.TRUE);
@@ -541,6 +645,12 @@ export default Route.extend({
           ? await this.fetchKeymgmtProviders(backend, page, filter)
           : await this.fetchKeymgmtKeys(backend, page, filter);
 
+      this.set('has404', false);
+    } else if (modelType === 'database/connection') {
+      secrets = await this.fetchDatabaseConnections(backend, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    } else if (modelType === 'database/role') {
+      secrets = await this.fetchDatabaseRoles(backend, getValidPage(params.page), params.pageFilter);
       this.set('has404', false);
     } else if (effectiveType === 'aws') {
       secrets = await this.fetchAwsRoles(backend, getValidPage(params.page), params.pageFilter);

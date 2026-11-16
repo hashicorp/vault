@@ -6,6 +6,8 @@
 import { hash } from 'rsvp';
 import { service } from '@ember/service';
 import EditBase from './secret-edit';
+import DatabaseConnectionForm, { CONNECTION_DEFAULTS } from 'vault/forms/database/connection';
+import DatabaseRoleForm, { ROLE_DEFAULTS } from 'vault/forms/database/role';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
@@ -30,7 +32,7 @@ export default EditBase.extend({
 
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let modelType = this.modelType(backend, null, { queryParams: transition.to.queryParams });
+    const modelType = this.modelType(backend, null, { queryParams: transition.to.queryParams });
 
     // Handle keymgmt/key with Form class
     if (modelType === 'keymgmt/key') {
@@ -99,8 +101,17 @@ export default EditBase.extend({
     if (modelType === 'transform') {
       return new TransformationForm({ backend, type: 'fpe' }, { isNew: true });
     }
-    if (modelType === 'database/connection' && transition.to?.queryParams?.itemType === 'role') {
-      modelType = 'database/role';
+    if (modelType === 'database/connection' && transition.to?.queryParams?.itemType !== 'role') {
+      return new DatabaseConnectionForm(
+        { ...CONNECTION_DEFAULTS, backend },
+        { isNew: true, isEnterprise: this.version.isEnterprise }
+      );
+    }
+    if (
+      modelType === 'database/role' ||
+      (modelType === 'database/connection' && transition.to?.queryParams?.itemType === 'role')
+    ) {
+      return new DatabaseRoleForm({ ...ROLE_DEFAULTS, backend, database: [] }, { isNew: true });
     }
     if (modelType !== 'secret') {
       return this.store.createRecord(modelType, { backend });
@@ -108,10 +119,23 @@ export default EditBase.extend({
     return secretModel(this.store, backend, transition.to.queryParams.initialKey);
   },
 
-  model(params, transition) {
-    return hash({
-      secret: this.createModel(transition),
-      capabilities: {},
-    });
+  // Roles warn on the form when the user may not create the selected type of role.
+  async fetchDatabaseRoleCreateCapabilities(backend) {
+    const dynamicPath = this.capabilitiesService.pathFor('databaseRoleWildcard', { backend });
+    const staticPath = this.capabilitiesService.pathFor('databaseStaticRoleWildcard', { backend });
+    const capabilities = await this.capabilitiesService.fetch([dynamicPath, staticPath]);
+    return {
+      canCreateDynamic: capabilities[dynamicPath]?.canCreate,
+      canCreateStatic: capabilities[staticPath]?.canCreate,
+    };
+  },
+
+  async model(params, transition) {
+    const secret = await this.createModel(transition);
+    const capabilities =
+      secret instanceof DatabaseRoleForm
+        ? await this.fetchDatabaseRoleCreateCapabilities(secret.backend)
+        : {};
+    return hash({ secret, capabilities });
   },
 });

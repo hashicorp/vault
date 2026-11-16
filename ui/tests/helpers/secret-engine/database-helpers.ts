@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// If we refactor the database/connection model we can move this const to a util and use it in a form component.
+// Expected computed fields per plugin for the database connection form and resource.
 // The ideal (future) scenario is the API provides this and we don't have to manually write the schema :)
 export const EXPECTED_FIELDS = {
   'elasticsearch-database-plugin': {
@@ -342,6 +342,7 @@ export const EXPECTED_FIELDS = {
         type: undefined,
       },
     ],
+    'TLS options': ['private_key', 'tls_ca', 'tls_certificate'],
     enterpriseOnly: 'self_managed',
   },
 };

@@ -14,11 +14,11 @@
   </:breadcrumbs>
 </Page::Header>
 
-{{#if @model.isAvailablePlugin}}
+{{#if this.isAvailablePlugin}}
   {{#if (eq @mode "show")}}
     <Toolbar>
       <ToolbarActions>
-        {{#if @model.canDelete}}
+        {{#if @capabilities.canDelete}}
           <Hds::Button
             @text="Delete connection"
             @color="secondary"
@@ -27,7 +27,7 @@
             data-test-database-connection-delete
           />
         {{/if}}
-        {{#if @model.canReset}}
+        {{#if @capabilities.canReset}}
           <ConfirmAction
             @buttonText="Reset connection"
             class="toolbar-button"
@@ -38,10 +38,10 @@
             data-test-database-connection-reset
           />
         {{/if}}
-        {{#if (or @model.canReset @model.canDelete)}}
+        {{#if (or @capabilities.canReset @capabilities.canDelete)}}
           <div class="toolbar-separator"></div>
         {{/if}}
-        {{#if @model.canRotateRoot}}
+        {{#if @capabilities.canRotateRoot}}
           {{! template-lint-disable quotes }}
           <ConfirmAction
             @buttonText="Rotate root credentials"
@@ -55,7 +55,7 @@
           />
           {{! template-lint-enable }}
         {{/if}}
-        {{#if @model.canAddRole}}
+        {{#if @capabilities.canAddRole}}
           <ToolbarSecretLink
             @secret=""
             @mode="create"
@@ -67,9 +67,9 @@
             Add role
           </ToolbarSecretLink>
         {{/if}}
-        {{#if @model.canEdit}}
+        {{#if @capabilities.canEdit}}
           <ToolbarSecretLink
-            @secret={{@model.id}}
+            @secret={{@model.name}}
             @mode="edit"
             @backend={{@model.backend}}
             data-test-edit-link={{true}}
@@ -193,7 +193,7 @@
       </div>
     </div>
   </form>
-{{else if (and (eq @mode "edit") @model.isAvailablePlugin)}}
+{{else if (and (eq @mode "edit") this.isAvailablePlugin)}}
   <form {{on "submit" this.handleUpdateConnection}} aria-label="plugin config form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (or (eq attr.name "name") (eq attr.name "plugin_name"))}}
@@ -313,7 +313,7 @@
       </div>
     </div>
   </form>
-{{else if (eq @model.isAvailablePlugin false)}}
+{{else if (not this.isAvailablePlugin)}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @icon="skip" @title="Database type unavailable" @titleTag="h2" />
     <A.Body
@@ -331,7 +331,7 @@
     </A.Footer>
   </Hds::ApplicationState>
 {{else}}
-  {{#each @model.showAttrs as |attr|}}
+  {{#each this.showAttrs as |attr|}}
     {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
@@ -350,7 +350,7 @@
           @queryParam="role"
           @type={{attr.type}}
         />
-      {{else if (eq attr.name "skip_static_role_rotation_import")}}
+      {{else if (eq attr.name "skip_static_role_import_rotation")}}
         <InfoTableRow
           @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
@@ -413,5 +413,5 @@
     Deleting the connection means that any associated roles won't be able to generate credentials until the connection is
     reconfigured.
   </p>
-  <MessageError @model={{this.model}} @errorMessage={{this.error}} />
+  <MessageError @errorMessage={{this.error}} />
 </ConfirmationModal>
