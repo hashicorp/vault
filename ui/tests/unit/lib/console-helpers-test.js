@@ -435,34 +435,42 @@ module('Unit | Lib | console helpers', function () {
 
   const testErrorCases = [
     {
-      name: 'AdapterError write',
-      args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'write'],
+      name: 'ApiError write',
+      args: [{ status: 404, path: 'v1/sys/foo', response: { errors: [{}] } }, 'sys/foo', 'write'],
       expectedContent: 'Error writing to: sys/foo.\nURL: v1/sys/foo\nCode: 404',
     },
     {
-      name: 'AdapterError read',
-      args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'read'],
+      name: 'ApiError read',
+      args: [{ status: 404, path: 'v1/sys/foo', response: { errors: [{}] } }, 'sys/foo', 'read'],
       expectedContent: 'Error reading from: sys/foo.\nURL: v1/sys/foo\nCode: 404',
     },
     {
-      name: 'AdapterError list',
-      args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'list'],
+      name: 'ApiError list',
+      args: [{ status: 404, path: 'v1/sys/foo', response: { errors: [{}] } }, 'sys/foo', 'list'],
       expectedContent: 'Error listing: sys/foo.\nURL: v1/sys/foo\nCode: 404',
     },
     {
-      name: 'AdapterError delete',
-      args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'delete'],
+      name: 'ApiError delete',
+      args: [{ status: 404, path: 'v1/sys/foo', response: { errors: [{}] } }, 'sys/foo', 'delete'],
       expectedContent: 'Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404',
     },
     {
       name: 'VaultError single error',
-      args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token'] }, 'sys/foo', 'delete'],
+      args: [
+        { status: 404, path: 'v1/sys/foo', response: { errors: ['no client token'] } },
+        'sys/foo',
+        'delete',
+      ],
       expectedContent: 'Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token',
     },
     {
       name: 'VaultErrors multiple errors',
       args: [
-        { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token', 'this is an error'] },
+        {
+          status: 404,
+          path: 'v1/sys/foo',
+          response: { errors: ['no client token', 'this is an error'] },
+        },
         'sys/foo',
         'delete',
       ],

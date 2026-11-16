@@ -4,7 +4,6 @@
  */
 
 import Component from '@ember/component';
-import { getOwner } from '@ember/owner';
 import config from '../config/environment';
 import { service } from '@ember/service';
 
@@ -82,16 +81,16 @@ export default Component.extend({
       // then forcing a download by clicking a link that has a download attribute
       //
       // this is not the default because
-      const adapter = getOwner(this).lookup('adapter:application');
 
       this.flashMessages.success('The snapshot download has begun.');
       let resp, blob;
       try {
-        resp = await adapter.rawRequest('/v1/sys/storage/raft/snapshot', 'GET');
+        // the snapshot is a binary stream with no generated API method
+        resp = await this.api.request.get('/sys/storage/raft/snapshot');
         blob = await resp.blob();
       } catch (e) {
-        const errString = e.errors ? e.errors.join(' ') : e.message || e;
-        this.flashMessages.danger(`There was an error trying to download the snapshot: ${errString}`);
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(`There was an error trying to download the snapshot: ${message}`);
       }
       const filename = 'snapshot.gz';
       const file = new Blob([blob], { type: 'application/x-gzip' });

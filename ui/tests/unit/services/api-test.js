@@ -239,6 +239,18 @@ module('Unit | Service | api', function (hooks) {
       assert.deepEqual(await response.json(), { data: { ok: true } }, 'the raw response is returned');
     });
 
+    test('it sends binary bodies unchanged and forwards the abort signal', async function (assert) {
+      this.respond(undefined, 204);
+      const blob = new Blob(['snapshot'], { type: 'application/gzip' });
+      const { signal } = new AbortController();
+      await this.apiService.request.post('/sys/storage/raft/snapshot', blob, undefined, signal);
+
+      const [, init] = this.fetch.lastCall.args;
+      assert.strictEqual(init.body, blob, 'blob body is not serialized');
+      assert.strictEqual(init.signal, signal, 'abort signal is passed to fetch');
+      assert.false(new Headers(init.headers).has('Content-Type'), 'content type is left to the browser');
+    });
+
     test('it keeps headers passed by the caller', async function (assert) {
       this.respond({ data: {} });
       await this.apiService.request.put('/sys/unseal', { key: 'k' }, { 'X-Vault-Namespace': '' });
