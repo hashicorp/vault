@@ -11,6 +11,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { encodeString } from 'vault/utils/b64';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 /**
  * @module TransitKeyActions
@@ -199,6 +200,8 @@ export default class TransitKeyActions extends Component {
     }
     const { backend, id } = this.args.key;
     const action = this.args.selectedAction || this.firstSupportedAction;
+    // The wrap TTL picker already explains an over-limit value; Vault would reject the request.
+    if (action === 'export' && isDurationOverMax(options.wrapTTL)) return;
     const { ...formData } = data || {};
     if (!this.props.encodedBase64) {
       if (action === 'encrypt' && !!formData.plaintext) {

@@ -11,6 +11,7 @@ import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import sinon from 'sinon';
 
 module('Integration | Component | transit key actions', function (hooks) {
@@ -320,6 +321,42 @@ module('Integration | Component | transit key actions', function (hooks) {
       'wrapped-token',
       'wraps by default'
     );
+  });
+
+  test('it blocks an export whose wrap TTL is longer than Vault supports', async function (assert) {
+    const exportStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitExportKey').resolves({
+      wrap_info: { token: 'wrapped-token' },
+    });
+
+    await setupExport.call(this);
+    await fillIn(GENERAL.ttl.input('Wrap response'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Wrap response'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(TTL_PICKER.error)
+      .hasText('Wrap response is too large. Maximum allowed value is 106,751 days.');
+    assert.true(exportStub.notCalled, 'no export request is made');
+    assert.dom('#transit-export-modal').doesNotExist('the modal does not open');
+
+    await fillIn(GENERAL.ttl.input('Wrap response'), '106751');
+    await click(GENERAL.submitButton);
+    assert.true(exportStub.calledOnce, 'the key exports once the TTL is valid');
+    assert.strictEqual(exportStub.firstCall.args[3].wrapTTL, '2562024h', 'the maximum whole days is sent');
+  });
+
+  test('it blocks an export whose wrap TTL is too long to be stored as a number', async function (assert) {
+    const exportStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitExportKey').resolves({
+      wrap_info: { token: 'wrapped-token' },
+    });
+
+    await setupExport.call(this);
+    await fillIn(GENERAL.ttl.input('Wrap response'), '9'.repeat(400));
+    await fillIn(TTL_PICKER.unitInputByLabel('Wrap response'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL_PICKER.error).exists('the picker shows its error');
+    assert.true(exportStub.notCalled, 'no export request is made');
   });
 
   test('it can export a key:unwrapped behavior', async function (assert) {

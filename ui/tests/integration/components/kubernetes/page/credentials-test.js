@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import timestamp from 'core/utils/timestamp';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
@@ -139,5 +140,54 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert
       .dom(GENERAL.infoRowValue('Lease ID'))
       .hasText('kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38');
+  });
+
+  test('it blocks a TTL longer than Vault supports', async function (assert) {
+    assert.expect(5);
+
+    await this.renderComponent();
+    await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Time-to-Live (TTL)'), 'd');
+    await click('[data-test-generate-credentials-button]');
+
+    assert
+      .dom(TTL_PICKER.error)
+      .hasText('Time-to-Live (TTL) is too large. Maximum allowed value is 106,751 days.');
+    assert.true(this.generateStub.notCalled, 'no credentials are requested');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate credentials', 'the form stays open');
+
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '106751');
+    await click('[data-test-generate-credentials-button]');
+    assert.true(this.generateStub.calledOnce, 'credentials are requested once the TTL is valid');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
+  });
+
+  test('it blocks a TTL too long to be stored as a number', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '9'.repeat(400));
+    await fillIn(TTL_PICKER.unitInputByLabel('Time-to-Live (TTL)'), 'd');
+    await click('[data-test-generate-credentials-button]');
+
+    assert.dom(TTL_PICKER.error).exists('the picker shows its error');
+    assert.true(this.generateStub.notCalled, 'no credentials are requested');
+  });
+
+  test('it does not send a TTL that was turned off', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Time-to-Live (TTL)'), 'd');
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await click('[data-test-generate-credentials-button]');
+
+    assert.true(this.generateStub.calledOnce, 'credentials are requested');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '', 'the hidden TTL is not sent');
   });
 });

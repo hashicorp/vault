@@ -126,9 +126,11 @@ const FIELDS: Record<string, FormField> = {
     editType: 'ttl',
   }),
   ttl: new FormField('ttl', 'string', {
+    label: 'TTL',
     editType: 'ttl',
   }),
   max_ttl: new FormField('max_ttl', 'string', {
+    label: 'Max TTL',
     editType: 'ttl',
   }),
   algorithm_signer: new FormField('algorithm_signer', 'string', {
@@ -179,6 +181,19 @@ export default class SshRoleForm extends Form<SshRoleData> {
         fieldOrder.map((name) => FIELDS[name]).filter((f): f is FormField => !!f)
       ),
     ];
+  }
+
+  // Vault rejects a duration it can't store even when the role's key type ignores it, so a TTL left over from
+  // the other key type is dropped from the payload instead of blocking the save behind a hidden field.
+  toJSON() {
+    const activeFields = this.data.key_type === 'otp' ? OTP_FIELD_ORDER : CA_FIELD_ORDER;
+    const data = { ...this.data };
+    for (const name of ALL_FIELD_NAMES) {
+      if (FIELDS[name]?.options.editType === 'ttl' && !activeFields.includes(name)) {
+        delete data[name];
+      }
+    }
+    return super.toJSON(data);
   }
 
   // Flat ordered list of fields for the current key_type, used by the show view.

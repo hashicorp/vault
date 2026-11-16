@@ -11,7 +11,7 @@ import ApiService from 'vault/services/api';
 import FlashMessageService from 'vault/services/flash-messages';
 import RouterService from '@ember/routing/router-service';
 import TransitKeyForm from 'vault/forms/transit/key';
-import { ValidationMap } from 'vault/vault/app-types';
+import { TtlEvent, ValidationMap } from 'vault/vault/app-types';
 import { HTMLElementEvent } from 'vault/forms';
 import { assert } from '@ember/debug';
 
@@ -25,6 +25,7 @@ export default class TransitFormEdit extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked modelValidations: ValidationMap | null = null;
+  @tracked isAutoRotateValid = true;
 
   @action
   updateVersion(field: 'min_decryption_version' | 'min_encryption_version', event: Event) {
@@ -33,8 +34,9 @@ export default class TransitFormEdit extends Component<Args> {
   }
 
   @action
-  handleAutoRotateChange(ttlObj: { enabled: boolean; goSafeTimeString: string }) {
+  handleAutoRotateChange(ttlObj: TtlEvent) {
     const { data } = this.args.form;
+    this.isAutoRotateValid = ttlObj.isValid;
     if (ttlObj.enabled) {
       data.auto_rotate_period = ttlObj.goSafeTimeString;
     } else {
@@ -62,7 +64,8 @@ export default class TransitFormEdit extends Component<Args> {
       const { isValid, state } = this.args.form.toJSON();
       this.modelValidations = isValid ? null : state;
 
-      if (isValid) {
+      // the picker explains an over-limit period, so it only needs to stop the save
+      if (isValid && this.isAutoRotateValid) {
         const {
           id,
           backend,

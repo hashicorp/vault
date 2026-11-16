@@ -49,7 +49,7 @@
   <form onsubmit={{action "createOrUpdate" "create"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode={{this.mode}} @noun="SSH role" />
-      <FormFieldGroupsLoop @model={{@form}} @mode={{this.mode}} />
+      <FormFieldGroupsLoop @model={{@form}} @mode={{this.mode}} @modelValidations={{this.modelValidations}} />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
@@ -72,6 +72,14 @@
         {{/if}}
       </Hds::ButtonSet>
     </div>
+    {{#if this.invalidFormMessage}}
+      <AlertInline
+        @type="danger"
+        class="has-top-padding-s"
+        @message={{this.invalidFormMessage}}
+        data-test-invalid-form-message
+      />
+    {{/if}}
   </form>
 {{else}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
