@@ -11,6 +11,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { add } from 'date-fns';
 import timestamp from 'vault/utils/timestamp';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
@@ -60,9 +61,11 @@ export default class CredentialsPageComponent extends Component<Args> {
   }
 
   @action
-  updateTtl({ enabled, goSafeTimeString, isValid }: TtlEvent) {
-    // a TTL that was turned off after being entered must not be sent
-    this.ttl = enabled ? goSafeTimeString : '';
+  updateTtl({ enabled, seconds, goSafeTimeString, isValid }: TtlEvent) {
+    // A TTL that was turned off keeps being sent as before, unless Vault would reject it. Then none is sent,
+    // so the role's default is used.
+    const isHiddenOverMax = !enabled && isDurationOverMax(seconds);
+    this.ttl = isHiddenOverMax ? '' : goSafeTimeString;
     this.isTtlValid = isValid;
   }
 

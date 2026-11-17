@@ -177,7 +177,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert.true(this.generateStub.notCalled, 'no credentials are requested');
   });
 
-  test('it does not send a TTL that was turned off', async function (assert) {
+  test("it uses the role's default when an over-limit TTL was turned off", async function (assert) {
     assert.expect(2);
 
     await this.renderComponent();
@@ -188,6 +188,34 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await click('[data-test-generate-credentials-button]');
 
     assert.true(this.generateStub.calledOnce, 'credentials are requested');
-    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '', 'the hidden TTL is not sent');
+    assert.strictEqual(
+      this.generateStub.firstCall.args[2].ttl,
+      '',
+      'no TTL is sent, so the role default is used'
+    );
+  });
+
+  // Existing behaviour, kept as it was before the max-duration checks.
+  test('it keeps sending a valid TTL that was turned off', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '2');
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await click('[data-test-generate-credentials-button]');
+
+    assert.true(this.generateStub.calledOnce, 'credentials are requested');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '2s', 'the entered TTL is still sent');
+  });
+
+  test('it sends no TTL when the picker is left off', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click('[data-test-generate-credentials-button]');
+
+    assert.true(this.generateStub.calledOnce, 'credentials are requested');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '', 'no TTL is sent');
   });
 });

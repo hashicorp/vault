@@ -260,7 +260,7 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
           'Replace the upgraded Vault configuration with your pre-upgrade configuration.',
           'Start Vault.',
           'Verify the current version via command vault status | grep Version',
-          'Unseal vault',
+          'Unseal Vault',
           'Test the rollback',
         ];
   }

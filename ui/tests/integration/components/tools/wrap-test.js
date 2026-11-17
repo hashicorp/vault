@@ -125,6 +125,67 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click(GENERAL.submitButton);
   });
 
+  test('it blocks a wrap TTL longer than Vault supports', async function (assert) {
+    assert.expect(5);
+    const wrapRequests = [];
+    this.server.post('sys/wrapping/wrap', (schema, { requestHeaders }) => {
+      wrapRequests.push(requestHeaders['x-vault-wrap-ttl']);
+      return {};
+    });
+
+    await this.renderComponent();
+    await click(TTL.toggleByLabel('Wrap TTL'));
+    await fillIn(TTL.valueInputByLabel('Wrap TTL'), '9999999999');
+    await fillIn(TTL.unitInputByLabel('Wrap TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL.error).hasText('Wrap TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.strictEqual(wrapRequests.length, 0, 'nothing is wrapped');
+    assert.dom(TS.toolsInput('wrapping-token')).doesNotExist('no token is shown');
+
+    await fillIn(TTL.valueInputByLabel('Wrap TTL'), '106751');
+    await click(GENERAL.submitButton);
+    assert.strictEqual(wrapRequests.length, 1, 'it wraps once the TTL is valid');
+    assert.strictEqual(wrapRequests[0], '9223286400s', 'the maximum whole days is sent');
+  });
+
+  test('it blocks a wrap TTL too long to be stored as a number', async function (assert) {
+    assert.expect(2);
+    const wrapRequests = [];
+    this.server.post('sys/wrapping/wrap', (schema, { requestHeaders }) => {
+      wrapRequests.push(requestHeaders['x-vault-wrap-ttl']);
+      return {};
+    });
+
+    await this.renderComponent();
+    await click(TTL.toggleByLabel('Wrap TTL'));
+    await fillIn(TTL.valueInputByLabel('Wrap TTL'), '9'.repeat(400));
+    await fillIn(TTL.unitInputByLabel('Wrap TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL.error).exists('the picker shows its error');
+    assert.strictEqual(wrapRequests.length, 0, 'nothing is wrapped');
+  });
+
+  test('it wraps with the default TTL when an over-limit TTL is toggled off', async function (assert) {
+    assert.expect(2);
+    const wrapRequests = [];
+    this.server.post('sys/wrapping/wrap', (schema, { requestHeaders }) => {
+      wrapRequests.push(requestHeaders['x-vault-wrap-ttl']);
+      return {};
+    });
+
+    await this.renderComponent();
+    await click(TTL.toggleByLabel('Wrap TTL'));
+    await fillIn(TTL.valueInputByLabel('Wrap TTL'), '9999999999');
+    await fillIn(TTL.unitInputByLabel('Wrap TTL'), 'd');
+    await click(TTL.toggleByLabel('Wrap TTL'));
+    await click(GENERAL.submitButton);
+
+    assert.strictEqual(wrapRequests.length, 1, 'it wraps');
+    assert.strictEqual(wrapRequests[0], '30m', 'the default TTL is used');
+  });
+
   test('it toggles between views and preserves input data', async function (assert) {
     assert.expect(7);
     await this.renderComponent();

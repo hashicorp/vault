@@ -7,6 +7,7 @@ import { next } from '@ember/runloop';
 import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 export default Controller.extend({
   clusterController: controller('vault.cluster'),
@@ -49,9 +50,16 @@ export default Controller.extend({
     },
 
     renewLease(model, increment) {
+      // the picker explains an over-limit increment, so it only needs to stop the request
+      if (increment?.isValid === false) return;
       const flash = this.flashMessages;
+      // An increment that was turned off keeps being sent as before, unless Vault would reject it.
+      const isHiddenOverMax = increment && !increment.enabled && isDurationOverMax(increment.seconds);
       this.api.sys
-        .leasesRenewLease({ lease_id: model.id, increment: String(increment?.seconds ?? '') })
+        .leasesRenewLease({
+          lease_id: model.id,
+          increment: isHiddenOverMax ? '' : String(increment?.seconds ?? ''),
+        })
         .then(() => {
           this.send('refreshModel');
           // lol this is terrible, but there's no way to get the promise from the route refresh

@@ -287,5 +287,23 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       await click(GENERAL.button('Analyze'));
       await waitFor(GENERAL.cardContainer('Known issues'));
     });
+
+    test('it capitalizes the product name in the unseal rollback step', async function (assert) {
+      assert.expect(2);
+      this.onSetUpgradeInfo = (info) => {
+        assert.true(info.rollback_steps.includes('Unseal Vault'), 'Rollback steps include "Unseal Vault"');
+        assert.false(
+          info.rollback_steps.includes('Unseal vault'),
+          'Rollback steps do not include lowercase "Unseal vault"'
+        );
+      };
+
+      await render(
+        hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+      );
+      await fillIn(GENERAL.selectByAttr('target version'), '1.20.1');
+      await click(GENERAL.button('Analyze'));
+      await waitFor(GENERAL.cardContainer('Known issues'));
+    });
   });
 });

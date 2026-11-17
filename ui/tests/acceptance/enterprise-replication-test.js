@@ -19,6 +19,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { addSecondary, disableReplication, enableReplication } from 'vault/tests/helpers/replication';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import sinon from 'sinon';
 
 // note: dr secondary tests are done in ./replication-dr-secondaries-test.js
@@ -281,5 +282,114 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .dom('[data-test-selectable-card-container="primary"]')
       .exists('shows the correct card on the details dashboard');
     assert.strictEqual(currentURL(), '/vault/replication/dr');
+  });
+
+  module('secondary token TTL', function (hooks) {
+    const LABEL = 'Time to Live (TTL) for generated secondary token';
+
+    hooks.beforeEach(async function () {
+      this.actionSpy = sinon.spy(
+        this.owner.lookup('service:store').adapterFor('cluster'),
+        'replicationAction'
+      );
+      await enableReplication('performance', 'primary');
+      await pollCluster(this.owner);
+      await settled();
+      this.tokenRequests = () =>
+        this.actionSpy.getCalls().filter((call) => call.args[0] === 'secondary-token');
+      this.openAddSecondary = async (name) => {
+        await visit('/vault/replication/performance/secondaries/add');
+        await fillIn('[data-test-input="Secondary ID"]', name);
+      };
+      this.enterTtl = async (value) => {
+        await click(TTL_PICKER.toggleByLabel(LABEL));
+        await fillIn(TTL_PICKER.valueInputByLabel(LABEL), value);
+        await fillIn(TTL_PICKER.unitInputByLabel(LABEL), 'd');
+      };
+      // the token modal must be dismissed before leaving the page
+      this.dismissTokenModal = async () => {
+        await click(GENERAL.button('Copy token'));
+        await click(GENERAL.cancelButton);
+      };
+    });
+
+    test('it blocks a TTL longer than Vault supports', async function (assert) {
+      assert.expect(5);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('9999999999');
+      await click(GENERAL.submitButton);
+
+      assert.dom(TTL_PICKER.error).hasText(`${LABEL} is too large. Maximum allowed value is 106,751 days.`);
+      assert.strictEqual(this.tokenRequests().length, 0, 'no token is requested');
+
+      await fillIn(TTL_PICKER.valueInputByLabel(LABEL), '106751');
+      await click(GENERAL.submitButton);
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested once the TTL is valid');
+      assert.strictEqual(
+        this.tokenRequests()[0].args[3].ttl,
+        '9223286400s',
+        'the maximum whole days is sent'
+      );
+      await this.dismissTokenModal();
+      assert.dom(TTL_PICKER.error).doesNotExist('the error clears');
+    });
+
+    test('it blocks a TTL too long to be stored as a number', async function (assert) {
+      assert.expect(2);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('9'.repeat(400));
+      await click(GENERAL.submitButton);
+
+      assert.dom(TTL_PICKER.error).exists('the picker shows its error');
+      assert.strictEqual(this.tokenRequests().length, 0, 'no token is requested');
+    });
+
+    test('it sends the default TTL when an over-limit TTL was turned off', async function (assert) {
+      assert.expect(3);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('9999999999');
+      await click(TTL_PICKER.toggleByLabel(LABEL));
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '1800s', 'the default TTL is sent');
+      assert.dom(GENERAL.infoRowValue('TTL')).hasText('1800s', 'the token modal shows the default TTL');
+      await this.dismissTokenModal();
+    });
+
+    // Existing behaviour, kept as it was before the max-duration checks.
+    test('it keeps sending a valid TTL that was turned off', async function (assert) {
+      assert.expect(2);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('2');
+      await click(TTL_PICKER.toggleByLabel(LABEL));
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '172800s', 'the entered TTL is still sent');
+      await this.dismissTokenModal();
+    });
+
+    test('it keeps sending the default TTL when the picker is left off', async function (assert) {
+      assert.expect(3);
+      await this.openAddSecondary('ttlSecondary');
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '1800s', 'the default TTL is sent');
+      assert.dom(GENERAL.infoRowValue('TTL')).hasText('1800s', 'the token modal shows the default TTL');
+      await this.dismissTokenModal();
+    });
+
+    test('it sends the entered TTL when the picker is on', async function (assert) {
+      assert.expect(2);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('2');
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '172800s', 'the entered TTL is sent');
+      await this.dismissTokenModal();
+    });
   });
 });
