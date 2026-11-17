@@ -141,7 +141,6 @@ jobs:
           secrets: |
             kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
-            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
       - name: Install Chrome
         uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
@@ -187,32 +186,6 @@ jobs:
         with:
           name: test-results-ui-${{ strategy.job-index }}
           path: ui/test-results
-      - name: Prepare datadog-ci
-        if: always() && startsWith(github.repository, 'hashicorp/vault') && strategy.job-index != 0
-        continue-on-error: true
-        run: |
-          if type datadog-ci > /dev/null 2>&1; then
-            exit 0
-          fi
-          # Curl does not always exit 1 if things go wrong. To determine if this is successful
-          # we'll silence all non-error output and check the results to determine success.
-          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
-            printf "failed to download datadog-ci: %s" "$out"
-          fi
-          if [[ -n "$out" ]]; then
-            printf "failed to download datadog-ci: %s" "$out"
-          fi
-          chmod +x /usr/local/bin/datadog-ci
-      - name: Upload test results to DataDog
-        if: (success() || failure()) && strategy.job-index != 0
-        continue-on-error: true
-        env:
-          DD_ENV: ci
-        run: |
-          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
-            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
-          fi
-          datadog-ci junit upload --service "$GITHUB_REPOSITORY" 'ui/test-results/qunit/results.xml'
       - if: always() && strategy.job-index != 0
         uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
         with:
