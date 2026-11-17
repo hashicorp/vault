@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, findAll, render } from '@ember/test-helpers';
+import { click, findAll, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
@@ -129,6 +129,12 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert
       .dom(CHARTS.carbonBar('Client usage by month (simple)'))
       .exists({ count: monthsWithData.length }, 'renders one bar per month with data');
+    // Carbon sets each bar's aria-label in a D3 transition, which settled() does not wait for.
+    await waitUntil(() =>
+      findAll(CHARTS.carbonBar('Client usage by month (simple)')).every((bar) =>
+        bar.hasAttribute('aria-label')
+      )
+    );
     findAll(CHARTS.carbonBar('Client usage by month (simple)')).forEach((bar) => {
       assert.dom(bar).hasAttribute('aria-label', /\d+/, 'bar has an accessible name');
     });
