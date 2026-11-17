@@ -212,6 +212,7 @@ require (
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
+	github.com/petermattis/goid v0.0.0-20260716134002-a9b348f0a2b9
 	github.com/pires/go-proxyproto v0.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/posener/complete v1.2.3
@@ -520,7 +521,6 @@ require (
 	github.com/opencontainers/runc v1.3.6 // indirect
 	github.com/oracle/oci-go-sdk/v65 v65.123.0 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
-	github.com/petermattis/goid v0.0.0-20260716134002-a9b348f0a2b9 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect

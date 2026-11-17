@@ -207,9 +207,15 @@ type PolicyStore struct {
 	tokenPoliciesLRU *lru.TwoQueueCache
 	egpLRU           *lru.TwoQueueCache
 
-	// This is used to ensure that writes to the store (acl/rgp) or to the egp
-	// path tree don't happen concurrently. We are okay reading stale data so
-	// long as there aren't concurrent writes.
+	// policyLocks serializes changes to a single policy, keyed by its cache
+	// key: writes to the store, the caches and policyTypeMap. Operations on
+	// different policies don't block each other. We are okay reading stale
+	// data so long as there aren't concurrent writes.
+	policyLocks policyLocker
+
+	// modifyLock is also held for every RGP and EGP operation, so that writes
+	// to Sentinel state shared across policies, such as the egp path tree,
+	// don't happen concurrently.
 	modifyLock *sync.RWMutex
 
 	// Stores whether a token policy is ACL or RGP
@@ -236,12 +242,13 @@ type PolicyEntry struct {
 // using a given view. It used used to durable store and manage named policy.
 func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, system logical.SystemView, logger log.Logger) (*PolicyStore, error) {
 	ps := &PolicyStore{
-		aclView:    baseView.SubView(policyACLSubPath),
-		rgpView:    baseView.SubView(policyRGPSubPath),
-		egpView:    baseView.SubView(policyEGPSubPath),
-		modifyLock: new(sync.RWMutex),
-		logger:     logger,
-		core:       core,
+		aclView:     baseView.SubView(policyACLSubPath),
+		rgpView:     baseView.SubView(policyRGPSubPath),
+		egpView:     baseView.SubView(policyEGPSubPath),
+		policyLocks: newKeyedLock(),
+		modifyLock:  new(sync.RWMutex),
+		logger:      logger,
+		core:        core,
 	}
 
 	ps.extraInit()
@@ -334,8 +341,8 @@ func (ps *PolicyStore) invalidate(ctx context.Context, name string, policyType P
 	saneName := strings.TrimPrefix(name, "/")
 	index := ps.cacheKey(ns, saneName)
 
-	ps.modifyLock.Lock()
-	defer ps.modifyLock.Unlock()
+	ps.lockPolicy(index, policyType)
+	defer ps.unlockPolicy(index, policyType)
 
 	// We don't lock before removing from the LRU here because the worst that
 	// can happen is we load again if something since added it
@@ -400,8 +407,11 @@ func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
 }
 
 func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy, req *logical.Request) error {
-	ps.modifyLock.Lock()
-	defer ps.modifyLock.Unlock()
+	// Construct the cache key
+	index := ps.cacheKey(p.namespace, p.Name)
+
+	ps.lockPolicy(index, p.Type)
+	defer ps.unlockPolicy(index, p.Type)
 
 	// Get the appropriate view based on policy type and namespace
 	view := ps.getBarrierView(p.namespace, p.Type)
@@ -424,9 +434,6 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy, req *lo
 	if err != nil {
 		return fmt.Errorf("failed to create entry: %w", err)
 	}
-
-	// Construct the cache key
-	index := ps.cacheKey(p.namespace, p.Name)
 
 	switch p.Type {
 	case PolicyTypeACL:
@@ -641,8 +648,8 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	}
 
 	if grabLock {
-		ps.modifyLock.Lock()
-		defer ps.modifyLock.Unlock()
+		ps.lockPolicy(index, policyType)
+		defer ps.unlockPolicy(index, policyType)
 	}
 
 	// See if anything has added it since we got the lock
@@ -853,17 +860,18 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 	if err != nil {
 		return err
 	}
-	// If not set, the call comes from invalidation, where we'll already have
-	// grabbed the lock
-	if physicalDeletion {
-		ps.modifyLock.Lock()
-		defer ps.modifyLock.Unlock()
-	}
 
 	// Policies are normalized to lower-case
 	name = ps.sanitizeName(name)
 	index := ps.cacheKey(ns, name)
 	sentinelIndex := ns.ID + "/" + name
+
+	// If not set, the call comes from invalidation, where we'll already have
+	// grabbed the lock
+	if physicalDeletion {
+		ps.lockPolicy(index, policyType)
+		defer ps.unlockPolicy(index, policyType)
+	}
 
 	view := ps.getBarrierView(ns, policyType)
 	if view == nil {
@@ -1136,4 +1144,30 @@ func (ps *PolicyStore) logDeniedParamWarning(p *Policy) {
 			ps.logger.Warn("you're using 'allowed_parameters' or 'denied_parameters' in one or more policies, note that Vault 1.21 introduced a behavior change. For details see https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#item-by-item-list-comparison-for-allowed_parameters-and-denied_parameters")
 		})
 	}
+}
+
+// policyLocker locks a single policy by its cache key. Tests replace it to
+// observe which goroutine holds each key.
+type policyLocker interface {
+	Lock(key string)
+	Unlock(key string)
+}
+
+// lockPolicy locks the policy with the given cache key and type for
+// modification. RGP and EGP policies also take modifyLock, always after the
+// policy lock. Callers must not hold another policy lock, so acquisitions
+// can't form a cycle.
+func (ps *PolicyStore) lockPolicy(index string, policyType PolicyType) {
+	ps.policyLocks.Lock(index)
+	if policyType != PolicyTypeACL {
+		ps.modifyLock.Lock()
+	}
+}
+
+// unlockPolicy releases the locks taken by lockPolicy.
+func (ps *PolicyStore) unlockPolicy(index string, policyType PolicyType) {
+	if policyType != PolicyTypeACL {
+		ps.modifyLock.Unlock()
+	}
+	ps.policyLocks.Unlock(index)
 }
