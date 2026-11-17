@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -9,7 +9,7 @@
     <NamespaceReminder @mode="save" @noun="Auth Method" />
 
     {{#each @form.tuneFields as |field|}}
-      <FormField data-test-field @attr={{field}} @model={{@form}} />
+      <FormField data-test-field @attr={{field}} @model={{@form}} @modelValidations={{this.modelValidations}} />
       {{#if (and (eq field.name "config.listing_visibility") this.directLoginLink)}}
         <Hds::Layout::Flex @align="center" @gap="8" class="has-top-margin-negative-s has-bottom-margin-l">
           <Hds::Text::Body @tag="p" @color="faint">UI login link:</Hds::Text::Body>
@@ -25,7 +25,7 @@
         Specifies the user lockout settings for this auth mount.
       </Hds::Text::Body>
       {{#each @form.userLockoutConfigFields as |field|}}
-        <FormField @attr={{field}} @model={{@form}} />
+        <FormField @attr={{field}} @model={{@form}} @modelValidations={{this.modelValidations}} />
       {{/each}}
     {{/if}}
   </div>
@@ -39,4 +39,9 @@
       data-test-submit
     />
   </div>
+  {{#if this.invalidFormMessage}}
+    <div class="control has-left-padding-m has-bottom-padding-m">
+      <AlertInline @type="danger" @message={{this.invalidFormMessage}} data-test-invalid-form-message />
+    </div>
+  {{/if}}
 </form>

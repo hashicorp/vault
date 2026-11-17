@@ -26,6 +26,20 @@ const write = async (api: APIRequestContext, path: string, data: object, method:
   return response;
 };
 
+// API paths to delete once the test ends, so later specs don't see leftover mounts, policies or groups.
+let createdPaths: string[] = [];
+
+test.afterEach(async ({ playwright }, testInfo) => {
+  const paths = createdPaths;
+  createdPaths = [];
+  if (!paths.length) return;
+  const api = await rootApi(playwright, testInfo);
+  // Cleanup is best effort; a path that was never created is not an error.
+  for (const path of paths.reverse()) {
+    await api.delete(`/v1/${path}`);
+  }
+});
+
 // Configure the control group max TTL through the UI and confirm Vault stored it.
 test('control group configuration saves and persists the maximum TTL', async ({
   page,
@@ -76,12 +90,23 @@ test('control group request is authorized by a group member and unlocked by the 
   const managers = `cg-managers-${id}`;
   let accessor = '';
 
+  createdPaths.push(
+    `sys/mounts/${kvMount}`,
+    `auth/userpass/users/${authorizer}`,
+    `identity/entity/name/${authorizer}`,
+    `identity/group/name/${managers}`,
+    `sys/policies/acl/cg-authorizer-${id}`,
+    `sys/policies/acl/cg-requester-${id}`
+  );
+
   await test.step('seed a protected secret, an authorizer group member and a requester token', async () => {
     await write(api, `sys/mounts/${kvMount}`, { type: 'kv' });
     await write(api, `${kvMount}/foo`, { bar: 'baz' });
 
     if (!(await api.get('/v1/sys/auth/userpass')).ok()) {
       await write(api, 'sys/auth/userpass', { type: 'userpass' });
+      // Specs that enable userpass themselves fail if it is left mounted.
+      createdPaths.push('sys/auth/userpass');
     }
     const userpass = await (await api.get('/v1/sys/auth/userpass')).json();
     await write(api, `auth/userpass/users/${authorizer}`, {

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -17,6 +17,7 @@ import type RouterService from '@ember/routing/router-service';
 import type { HTMLElementEvent } from 'vault/forms';
 import type NamespaceService from 'vault/services/namespace';
 import type VersionService from 'vault/services/version';
+import type { ValidationMap } from 'vault/app-types';
 import type { MountsAuthTuneConfigurationParametersRequest } from '@hashicorp/vault-client-typescript';
 
 /**
@@ -42,6 +43,8 @@ export default class AuthConfigOptions extends Component<Args> {
   @service declare readonly version: VersionService;
 
   @tracked errorMessage: string | null = null;
+  @tracked modelValidations: ValidationMap | null = null;
+  @tracked invalidFormMessage = '';
 
   get directLoginLink() {
     const ns = this.namespace.path;
@@ -63,9 +66,12 @@ export default class AuthConfigOptions extends Component<Args> {
       this.errorMessage = null;
       try {
         const { form } = this.args;
-        const {
-          data: { description, config, user_lockout_config },
-        } = form.toJSON();
+        const { isValid, state, invalidFormMessage, data } = form.toJSON();
+        this.modelValidations = isValid ? null : state;
+        this.invalidFormMessage = invalidFormMessage;
+        if (!isValid) return;
+
+        const { description, config, user_lockout_config } = data;
 
         const payload = {
           description,

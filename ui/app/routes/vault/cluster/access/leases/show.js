@@ -62,6 +62,11 @@ export default class LeasesShowRoute extends Route {
     });
   }
 
+  resetController(controller, isExiting) {
+    // The controller outlives the route, but the picker is recreated empty on the next visit.
+    if (isExiting) controller.set('increment', null);
+  }
+
   @action
   error(error) {
     const { lease_id: leaseId } = this.paramsFor(this.routeName);

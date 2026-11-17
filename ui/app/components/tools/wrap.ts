@@ -29,6 +29,7 @@ export default class ToolsWrap extends Component {
   @tracked hasLintingErrors = false;
   @tracked token = '';
   @tracked wrapTTL = '';
+  @tracked isTtlValid = true;
   @tracked wrapData = null;
   @tracked errorMessage = '';
   @tracked showJson = true;
@@ -60,6 +61,7 @@ export default class ToolsWrap extends Component {
     this.token = '';
     this.errorMessage = '';
     this.wrapTTL = '';
+    this.isTtlValid = true;
     this.hasLintingErrors = false;
     if (clearData) this.wrapData = null;
   }
@@ -68,6 +70,7 @@ export default class ToolsWrap extends Component {
   updateTtl(evt: TtlEvent) {
     if (!evt) return;
     this.wrapTTL = evt.enabled ? `${evt.seconds}s` : '30m';
+    this.isTtlValid = evt.isValid;
   }
 
   @action
@@ -84,6 +87,8 @@ export default class ToolsWrap extends Component {
   @action
   async handleSubmit(evt: HTMLElementEvent<HTMLFormElement>) {
     evt.preventDefault();
+    // the picker explains an over-limit TTL, so it only needs to stop the request
+    if (!this.isTtlValid) return;
 
     const data = this.wrapData || {};
     const wrap = this.wrapTTL || '';
