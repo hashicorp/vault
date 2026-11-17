@@ -32,7 +32,7 @@ jobs:
       pull-requests: read
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
-      checkout-ref: ${{ steps.checkout.outputs.ref }}
+      checkout-ref: ${{ steps.checkout.outputs.sha }}
       compute-build: ${{ steps.metadata.outputs.compute-build }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
       compute-test-go: ${{ steps.metadata.outputs.compute-test-go }}
