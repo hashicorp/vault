@@ -67,9 +67,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     assert.dom(selectors.save).isDisabled('Save button is disabled when schema is not selected');
 
     await click(selectors.radioCard);
-    assert
-      .dom('[data-test-component="empty-state"]')
-      .doesNotExist('Empty state is hidden when schema is selected');
+    assert.dom('[data-test-empty-state-title]').doesNotExist('Empty state is hidden when schema is selected');
   });
 
   test('it should render validation messages for invalid form', async function (assert) {
