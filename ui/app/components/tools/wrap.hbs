@@ -47,9 +47,14 @@
       <MessageError @errorMessage={{this.errorMessage}} />
       <Toolbar>
         <ToolbarFilters>
-          <Toggle @name="json" @checked={{this.showJson}} @onChange={{this.handleToggle}}>
-            <span class="has-text-grey">JSON</span>
-          </Toggle>
+          <Hds::Form::Toggle::Field
+            checked={{this.showJson}}
+            {{on "change" this.handleToggle}}
+            data-test-toggle-input="json"
+            as |F|
+          >
+            <F.Label data-test-toggle-label="json">JSON</F.Label>
+          </Hds::Form::Toggle::Field>
         </ToolbarFilters>
       </Toolbar>
       {{#if this.showJson}}
@@ -76,6 +81,7 @@
         @helperTextDisabled="Vault will use the default (30m)"
         @helperTextEnabled="Wrap will expire after"
         @changeOnInit={{true}}
+        class="has-top-margin-m"
       />
       {{#if this.hasLintingErrors}}
         <AlertInline

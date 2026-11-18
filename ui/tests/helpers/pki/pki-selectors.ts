@@ -139,6 +139,7 @@ export const PKI_CONFIG_EDIT = {
   crlToggleInput: (attr: string) => `[data-test-input="${attr}"] input`,
   crlTtlInput: (attr: string) => `[data-test-ttl-value="${attr}"]`,
   crlFieldLabel: (attr: string) => `[data-test-input="${attr}"] label`,
+  crlFieldHelperText: (attr: string) => `[data-test-input="${attr}"] [data-test-ttl-form-subtext]`,
   saveButton: '[data-test-configuration-edit-save]',
   cancelButton: '[data-test-configuration-edit-cancel]',
   validationAlert: '[data-test-configuration-edit-validation-alert]',

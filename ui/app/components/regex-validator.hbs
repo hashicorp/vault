@@ -22,13 +22,14 @@
         {{/if}}
       </div>
       <div>
-        <Toggle
-          @name={{concat @attr.name "-validation-toggle"}}
-          @checked={{this.showTestValue}}
-          @onChange={{this.toggleTestValue}}
+        <Hds::Form::Toggle::Field
+          checked={{this.showTestValue}}
+          {{on "change" this.toggleTestValue}}
+          data-test-toggle-input={{concat @attr.name "-validation-toggle"}}
+          as |F|
         >
-          <span class="has-text-grey">Validation</span>
-        </Toggle>
+          <F.Label data-test-toggle-label={{concat @attr.name "-validation-toggle"}}>Validation</F.Label>
+        </Hds::Form::Toggle::Field>
       </div>
     </div>
     {{#if @attr.options.subText}}

@@ -533,71 +533,60 @@
       />
     {{else if (eq @attr.options.editType "toggleButton")}}
       {{! Togglable Input }}
-      <Toggle
-        @name="toggle-{{@attr.name}}"
-        @onChange={{this.toggleButton}}
-        @checked={{if @attr.options.isOppositeValue (not this.toggleInputEnabled) this.toggleInputEnabled}}
-        data-test-toggle={{@attr.name}}
+      <Hds::Form::Toggle::Field
+        checked={{if @attr.options.isOppositeValue (not this.toggleInputEnabled) this.toggleInputEnabled}}
         disabled={{this.disabled}}
-        aria-describedby={{concat @attr.name "-helper-text"}}
+        {{on "change" this.toggleButton}}
+        data-test-toggle-input="toggle-{{@attr.name}}"
+        data-test-toggle={{@attr.name}}
+        as |F|
       >
-        <span class="has-text-weight-bold is-large">{{this.labelString}}</span><br />
-        <div class="description has-text-grey" data-test-toggle-subtext>
-          <span id={{concat @attr.name "-helper-text"}}>
-            {{#if this.toggleInputEnabled}}
-              {{if @attr.options.isOppositeValue @attr.options.helperTextDisabled @attr.options.helperTextEnabled}}
-            {{else}}
-              {{if @attr.options.isOppositeValue @attr.options.helperTextEnabled @attr.options.helperTextDisabled}}
-            {{/if}}
-          </span>
-        </div>
-      </Toggle>
+        <F.Label data-test-toggle-label="toggle-{{@attr.name}}">{{this.labelString}}</F.Label>
+        <F.HelperText data-test-toggle-subtext>
+          {{#if this.toggleInputEnabled}}
+            {{if @attr.options.isOppositeValue @attr.options.helperTextDisabled @attr.options.helperTextEnabled}}
+          {{else}}
+            {{if @attr.options.isOppositeValue @attr.options.helperTextEnabled @attr.options.helperTextDisabled}}
+          {{/if}}
+        </F.HelperText>
+      </Hds::Form::Toggle::Field>
     {{else if (eq @attr.options.editType "optionalText")}}
       {{! Togglable Text Input }}
-      <Toggle
-        @name="show-{{@attr.name}}"
-        @onChange={{this.toggleTextShow}}
-        @checked={{this.showToggleTextInput}}
+      <Hds::Form::Toggle::Field
+        checked={{this.showToggleTextInput}}
+        {{on "change" this.toggleTextShow}}
+        data-test-toggle-input="show-{{@attr.name}}"
         data-test-toggle={{@attr.name}}
-        aria-describedby={{concat @attr.name "-helper-text"}}
+        as |F|
       >
-        <span class="ttl-picker-label is-large" id={{concat @attr.name "-helper-text"}}>{{this.labelString}}</span><br />
-        <div class="description has-text-grey">
-          {{#if this.showToggleTextInput}}
-            <span>
-              {{@attr.options.subText}}
-              {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
-                  See our documentation
-                </DocLink>
-                for help.
-              {{/if}}
-            </span>
-          {{else}}
-            <span>
-              {{or @attr.options.defaultSubText "Vault will use the engine default."}}
-              {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
-                  See our documentation
-                </DocLink>
-                for help.
-              {{/if}}
-            </span>
+        <F.Label data-test-toggle-label="show-{{@attr.name}}">{{this.labelString}}</F.Label>
+        <F.HelperText data-test-toggle-subtext>
+          {{if
+            this.showToggleTextInput
+            @attr.options.subText
+            (or @attr.options.defaultSubText "Vault will use the engine default.")
+          }}
+          {{#if @attr.options.docLink}}
+            <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
+              See our documentation
+            </DocLink>
+            for help.
           {{/if}}
-        </div>
-        {{#if this.showToggleTextInput}}
-          <input
-            data-test-input={{@attr.name}}
-            id={{@attr.name}}
-            autocomplete="off"
-            spellcheck="false"
-            value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-            onchange={{this.onChangeWithEvent}}
-            class="input"
-            maxLength={{@attr.options.characterLimit}}
-          />
-        {{/if}}
-      </Toggle>
+        </F.HelperText>
+      </Hds::Form::Toggle::Field>
+      {{#if this.showToggleTextInput}}
+        <label for={{@attr.name}} class="sr-only">{{this.labelString}}</label>
+        <input
+          data-test-input={{@attr.name}}
+          id={{@attr.name}}
+          autocomplete="off"
+          spellcheck="false"
+          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
+          {{on "change" this.onChangeWithEvent}}
+          class="input has-top-margin-xs"
+          maxLength={{@attr.options.characterLimit}}
+        />
+      {{/if}}
     {{else if (eq @attr.options.editType "stringArray")}}
       <StringList
         class={{if this.validationError "string-list-form-field-error"}}

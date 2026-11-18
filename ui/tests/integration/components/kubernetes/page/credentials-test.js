@@ -74,9 +74,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert
       .dom('[data-test-generate-credentials] .is-size-8')
       .hasText('The namespace in which to generate the credentials.');
-    assert.dom('[data-test-toggle-label] .title').hasText('ClusterRoleBinding');
+    assert.dom('[data-test-toggle-label="kubernetes-clusterRoleBinding"]').hasText('ClusterRoleBinding');
     assert
-      .dom('[data-test-toggle-label] .description')
+      .dom('[data-test-toggle-helper-text="kubernetes-clusterRoleBinding"]')
       .hasText(
         'Generate a ClusterRoleBinding to grant permissions across the whole cluster instead of within a namespace. This requires the Vault role to have kubernetes_role_type set to ClusterRole.'
       );

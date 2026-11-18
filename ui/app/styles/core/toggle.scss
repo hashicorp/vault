@@ -103,7 +103,3 @@
 .toggle[type='checkbox'].is-success:checked + label::before {
   background: var(--token-color-palette-blue-200);
 }
-
-.toggle-label {
-  width: 100%;
-}

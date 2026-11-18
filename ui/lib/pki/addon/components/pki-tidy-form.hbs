@@ -16,16 +16,19 @@
 <form class="has-bottom-margin-s" {{on "submit" (perform this.save)}} data-test-tidy-form={{@tidyType}}>
   {{#if (eq @tidyType "auto")}}
     <div class="field">
-      <Toggle @onChange={{fn (mut @form.data.enabled)}} @checked={{@form.data.enabled}} @name="enabled">
-        <legend>
-          <span class="ttl-picker-label is-large">
-            {{if @form.data.enabled "Automatic tidy enabled" "Automatic tidy disabled"}}
-          </span>
-          {{#unless @form.data.enabled}}
-            <p class="sub-text">Automatic tidy operations will not run.</p>
-          {{/unless}}
-        </legend>
-      </Toggle>
+      <Hds::Form::Toggle::Field
+        checked={{@form.data.enabled}}
+        {{on "change" (fn (mut @form.data.enabled) (not @form.data.enabled))}}
+        data-test-toggle-input="enabled"
+        as |F|
+      >
+        <F.Label data-test-toggle-label="enabled">
+          {{if @form.data.enabled "Automatic tidy enabled" "Automatic tidy disabled"}}
+        </F.Label>
+        {{#unless @form.data.enabled}}
+          <F.HelperText>Automatic tidy operations will not run.</F.HelperText>
+        {{/unless}}
+      </Hds::Form::Toggle::Field>
     </div>
 
     {{#if @form.data.enabled}}

@@ -21,13 +21,14 @@
                   @helpText={{(if this.showHelpText field.options.helpText)}}
                   @subText={{field.options.subText}}
                 />
-                <Toggle
-                  @name={{concat field.name "-toggle"}}
-                  @checked={{this.showDefaultIssuer}}
-                  @onChange={{this.toggleShowDefaultIssuer}}
+                <Hds::Form::Toggle::Field
+                  checked={{this.showDefaultIssuer}}
+                  {{on "change" this.toggleShowDefaultIssuer}}
+                  data-test-toggle-input={{concat field.name "-toggle"}}
+                  as |F|
                 >
-                  <span class="has-text-grey">Use default issuer</span>
-                </Toggle>
+                  <F.Label data-test-toggle-label={{concat field.name "-toggle"}}>Use default issuer</F.Label>
+                </Hds::Form::Toggle::Field>
               </div>
               {{#unless this.showDefaultIssuer}}
                 <div class="has-top-margin-xs has-bottom-margin-l">
