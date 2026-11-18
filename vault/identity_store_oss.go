@@ -31,3 +31,7 @@ func identityStoreSCIMUnauthedPaths() []string {
 func mfaLoginEnterprisePaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{}
 }
+
+func (i *IdentityStore) initializeEntityMetadataDB() error {
+	return nil
+}
