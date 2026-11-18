@@ -224,36 +224,35 @@
                         {{capitalize (or attr.options.label attr.name)}}
                       </label>
                       <div class="field">
-                        <Toggle
-                          @name="show-{{attr.name}}"
-                          @onChange={{fn this.updateShowPassword (not this.showPasswordField)}}
-                          @checked={{this.showPasswordField}}
+                        <Hds::Form::Toggle::Field
+                          checked={{this.showPasswordField}}
+                          {{on "change" (fn this.updateShowPassword (not this.showPasswordField))}}
+                          data-test-toggle-input="show-{{attr.name}}"
                           data-test-toggle={{attr.name}}
+                          as |F|
                         >
-                          <span class="ttl-picker-label has-text-grey">Update password</span><br />
-                          <div class="description has-text-grey">
-                            <span>
-                              {{if
-                                this.showPasswordField
-                                "The new password that will be used when connecting to the database"
-                                "Vault will use the existing password"
-                              }}
-                            </span>
-                          </div>
-                          {{#if this.showPasswordField}}
-                            <Input
-                              {{on "change" (fn this.updatePassword attr.name)}}
-                              aria-label="New password"
-                              @type="password"
-                              @value={{get @model attr.name}}
-                              name={{attr.name}}
-                              class="input"
-                              {{! Prevents browsers from auto-filling }}
-                              autocomplete="new-password"
-                              spellcheck="false"
-                            />
-                          {{/if}}
-                        </Toggle>
+                          <F.Label data-test-toggle-label="show-{{attr.name}}">Update password</F.Label>
+                          <F.HelperText>
+                            {{if
+                              this.showPasswordField
+                              "The new password that will be used when connecting to the database"
+                              "Vault will use the existing password"
+                            }}
+                          </F.HelperText>
+                        </Hds::Form::Toggle::Field>
+                        {{#if this.showPasswordField}}
+                          <Input
+                            {{on "change" (fn this.updatePassword attr.name)}}
+                            aria-label="New password"
+                            @type="password"
+                            @value={{get @model attr.name}}
+                            name={{attr.name}}
+                            class="input has-top-margin-xs"
+                            {{! Prevents browsers from auto-filling }}
+                            autocomplete="new-password"
+                            spellcheck="false"
+                          />
+                        {{/if}}
                       </div>
                     </div>
                   {{else}}

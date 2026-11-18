@@ -340,6 +340,31 @@ module('Integration | Component | ttl-picker', function (hooks) {
   });
 
   module('with toggle', function () {
+    test('it renders an accessible HDS toggle', async function (assert) {
+      await render(hbs`
+        <TtlPicker
+          @label={{this.label}}
+          @helperTextDisabled="TTL is off"
+          @onChange={{this.onChange}}
+        />
+      `);
+      const toggle = find(TTL_PICKER.toggle);
+      assert.dom(toggle).hasClass('hds-form-toggle__control', 'renders the HDS toggle');
+      assert.dom(toggle).hasAttribute('role', 'switch');
+      assert
+        .dom(GENERAL.ttl.toggle('Foobar'))
+        .hasAttribute('for', toggle.id, 'label is associated with toggle');
+      assert.dom(GENERAL.ttl.toggle('Foobar')).hasText('Foobar');
+      const helperTextId = find('[data-test-ttl-form-subtext]').closest('.hds-form-helper-text').id;
+      assert.dom(toggle).hasAttribute('aria-describedby', helperTextId, 'toggle is described by helper text');
+
+      await click(GENERAL.ttl.toggle('Foobar'));
+
+      assert.dom(toggle).isChecked('clicking the label toggles the input');
+      assert.dom(TTL_PICKER.ttlFormGroup).exists('TTL inputs render outside the toggle label');
+      assert.dom(`label ${TTL_PICKER.ttlValue}`).doesNotExist('TTL input is not nested in a label');
+    });
+
     test('it has toggle off by default', async function (assert) {
       await render(hbs`
         <TtlPicker

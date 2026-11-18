@@ -6,7 +6,7 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, fillIn, findAll, setupOnerror, waitFor } from '@ember/test-helpers';
+import { render, click, fillIn, find, findAll, setupOnerror, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
@@ -175,6 +175,92 @@ module('Integration | Component | form field', function (hooks) {
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
     assert.dom(GENERAL.toggleInput('show-foo.bar')).isChecked();
     assert.dom(GENERAL.inputByAttr('foo.bar')).hasValue('apple');
+  });
+
+  test('it renders toggleButton as an accessible HDS toggle', async function (assert) {
+    this.setProperties({
+      attr: createAttr('foobar', 'boolean', {
+        editType: 'toggleButton',
+        label: 'Foo bar',
+        helperTextEnabled: 'Toggled on',
+        helperTextDisabled: 'Toggled off',
+      }),
+      model: EmberObject.create({}),
+      onChange: () => {},
+    });
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} @disabled={{true}} />`
+    );
+    const input = GENERAL.toggleInput('toggle-foobar');
+    assert.dom(input).hasClass('hds-form-toggle__control', 'renders the HDS toggle');
+    assert.dom(input).hasAttribute('role', 'switch');
+    assert.dom(input).isDisabled('passes disabled through to the input');
+    assert
+      .dom(GENERAL.ttl.toggle('toggle-foobar'))
+      .hasAttribute('for', find(input).id, 'label is associated with the input');
+    assert.dom(GENERAL.ttl.toggle('toggle-foobar')).hasText('Foo bar');
+    assert
+      .dom(input)
+      .hasAttribute(
+        'aria-describedby',
+        find('[data-test-toggle-subtext]').id,
+        'input is described by the helper text'
+      );
+  });
+
+  test('it renders isOppositeValue toggleButton checked when the value is false', async function (assert) {
+    const [model] = await setup.call(
+      this,
+      createAttr('skip', 'boolean', {
+        editType: 'toggleButton',
+        isOppositeValue: true,
+        defaultValue: false,
+        helperTextEnabled: 'Toggle is on',
+        helperTextDisabled: 'Toggle is off',
+      })
+    );
+    assert.dom(GENERAL.toggleInput('toggle-skip')).isChecked('toggle is on when value is false');
+    assert.dom('[data-test-toggle-subtext]').hasText('Toggle is on');
+
+    await click(GENERAL.toggleInput('toggle-skip'));
+
+    assert.dom(GENERAL.toggleInput('toggle-skip')).isNotChecked();
+    assert.true(model.get('skip'), 'value is flipped to true');
+    assert.dom('[data-test-toggle-subtext]').hasText('Toggle is off');
+  });
+
+  test('it renders: optionalText', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', 'string', {
+        editType: 'optionalText',
+        label: 'Foo',
+        subText: 'Enter a value.',
+        docLink: '/docs',
+      })
+    );
+    const input = GENERAL.toggleInput('show-foo');
+    assert.dom(input).hasAttribute('role', 'switch');
+    assert.dom(input).isNotChecked();
+    assert.dom(GENERAL.ttl.toggle('show-foo')).hasText('Foo');
+    assert
+      .dom('[data-test-toggle-subtext]')
+      .hasText('Vault will use the engine default. See our documentation for help.');
+    assert.dom(GENERAL.inputByAttr('foo')).doesNotExist('text input is hidden when toggled off');
+
+    await click(GENERAL.ttl.toggle('show-foo'));
+
+    assert.dom(input).isChecked('clicking the label toggles the input');
+    assert.dom('[data-test-toggle-subtext]').hasText('Enter a value. See our documentation for help.');
+    assert.dom('label[for="foo"]').hasText('Foo', 'text input has accessible name');
+    await fillIn(GENERAL.inputByAttr('foo'), 'bar');
+    assert.strictEqual(model.get('foo'), 'bar');
+
+    await click(input);
+
+    assert.dom(GENERAL.inputByAttr('foo')).doesNotExist('text input is hidden when toggled off');
+    assert.strictEqual(model.get('foo'), null, 'value is cleared when toggled off');
+    assert.ok(spy.calledWith('foo', null), 'onChange called with null');
   });
 
   test('it renders: editType file', async function (assert) {

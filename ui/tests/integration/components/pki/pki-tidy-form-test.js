@@ -78,12 +78,13 @@ module('Integration | Component | pki tidy form', function (hooks) {
     await this.renderComponent();
     // the form isn't created until we render so expect assertions need to be after render
     const loopAssertCount = this.allFields.length * 2 - 3; // loop skips 3 params
-    assert.expect(loopAssertCount + headerAssertCount + 4);
+    assert.expect(loopAssertCount + headerAssertCount + 5);
 
     assert.dom(GENERAL.toggleInput('enabled')).isNotChecked();
+    assert.dom(GENERAL.ttl.toggle('enabled')).hasText('Automatic tidy disabled');
     assert
-      .dom(GENERAL.ttl.toggle('enabled'))
-      .hasText('Automatic tidy disabled Automatic tidy operations will not run.');
+      .dom(`[data-test-tidy-form="auto"] .hds-form-helper-text`)
+      .hasText('Automatic tidy operations will not run.');
 
     this.allFields.forEach((field) => {
       if (field !== 'enabled') {

@@ -64,75 +64,72 @@
       >{{this.validationMessage}}</Hds::Form::Error>
     {{/if}}
   {{else}}
-    <Toggle
-      @name={{this.label}}
-      @onChange={{action "toggleEnabled"}}
-      @checked={{this.enableTTL}}
-      @hideLabel={{true}}
+    <Hds::Form::Toggle::Field
+      checked={{this.enableTTL}}
+      {{on "change" this.toggleEnabled}}
+      data-test-toggle-input={{this.label}}
       data-test-ttl-toggle={{this.label}}
-      aria-describedby={{concat (dasherize this.label) "-helper-text"}}
+      as |F|
     >
-      <fieldset class="field is-grouped is-marginless is-borderless">
-        {{#if (has-block)}}
-          {{! Allow label override }}
-          {{yield}}
-        {{else}}
-          <legend>
-            <span class="ttl-picker-label is-large" data-test-ttl-form-label={{this.label}}>{{this.label}}</span><br />
-            {{#if this.helperText}}
-              <div class="sub-text">
-                <span id={{concat (dasherize this.label) "-helper-text"}} data-test-ttl-form-subtext>{{this.helperText}}
-                </span>
-                {{#if @description}}
-                  <Hds::TooltipButton
-                    @text={{@description}}
-                    @placement="bottom"
-                    aria-label="description"
-                    data-test-tooltip="ttl-picker"
-                  >
-                    <Icon @name="info" />
-                  </Hds::TooltipButton>
-                {{/if}}
-              </div>
+      {{#if (has-block)}}
+        {{! Allow label override }}
+        <F.Label data-test-toggle-label={{this.label}}>{{yield}}</F.Label>
+      {{else}}
+        <F.Label data-test-toggle-label={{this.label}} data-test-ttl-form-label={{this.label}}>{{this.label}}</F.Label>
+        {{#if this.helperText}}
+          <F.HelperText>
+            <span data-test-ttl-form-subtext>{{this.helperText}}</span>
+            {{#if @description}}
+              <Hds::TooltipButton
+                @text={{@description}}
+                @placement="bottom"
+                aria-label="description"
+                data-test-tooltip="ttl-picker"
+              >
+                <Icon @name="info" />
+              </Hds::TooltipButton>
             {{/if}}
-          </legend>
+          </F.HelperText>
         {{/if}}
-        {{#if (or this.enableTTL @hideToggle)}}
-          <div class="control is-marginless" data-test-ttl-inputs>
-            <label for="time-{{this.elementId}}" class="sr-only">Number of units</label>
-            <Input
-              id="time-{{this.elementId}}"
-              @value={{this.time}}
-              @type="text"
-              name="time"
-              class="input {{if this.validationMessage 'has-error'}}"
-              aria-describedby={{if this.validationMessage (concat "error-time-" this.elementId)}}
-              oninput={{perform this.updateTime value="target.value"}}
-              pattern="[0-9]*"
-              data-test-ttl-value={{this.label}}
-            />
-          </div>
-          <div class="control">
-            <label for="unit-{{this.elementId}}" class="sr-only">Unit for TTL</label>
-            <Select
-              id="unit-{{this.elementId}}"
-              @ariaLabel="TTL unit for {{this.label}}"
-              @name="ttl-unit"
-              @options={{this.unitOptions}}
-              @onChange={{this.updateUnit}}
-              @selectedValue={{this.unit}}
-              data-test-ttl-unit={{this.label}}
-            />
-          </div>
-        {{/if}}
+      {{/if}}
+    </Hds::Form::Toggle::Field>
+    {{#if this.enableTTL}}
+      <fieldset class="field is-grouped is-marginless is-borderless has-top-margin-xs">
+        <legend class="sr-only">{{this.label}}</legend>
+        <div class="control is-marginless" data-test-ttl-inputs>
+          <label for="time-{{this.elementId}}" class="sr-only">Number of units</label>
+          <Input
+            id="time-{{this.elementId}}"
+            @value={{this.time}}
+            @type="text"
+            name="time"
+            class="input {{if this.validationMessage 'has-error'}}"
+            aria-describedby={{if this.validationMessage (concat "error-time-" this.elementId)}}
+            oninput={{perform this.updateTime value="target.value"}}
+            pattern="[0-9]*"
+            data-test-ttl-value={{this.label}}
+          />
+        </div>
+        <div class="control">
+          <label for="unit-{{this.elementId}}" class="sr-only">Unit for TTL</label>
+          <Select
+            id="unit-{{this.elementId}}"
+            @ariaLabel="TTL unit for {{this.label}}"
+            @name="ttl-unit"
+            @options={{this.unitOptions}}
+            @onChange={{this.updateUnit}}
+            @selectedValue={{this.unit}}
+            data-test-ttl-unit={{this.label}}
+          />
+        </div>
       </fieldset>
-      {{#if (and (or this.enableTTL @hideToggle) this.validationMessage)}}
+      {{#if this.validationMessage}}
         <Hds::Form::Error
           @controlId={{concat "time-" this.elementId}}
           class="ttl-value-error"
           data-test-ttl-error={{this.label}}
         >{{this.validationMessage}}</Hds::Form::Error>
       {{/if}}
-    </Toggle>
+    {{/if}}
   {{/if}}
 </div>
