@@ -5,6 +5,8 @@ package logical
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -101,4 +103,59 @@ func prepKeyStorage(t *testing.T) Storage {
 	}
 
 	return s
+}
+
+// recordingView wraps a Storage, recording every List prefix it is asked
+// for, and failing List calls outside allowedPrefix. It proves that
+// CollectKeysWithPrefix never descends outside the requested prefix.
+type recordingView struct {
+	Storage
+	lists         []string
+	allowedPrefix string
+}
+
+func (v *recordingView) List(ctx context.Context, prefix string) ([]string, error) {
+	v.lists = append(v.lists, prefix)
+	if !strings.HasPrefix(prefix, v.allowedPrefix) {
+		return nil, fmt.Errorf("list outside prefix %q: %q", v.allowedPrefix, prefix)
+	}
+	return v.Storage.List(ctx, prefix)
+}
+
+func TestCollectKeysWithPrefix_DoesNotScanOutsidePrefix(t *testing.T) {
+	s := &InmemStorage{}
+	for _, key := range []string{
+		"password_policy/default",
+		"password_policy/strong",
+		"password_policy/nested/deep",
+		"expire/id/auth/approle/login/abc",
+		"expire/id/auth/approle/login/def",
+		"other/x",
+	} {
+		if err := s.Put(context.Background(), &StorageEntry{Key: key}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	v := &recordingView{Storage: s, allowedPrefix: "password_policy/"}
+	keys, err := CollectKeysWithPrefix(context.Background(), v, "password_policy/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Depth-first order: "default" and "strong" are visited while listing
+	// "password_policy/", "nested/deep" only after descending into "nested/".
+	exp := []string{
+		"password_policy/default",
+		"password_policy/strong",
+		"password_policy/nested/deep",
+	}
+	if diff := deep.Equal(keys, exp); diff != nil {
+		t.Fatal(diff)
+	}
+	for _, prefix := range v.lists {
+		if !strings.HasPrefix(prefix, "password_policy/") {
+			t.Fatalf("listed outside the prefix: %q (all lists: %v)", prefix, v.lists)
+		}
+	}
 }

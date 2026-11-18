@@ -68,7 +68,13 @@ type ClearableView interface {
 
 // ScanView is used to scan all the keys in a view iteratively
 func ScanView(ctx context.Context, view ClearableView, cb func(path string)) error {
-	frontier := []string{""}
+	return scanView(ctx, view, "", cb)
+}
+
+// scanView is ScanView starting at a directory prefix of the view
+// ("" for the view root). Every key handed to cb is prefixed with start.
+func scanView(ctx context.Context, view ClearableView, start string, cb func(path string)) error {
+	frontier := []string{start}
 	for len(frontier) > 0 {
 		n := len(frontier)
 		current := frontier[n-1]
@@ -146,8 +152,18 @@ func CollectKeysWithPrefix(ctx context.Context, view ClearableView, prefix strin
 		}
 	}
 
-	// Scan for all the keys
-	if err := ScanView(ctx, view, cb); err != nil {
+	// Scan for all the keys, starting at the directory containing the
+	// prefix instead of the view root. Previously the scan walked the
+	// entire view and filtered afterwards, so listing a small prefix
+	// (e.g. "password_policy/" on the sys/ view) also walked every
+	// other directory in the view - including the expiration manager's
+	// lease tree under sys/expire/id/ - and failed once that walk grew
+	// too large for the request deadline.
+	start := ""
+	if i := strings.LastIndex(prefix, "/"); i >= 0 {
+		start = prefix[:i+1]
+	}
+	if err := scanView(ctx, view, start, cb); err != nil {
 		return nil, err
 	}
 	return keys, nil
