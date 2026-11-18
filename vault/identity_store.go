@@ -110,6 +110,10 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, err
 	}
 
+	if err := iStore.initializeEntityMetadataDB(); err != nil {
+		return nil, fmt.Errorf("failed to initialize entity metadata database: %w", err)
+	}
+
 	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
 	core.AddLogger(entitiesPackerLogger)
 	localAliasesPackerLogger := iStore.logger.Named("storagepacker").Named("local-aliases")

@@ -58,6 +58,11 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
+	// entityMetadataDB is the in-memory database where frequently changing entity updates
+	// like entity last login, or token creation timestamps are stored. These dbs are
+	// separated to prevent frequent changes from affecting the main memdb instance.
+	entityMetadataDB *memdb.MemDB
+
 	// lock is the high-level IdentityStore lock, which protects underlying
 	// state against concurrent modification/access. If needed, callers should
 	// be sure to take this lock **before** (and never after) taking out any of
