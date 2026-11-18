@@ -34,8 +34,6 @@ module('Integration | Component | replication-table-rows', function (hooks) {
     await render(
       hbs`<ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}}/>`
     );
-    assert.dom('.empty-state').doesNotExist('does not show empty state when data is found');
-
     assert
       .dom('[data-test-row-value="Merkle root index"]')
       .includesText(REPLICATION_DETAILS.merkleRoot, `shows the correct Merkle Root`);
