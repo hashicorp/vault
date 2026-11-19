@@ -79,8 +79,8 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 	require.Equalf(t, os.FileMode(0o600), info.Mode(), "File mode does not match.")
 }
 
-// TestAuditFile_fileMode0000 verifies that setting the audit file mode to
-// "0000" prevents Vault from modifying the permissions of the file.
+// TestAuditFile_fileMode0000 verifies that mode "0000" preserves existing
+// non-executable file permissions.
 func TestAuditFile_fileMode0000(t *testing.T) {
 	t.Parallel()
 
@@ -88,7 +88,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 	f, err := os.CreateTemp(dir, "auditTest.log")
 	require.NoErrorf(t, err, "Failure to create test file.")
 
-	err = os.Chmod(f.Name(), 0o777)
+	err = os.Chmod(f.Name(), 0o666)
 	require.NoErrorf(t, err, "Failure to chmod temp file for testing.")
 
 	err = f.Close()
@@ -110,7 +110,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 
 	info, err := os.Stat(f.Name())
 	require.NoErrorf(t, err, "cannot retrieve file mode from `Stat`. The error is %v", err)
-	require.Equalf(t, os.FileMode(0o777), info.Mode(), "File mode does not match.")
+	require.Equalf(t, os.FileMode(0o666), info.Mode(), "File mode does not match.")
 }
 
 // TestAuditFile_EventLogger_fileModeNew verifies that the Factory function

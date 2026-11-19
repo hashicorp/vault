@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -24,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -940,4 +942,155 @@ func TestAudit_PluginDirectorySecurityCheck_WithPathOrFilePath(t *testing.T) {
 			})
 		}
 	}
+}
+
+// TestAudit_PluginDirectoryGuard verifies that the API rejects a whitespace
+// padded path to a symlinked plugin directory and clears executable modes.
+func TestAudit_PluginDirectoryGuard(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	pluginDir := filepath.Join(root, "plugins")
+	require.NoError(t, os.Mkdir(pluginDir, 0o700))
+	pluginLink := filepath.Join(root, "plugin-link")
+	if err := os.Symlink(pluginDir, pluginLink); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("symlinks unavailable: %v", err)
+		}
+		require.NoError(t, err)
+	}
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{PluginDirectory: pluginLink})
+	client := cluster.Cores[0].Client
+
+	for _, option := range []string{"file_path", "path"} {
+		forbidden := filepath.Join(pluginDir, option)
+		err := client.Sys().EnableAuditWithOptions(option, &api.EnableAuditOptions{
+			Type: vaultaudit.TypeFile,
+			Options: map[string]string{
+				option: " " + forbidden + " ",
+				"mode": "0755",
+			},
+		})
+		require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
+		require.NoFileExists(t, forbidden)
+	}
+
+	auditLink := filepath.Join(root, "audit-link")
+	require.NoError(t, os.Symlink(pluginDir, auditLink))
+	symlinkedTarget := filepath.Join(auditLink, "symlinked.log")
+	err := client.Sys().EnableAuditWithOptions("symlinked", &api.EnableAuditOptions{
+		Type:    vaultaudit.TypeFile,
+		Options: map[string]string{"file_path": symlinkedTarget},
+	})
+	require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
+	require.NoFileExists(t, symlinkedTarget)
+
+	require.NoError(t, os.Mkdir(filepath.Join(pluginDir, "sub"), 0o700))
+	subLink := filepath.Join(root, "sub-link")
+	require.NoError(t, os.Symlink(filepath.Join(pluginDir, "sub"), subLink))
+	sep := string(filepath.Separator)
+	err = client.Sys().EnableAuditWithOptions("dotdot", &api.EnableAuditOptions{
+		Type:    vaultaudit.TypeFile,
+		Options: map[string]string{"file_path": subLink + sep + ".." + sep + "dotdot.log"},
+	})
+	require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
+	require.NoFileExists(t, filepath.Join(pluginDir, "dotdot.log"))
+
+	linkedTarget := filepath.Join(pluginDir, "linked.log")
+	fileLink := filepath.Join(root, "file-link.log")
+	require.NoError(t, os.Symlink(linkedTarget, fileLink))
+	err = client.Sys().EnableAuditWithOptions("filelink", &api.EnableAuditOptions{
+		Type:    vaultaudit.TypeFile,
+		Options: map[string]string{"file_path": fileLink},
+	})
+	require.Error(t, err)
+	require.NoFileExists(t, linkedTarget)
+
+	safe := filepath.Join(root, "logs", "audit.log")
+	forbidden := filepath.Join(pluginDir, "ignored.log")
+	require.NoError(t, client.Sys().EnableAuditWithOptions("safe", &api.EnableAuditOptions{
+		Type: vaultaudit.TypeFile,
+		Options: map[string]string{
+			"file_path": safe,
+			"path":      forbidden,
+			"mode":      "0755",
+		},
+	}))
+	require.NoFileExists(t, forbidden)
+	info, err := os.Stat(safe)
+	require.NoError(t, err)
+	if runtime.GOOS != "windows" {
+		require.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+	}
+}
+
+// TestAudit_PersistedPluginDirectoryGuard verifies that neither standby
+// preflight nor active startup opens an unsafe persisted file audit device.
+func TestAudit_PersistedPluginDirectoryGuard(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	pluginDir := filepath.Join(root, "plugins")
+	require.NoError(t, os.Mkdir(pluginDir, 0o700))
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
+		PluginDirectory: pluginDir,
+		EnableRaw:       true,
+	}, &vault.TestClusterOptions{NumCores: 2}, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	client := cluster.Cores[0].Client
+	cluster.StopCore(t, 1)
+
+	healthy := filepath.Join(root, "healthy.log")
+	for name, path := range map[string]string{
+		"healthy": healthy,
+		"unsafe":  filepath.Join(root, "before-restart.log"),
+	} {
+		require.NoError(t, client.Sys().EnableAuditWithOptions(name, &api.EnableAuditOptions{
+			Type:    vaultaudit.TypeFile,
+			Options: map[string]string{"file_path": path},
+		}))
+	}
+
+	raw, err := client.Logical().Read("sys/raw/core/audit")
+	require.NoError(t, err)
+	require.NotNil(t, raw)
+	rawValue, ok := raw.Data["value"].(string)
+	require.True(t, ok)
+	var table vault.MountTable
+	require.NoError(t, json.Unmarshal([]byte(rawValue), &table))
+
+	forbidden := filepath.Join(pluginDir, "forbidden")
+	var updated bool
+	for _, entry := range table.Entries {
+		if entry.Path == "unsafe/" {
+			entry.Options["file_path"] = " " + forbidden + " "
+			entry.Options["mode"] = "0755"
+			updated = true
+		}
+	}
+	require.True(t, updated)
+	encoded, err := json.Marshal(table)
+	require.NoError(t, err)
+	_, err = client.Logical().Write("sys/raw/core/audit", map[string]any{"value": string(encoded)})
+	require.NoError(t, err)
+
+	cluster.StartCore(t, 1, opts, false)
+	cluster.UnsealCore(t, cluster.Cores[1])
+	require.NoFileExists(t, forbidden)
+
+	cluster.StopCore(t, 1)
+	cluster.StopCore(t, 0)
+	cluster.StartCore(t, 0, opts, false)
+	cluster.StartCore(t, 1, opts, false)
+	cluster.UnsealCores(t)
+	require.NoFileExists(t, forbidden)
+
+	before, err := os.Stat(healthy)
+	require.NoError(t, err)
+	_, err = cluster.Cores[0].Client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+	content, err := os.ReadFile(healthy)
+	require.NoError(t, err)
+	require.Greater(t, int64(len(content)), before.Size())
+	require.Contains(t, string(content[before.Size():]), `"path":"auth/token/lookup-self"`)
 }

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -130,40 +131,6 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	if err := c.validateAuditPrefix(entry.Options); err != nil {
 		return err
-	}
-
-	if entry.Type == "file" {
-		if c.pluginDirectory != "" {
-			// Validate that the audit log file is not in the plugin directory
-			auditPath := entry.Options["file_path"]
-			if auditPath == "" {
-				auditPath = entry.Options["path"]
-			}
-			auditDir := filepath.Dir(auditPath)
-			auditDir, err = filepath.Abs(auditDir)
-			if err != nil {
-				return fmt.Errorf("error getting absolute path of audit dir for audit validation: %w", err)
-			}
-			pluginDir, err := filepath.Abs(c.pluginDirectory)
-			if err != nil {
-				return fmt.Errorf("error getting absolute path of plugin dir for audit validation: %w", err)
-			}
-			// Walk the audit path up checking that none of them are the plugin dir
-			for {
-				rp, err := filepath.Rel(pluginDir, auditDir)
-				if err != nil {
-					return fmt.Errorf("error checking relative path for audit validation: %w", err)
-				}
-				if rp == "." {
-					return errors.New("audit file target may not be in the plugin directory")
-				}
-				parent := filepath.Dir(auditDir)
-				if parent == auditDir { // reached filesystem root (works on all OSes)
-					break
-				}
-				auditDir = parent
-			}
-		}
 	}
 
 	c.auditLock.Lock()
@@ -553,11 +520,84 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	return nil
 }
 
+// validateAuditFileDestination rejects file audit devices that would write
+// inside the plugin directory.
+func (c *Core) validateAuditFileDestination(entry *MountEntry, options map[string]string) error {
+	if entry.Type != audit.TypeFile || c.pluginDirectory == "" {
+		return nil
+	}
+
+	auditPath := options["file_path"]
+	if auditPath == "" {
+		auditPath = options["path"]
+	}
+	// The file sink trims the path before opening it.
+	auditPath = strings.TrimSpace(auditPath)
+
+	// The file sink follows a symlinked audit file, so validate its target.
+	if info, err := os.Lstat(auditPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		auditPath, err = filepath.EvalSymlinks(auditPath)
+		if err != nil {
+			return fmt.Errorf("error resolving audit file path for audit validation: %w", err)
+		}
+	}
+
+	auditDir := filepath.Dir(auditPath)
+	auditDir, err := filepath.Abs(auditDir)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path of audit dir for audit validation: %w", err)
+	}
+	pluginDir, err := filepath.Abs(c.pluginDirectory)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path of plugin dir for audit validation: %w", err)
+	}
+	// Walk the audit path up checking that none of them are the plugin dir
+	for {
+		rp, err := filepath.Rel(pluginDir, auditDir)
+		if err != nil {
+			return fmt.Errorf("error checking relative path for audit validation: %w", err)
+		}
+		if rp == "." {
+			return errors.New("audit file target may not be in the plugin directory")
+		}
+		parent := filepath.Dir(auditDir)
+		if parent == auditDir { // reached filesystem root (works on all OSes)
+			break
+		}
+		auditDir = parent
+	}
+
+	pluginInfo, err := os.Stat(pluginDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("error checking plugin dir for audit validation: %w", err)
+	}
+	// Stat each unresolved parent so symlinks, "..", and case-insensitive names
+	// resolve the same way they will when the audit file is opened.
+	parents := []string{filepath.Dir(auditPath)}
+	for i := 1; i < len(auditPath); i++ {
+		if os.IsPathSeparator(auditPath[i]) {
+			parents = append(parents, auditPath[:i])
+		}
+	}
+	for _, parent := range parents {
+		if info, err := os.Stat(parent); err == nil && os.SameFile(pluginInfo, info) {
+			return errors.New("audit file target may not be in the plugin directory")
+		}
+	}
+	return nil
+}
+
 // newAuditBackendWithFormatter creates a backend with the supplied formatter
 // for preflight validation.
 func (c *Core) newAuditBackendWithFormatter(entry *MountEntry, view logical.Storage, conf map[string]string, formatter audit.HeaderFormatter) (audit.Backend, error) {
 	if audit.HasInvalidOptions(entry.Options) {
 		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
+	}
+	if err := c.validateAuditFileDestination(entry, conf); err != nil {
+		return nil, err
 	}
 	f, ok := c.auditBackends[entry.Type]
 	if !ok {
@@ -728,6 +768,9 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
 	if audit.HasInvalidOptions(entry.Options) {
 		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
+	}
+	if err := c.validateAuditFileDestination(entry, conf); err != nil {
+		return nil, err
 	}
 
 	f, ok := c.auditBackends[entry.Type]

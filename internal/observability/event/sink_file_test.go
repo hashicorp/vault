@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -150,6 +151,11 @@ func TestFileSink_Reopen(t *testing.T) {
 			Options:          []Option{WithFileMode("0000")},
 			ExpectedFileMode: os.FileMode(defaultFileMode),
 		},
+		"filemode-executable": {
+			Path:             "vault.log",
+			Options:          []Option{WithFileMode("0755")},
+			ExpectedFileMode: 0o755,
+		},
 	}
 
 	for name, tc := range tests {
@@ -157,6 +163,10 @@ func TestFileSink_Reopen(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			if name == "filemode-executable" && runtime.GOOS == "windows" {
+				t.Skip("Unix file permissions are not supported on Windows")
+			}
 
 			// If we need a real directory as a path we can use a temp dir.
 			// but we should keep track of it for comparison in the new sink.
