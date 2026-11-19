@@ -20,6 +20,7 @@ import sinon from 'sinon';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { Response } from 'miragejs';
 
 // ---------------------------------------------------------------------------
 // Shared stub helpers — called AFTER login(), BEFORE visit()
@@ -209,5 +210,39 @@ module('Acceptance | leases show — revokeLease / renewLease actions', function
     await click('[data-test-renew-lease-submit]');
 
     assert.dom('[data-test-flash-message]').exists('danger flash is shown when renew fails');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// List page — empty state handling
+// ---------------------------------------------------------------------------
+
+module('Acceptance | leases list — empty state (404)', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    await login();
+    stubCapabilities(this.owner);
+  });
+
+  test('list page shows empty state when no leases exist (404 from API)', async function (assert) {
+    // Stub the root leases endpoint to return 404 (no leases)
+    this.server.get(
+      '/sys/leases/lookup/',
+      () => new Response(404, { 'Content-Type': 'application/json' }, { errors: [] })
+    );
+
+    await visit('/vault/access/leases/list');
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.leases.list-root',
+      'stays on list-root route after 404'
+    );
+
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('There are currently no leases.', 'shows empty state title when no leases exist');
   });
 });
