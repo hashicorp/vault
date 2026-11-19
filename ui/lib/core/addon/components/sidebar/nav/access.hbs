@@ -73,7 +73,12 @@
       />
     {{/if}}
     {{#if (has-permission "access" routeParams="leases")}}
-      <Nav.Link @route="vault.cluster.access.leases" @text="Leases" data-test-sidebar-nav-link="Leases" />
+      <Nav.Link
+        @route="vault.cluster.access.leases"
+        @current-when="vault.cluster.access.leases.list-root vault.cluster.access.leases.list vault.cluster.access.leases.show"
+        @text="Leases"
+        data-test-sidebar-nav-link="Leases"
+      />
     {{/if}}
 
     {{! Authentication }}
