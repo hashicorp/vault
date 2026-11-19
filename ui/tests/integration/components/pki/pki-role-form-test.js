@@ -124,6 +124,20 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert.true(this.onSave.calledWith(name), 'onSave called with role name after successful save');
   });
 
+  test('it renders the issuer select labelled by the issuer ref label', async function (assert) {
+    this.role = { name: 'test-role', issuer_ref: 'issuer-0' };
+    await this.renderComponent();
+
+    const select = GENERAL.selectByAttr('issuer_ref');
+    assert.dom(select).hasClass('hds-form-select', 'renders the HDS select');
+    assert.dom(select).hasValue('issuer-0', 'preselects the issuer from the form');
+    assert.dom('label[for="select-issuer_ref"]').hasText('Issuer ref', 'label is associated with the select');
+    assert.dom(`${select} option`).exists({ count: 2 }, 'renders an option per issuer');
+
+    await fillIn(select, 'issuer-1');
+    assert.strictEqual(this.form.data.issuer_ref, 'issuer-1', 'updates the form with the selected issuer');
+  });
+
   test('it should edit a role', async function (assert) {
     assert.expect(7);
 

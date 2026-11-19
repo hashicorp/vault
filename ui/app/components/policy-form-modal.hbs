@@ -21,16 +21,24 @@
         </T.Panel>
       </Page::Tabs>
     {{else}}
-      <Select
-        @name="policyType"
-        @label="Type"
-        @options={{this.policyOptions}}
-        @isFullwidth={{true}}
-        @selectedValue={{@form.policyType}}
-        @onChange={{fn (mut @form.policyType)}}
-        @noDefault={{true}}
+      <Hds::Form::Select::Field
+        @width="100%"
+        name="policyType"
+        {{on "change" (pipe (pick "target.value") (fn (mut @form.policyType)))}}
+        data-test-select="policyType"
         data-test-type-select
-      />
+        as |F|
+      >
+        <F.Label data-test-select-label>Type</F.Label>
+        <F.Options>
+          <option value="" selected={{not @form.policyType}}>Select one</option>
+          {{#each this.policyOptions as |item|}}
+            <option value={{item.value}} disabled={{item.isDisabled}} selected={{eq @form.policyType item.value}}>
+              {{item.label}}
+            </option>
+          {{/each}}
+        </F.Options>
+      </Hds::Form::Select::Field>
       <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
         <A.Header @title="No policy type selected" @titleTag="h2" data-test-empty-state-title />
         <A.Body @text="Select a policy type to continue creating." data-test-empty-state-message />

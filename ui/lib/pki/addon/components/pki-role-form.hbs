@@ -32,18 +32,23 @@
               </div>
               {{#unless this.showDefaultIssuer}}
                 <div class="has-top-margin-xs has-bottom-margin-l">
-                  <div class="select is-fullwidth">
-                    <Select
-                      @name={{field.name}}
-                      @options={{this.issuers}}
-                      @valueAttribute={{"issuerDisplayName"}}
-                      @labelAttribute={{"issuerDisplayName"}}
-                      @isFullwidth={{true}}
-                      @selectedValue={{@form.data.issuer_ref}}
-                      @onChange={{action (mut @form.data.issuer_ref)}}
-                      aria-labelledby={{field.name}}
-                    />
-                  </div>
+                  <Hds::Form::Select::Base
+                    @width="100%"
+                    id="select-{{field.name}}"
+                    name={{field.name}}
+                    {{on "change" (pipe (pick "target.value") (fn (mut @form.data.issuer_ref)))}}
+                    data-test-select={{field.name}}
+                    as |S|
+                  >
+                    <S.Options>
+                      {{#each this.issuers as |issuer|}}
+                        <option
+                          value={{issuer.issuerDisplayName}}
+                          selected={{eq @form.data.issuer_ref issuer.issuerDisplayName}}
+                        >{{issuer.issuerDisplayName}}</option>
+                      {{/each}}
+                    </S.Options>
+                  </Hds::Form::Select::Base>
                 </div>
               {{/unless}}
             {{else if (this.showField field.name)}}

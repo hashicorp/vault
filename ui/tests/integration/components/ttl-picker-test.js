@@ -365,6 +365,30 @@ module('Integration | Component | ttl-picker', function (hooks) {
       assert.dom(`label ${TTL_PICKER.ttlValue}`).doesNotExist('TTL input is not nested in a label');
     });
 
+    test('it renders the unit select as an accessible HDS select', async function (assert) {
+      const changeSpy = sinon.spy();
+      this.set('onChange', changeSpy);
+      await render(hbs`
+        <TtlPicker @label={{this.label}} @onChange={{this.onChange}} @initialValue="2h" @initialEnabled={{true}} />
+      `);
+      const unit = TTL_PICKER.unitInputByLabel('Foobar');
+      assert.dom(unit).hasClass('hds-form-select', 'renders the HDS select');
+      assert.dom(unit).hasAttribute('aria-label', 'TTL unit for Foobar');
+      assert.dom(unit).hasValue('h');
+      assert.deepEqual(
+        [...find(unit).options].map((option) => option.value),
+        ['s', 'm', 'h', 'd'],
+        'renders every unit option'
+      );
+
+      await fillIn(unit, 'm');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('120', 'keeps the same duration in the new unit');
+      assert.true(
+        changeSpy.calledWithMatch({ timeString: '120m', seconds: 7200 }),
+        'onChange receives the TTL in the selected unit'
+      );
+    });
+
     test('it has toggle off by default', async function (assert) {
       await render(hbs`
         <TtlPicker
