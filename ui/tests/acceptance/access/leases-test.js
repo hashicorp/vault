@@ -246,3 +246,49 @@ module('Acceptance | leases list — empty state (404)', function (hooks) {
       .hasText('There are currently no leases.', 'shows empty state title when no leases exist');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sidebar navigation — active state
+// ---------------------------------------------------------------------------
+
+module('Acceptance | leases — sidebar navigation active state', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    await login();
+    stubLeasesListAtPrefix(this.server);
+    stubCapabilities(this.owner);
+  });
+
+  test('Leases nav link is active on the lease list root route', async function (assert) {
+    await visit('/vault/access/leases/list/');
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.leases.list-root',
+      'the lease list root route renders'
+    );
+
+    assert
+      .dom('[data-test-sidebar-nav-link="Leases"]')
+      .hasClass('active', 'Leases nav link is active on the lease list root route');
+  });
+
+  test('Leases nav link is active on a lease prefix route', async function (assert) {
+    await visit('/vault/access/leases/list/auth/token/create/');
+
+    assert
+      .dom('[data-test-sidebar-nav-link="Leases"]')
+      .hasClass('active', 'Leases nav link is active on a lease prefix route');
+  });
+
+  test('Leases nav link is active on a lease detail route', async function (assert) {
+    stubLeaseLookup(this.server, 'auth/token/create/hvs.xyz123');
+    await visit('/vault/access/leases/show/auth/token/create/hvs.xyz123');
+
+    assert
+      .dom('[data-test-sidebar-nav-link="Leases"]')
+      .hasClass('active', 'Leases nav link is active on a lease detail route');
+  });
+});
