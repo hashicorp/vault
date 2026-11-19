@@ -21,6 +21,10 @@ const (
 		"Since this parameter was set on a performance standby, the billing data was not refreshed " +
 		"and retrieved from storage without update."
 
+	WarningRefreshAlreadyInProgress = "a billing data refresh is already in progress. " +
+		"Since refresh_data was set, the billing data was not refreshed by this request " +
+		"and retrieved from storage without update."
+
 	WarningStartEndMonthOutOfRetentionRange = "the specified start_month and/or end_month fall outside the range of the current billing data retention period." +
 		"Months that are not covered in the retention period will show a zero updated_at timestamp and no metrics."
 )
@@ -274,7 +278,7 @@ func (b *SystemBackend) handleBillingOverview(ctx context.Context, req *logical.
 		// Only refresh current month if refresh_data is true
 		shouldRefresh := refreshData && month.Equal(timeutil.StartOfMonth(currentMonth))
 
-		monthData, err := b.buildMonthBillingData(ctx, month, shouldRefresh)
+		monthData, err := b.buildMonthBillingData(ctx, month, shouldRefresh, &warnings)
 		if err != nil {
 			return nil, fmt.Errorf("error building billing data for month %s: %w", month.Format("2006-01"), err)
 		}
@@ -335,14 +339,28 @@ func parseStartEndMonths(data *framework.FieldData, currentMonth time.Time, rete
 }
 
 // buildMonthBillingData constructs billing data for a specific month
-func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Time, refreshData bool) (map[string]interface{}, error) {
+func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Time, refreshData bool, warnings *[]string) (map[string]interface{}, error) {
 	currentMonth := timeutil.StartOfMonth(time.Now().UTC())
 	// Check if the billing metrics need to be refreshed. We're running
 	// under the core stateLock during request handling,so call the no-lock helper to
 	// avoid recursive locking.
 	if refreshData {
-		if err := b.Core.updateBillingMetricsLocked(ctx, currentMonth); err != nil {
-			return nil, fmt.Errorf("error refreshing billing metrics: %w", err)
+		b.Core.consumptionBillingLock.RLock()
+		cb := b.Core.consumptionBilling
+		b.Core.consumptionBillingLock.RUnlock()
+
+		// Avoid starting a redundant scan from the API. If one is already in progress, skip the
+		// refresh, warn, and return the stored (non-updated) data. If we can grab the lock, hold
+		// it for the refresh; it is released when this function returns, on success or error.
+		if cb != nil && !cb.RefreshInProgress.TryLock() {
+			*warnings = append(*warnings, WarningRefreshAlreadyInProgress)
+		} else {
+			if cb != nil {
+				defer cb.RefreshInProgress.Unlock()
+			}
+			if err := b.Core.updateBillingMetricsLocked(ctx, currentMonth); err != nil {
+				return nil, fmt.Errorf("error refreshing billing metrics: %w", err)
+			}
 		}
 	}
 

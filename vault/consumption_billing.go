@@ -151,6 +151,7 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				c.logger.Debug("reached end of month, resetting timer", "currentMonth", currentMonth)
 				previousMonth := timeutil.StartOfPreviousMonth(currentMonth)
 				// On month boundary, we need to flush the current in-memory counts to storage
+				// The worker always flushes unconditionally so a concurrent API scan cannot cause this to be skipped.
 				if err := c.updateBillingMetrics(ctx, previousMonth); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
 				}
@@ -351,7 +352,8 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	return nil
 }
 
-// updateBillingMetricsLocked must be called with stateLock already held.
+// updateBillingMetricsLocked must be called with stateLock already held and,
+// when consumption billing is set up, with the RefreshInProgress lock held by the caller.
 func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time.Time) error {
 	// Check if systemBarrierView is initialized
 	c.mountsLock.RLock()
@@ -395,9 +397,24 @@ func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time
 	return nil
 }
 
+// updateBillingMetrics acquires the stateLock and the RefreshInProgress lock, then
+// refreshes the billing metrics. The lock is held for the whole refresh and released
+// when it returns.
 func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+
+	// The worker must never skip a flush (especially the month-end one), because the
+	// in-memory counters are reset right after it, so it waits for any running
+	// refresh via the RefreshInProgress lock rather than skipping.
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+	if cb != nil {
+		cb.RefreshInProgress.Lock()
+		defer cb.RefreshInProgress.Unlock()
+	}
+
 	return c.updateBillingMetricsLocked(ctx, currentMonth)
 }
 

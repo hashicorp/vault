@@ -120,6 +120,11 @@ type ConsumptionBilling struct {
 	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
 	// This is used to avoid scanning all mounts every 10 minutes for KMIP billing detection.
 	KmipSeenEnabledThisMonth atomic.Bool
+
+	// RefreshInProgress is held while billing metrics are being refreshed (mount table
+	// scan and storage updates). API requests use TryLock so concurrent refresh_data=true
+	// requests skip starting a redundant scan.
+	RefreshInProgress sync.Mutex
 }
 
 // MetricLocks maintains one read/write lock per billing metric key and
