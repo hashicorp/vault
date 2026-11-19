@@ -29,17 +29,18 @@ var _ eventlogger.Node = (*FileSink)(nil)
 
 // FileSink is a sink node which handles writing events to file.
 type FileSink struct {
-	file           *os.File
-	writePermit    *permitpool.Pool
-	permitInitOnce sync.Once
-	fileMode       os.FileMode
-	path           string
-	requiredFormat string
-	logger         hclog.Logger
+	file                  *os.File
+	writePermit           *permitpool.Pool
+	permitInitOnce        sync.Once
+	fileMode              os.FileMode
+	nonExecutableFileMode bool
+	path                  string
+	requiredFormat        string
+	logger                hclog.Logger
 }
 
 // NewFileSink should be used to create a new FileSink.
-// Accepted options: WithFileMode.
+// Accepted options include WithFileMode and WithNonExecutableFileMode.
 func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	// Parse and check path
 	p := strings.TrimSpace(path)
@@ -64,16 +65,23 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 			return nil, fmt.Errorf("unable to determine existing file mode: %w", err)
 		}
 		mode = fileInfo.Mode()
+		if opts.nonExecutableFileMode && mode&0o111 != 0 && opts.withLogger != nil {
+			opts.withLogger.Warn("existing file mode contained executable bits, clearing", "configured_mode", fmt.Sprintf("%04o", mode.Perm()), "new_mode", fmt.Sprintf("%04o", (mode&^0o111).Perm()))
+		}
 	default:
 		mode = *opts.withFileMode
 	}
+	if opts.nonExecutableFileMode {
+		mode &^= 0o111
+	}
 
 	sink := &FileSink{
-		file:           nil,
-		fileMode:       mode,
-		requiredFormat: format,
-		path:           p,
-		logger:         opts.withLogger,
+		file:                  nil,
+		fileMode:              mode,
+		nonExecutableFileMode: opts.nonExecutableFileMode,
+		requiredFormat:        format,
+		path:                  p,
+		logger:                opts.withLogger,
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -199,7 +207,13 @@ func (s *FileSink) open() error {
 		return nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(s.path), s.fileMode); err != nil {
+	dir := filepath.Dir(s.path)
+	dirMode := s.fileMode
+	if s.nonExecutableFileMode {
+		// Directories need traversal permission even when audit files cannot be executable.
+		dirMode |= 0o700 | (s.fileMode&0o444)>>2 | (s.fileMode&0o222)>>1
+	}
+	if err := os.MkdirAll(dir, dirMode); err != nil {
 		return fmt.Errorf("unable to create file %q: %w", s.path, err)
 	}
 
@@ -210,12 +224,12 @@ func (s *FileSink) open() error {
 	}
 
 	// Change the file mode in case the log file already existed.
-	// We special case '/dev/null' since we can't chmod it, and bypass if the mode is zero.
+	// We special case '/dev/null' since we can't chmod it.
 	switch s.path {
 	case devnull:
 	default:
-		if s.fileMode != 0 {
-			err = os.Chmod(s.path, s.fileMode)
+		if s.fileMode != 0 || s.nonExecutableFileMode {
+			err = s.file.Chmod(s.fileMode)
 			if err != nil {
 				chmodErr := fmt.Errorf("unable to change file permissions '%v' for sink %q: %w", s.fileMode, s.path, err)
 				closeErr := s.file.Close()

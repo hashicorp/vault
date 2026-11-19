@@ -92,7 +92,7 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*fileBa
 		return nil, err
 	}
 
-	sinkOpts := []event.Option{event.WithLogger(conf.Logger)}
+	sinkOpts := []event.Option{event.WithLogger(conf.Logger), event.WithNonExecutableFileMode()}
 	if mode, ok := conf.Config[optionMode]; ok {
 		if strings.TrimSpace(mode) != "" {
 			m, err := strconv.ParseUint(mode, 8, 32)
