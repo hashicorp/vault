@@ -406,12 +406,26 @@ func (b *backend) secretAccessKeysCreate(
 		userPath = "/"
 	}
 
+	var tags []iamtypes.Tag
+	for key, value := range role.IAMTags {
+		// This assignment needs to be done in order to create unique addresses for
+		// these variables. Without doing so, all the tags will be copies of the last
+		// tag listed in the role.
+		k, v := key, value
+		tags = append(tags, iamtypes.Tag{Key: &k, Value: &v})
+	}
+
 	createUserRequest := &iam.CreateUserInput{
 		UserName: aws.String(username),
 		Path:     aws.String(userPath),
 	}
 	if role.PermissionsBoundaryARN != "" {
 		createUserRequest.PermissionsBoundary = aws.String(role.PermissionsBoundaryARN)
+	}
+	// Tag the user in the CreateUser request itself, so that SCPs or IAM
+	// policies that require tags on iam:CreateUser allow the request.
+	if len(tags) > 0 {
+		createUserRequest.Tags = tags
 	}
 
 	// Create the user
@@ -455,25 +469,6 @@ func (b *backend) secretAccessKeysCreate(
 		})
 		if err != nil {
 			return logical.ErrorResponse("Error adding user to group: %s", err), awsutil.CheckAWSError(err)
-		}
-	}
-
-	var tags []iamtypes.Tag
-	for key, value := range role.IAMTags {
-		// This assignment needs to be done in order to create unique addresses for
-		// these variables. Without doing so, all the tags will be copies of the last
-		// tag listed in the role.
-		k, v := key, value
-		tags = append(tags, iamtypes.Tag{Key: &k, Value: &v})
-	}
-
-	if len(tags) > 0 {
-		_, err = iamClient.TagUser(ctx, &iam.TagUserInput{
-			Tags:     tags,
-			UserName: &username,
-		})
-		if err != nil {
-			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
 		}
 	}
 
