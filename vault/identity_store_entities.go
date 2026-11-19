@@ -836,9 +836,80 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	return logical.ListResponseWithInfo(keys, entityInfo), nil
 }
 
+// mergeEntityAsPartOfUpsert resolves an alias conflict found while upserting toEntity by merging it with
+// fromEntityID, the entity that already holds the alias. Unmanaged duplicates keep toEntity;
+// conflicts involving SCIM-managed entities use mergeSCIMEntityAsPartOfUpsert.
 func (i *IdentityStore) mergeEntityAsPartOfUpsert(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityID string, persist bool) (error, error) {
-	err1, err2, _ := i.mergeEntity(ctx, txn, toEntity, []string{fromEntityID}, []string{}, true, false, true, persist, true)
+	// Cloned because fromEntity may become the survivor, which mergeEntity modifies.
+	fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, true)
+	if err != nil {
+		return nil, err
+	}
+	if fromEntity == nil {
+		return fmt.Errorf("fromEntity %s was not found in memdb as part of an automated entity merge into %s; storage/memdb may be in a bad state", fromEntityID, toEntity.ID), nil
+	}
+
+	// If both entities are unmanaged, we can directly merge them using the standard merge logic.
+	if fromEntity.ScimClientID == "" && toEntity.ScimClientID == "" {
+		// forceMergeAliases=true: on conflicting aliases, mergeEntity keeps fromEntity's copy.
+		err1, err2, _ := i.mergeEntity(ctx, txn, toEntity, []string{fromEntityID}, []string{}, true, false, true, persist, true)
+		return err1, err2
+	}
+	// Otherwise, at least one entity is SCIM-managed, so we delegate to the SCIM-specific merge logic.
+	return i.mergeSCIMEntityAsPartOfUpsert(ctx, txn, toEntity, fromEntity, persist)
+}
+
+// mergeSCIMEntityAsPartOfUpsert resolves an alias conflict involving at least one SCIM-managed entity.
+// A managed entity beats an unmanaged one; between managed entities, the older one survives.
+func (i *IdentityStore) mergeSCIMEntityAsPartOfUpsert(ctx context.Context, txn *memdb.Txn, toEntity, fromEntity *identity.Entity, persist bool) (error, error) {
+	// A SCIM client is the source of truth for its entities, so a SCIM-managed entity beats an unmanaged one.
+	var keepFromEntity bool
+	switch {
+	case toEntity.ScimClientID == "":
+		keepFromEntity = true
+	case fromEntity.ScimClientID == "":
+		keepFromEntity = false
+	default:
+		// Duplicate SCIM entities come from creating the same user twice, so the first creation wins.
+		keepFromEntity = entityCreatedBefore(fromEntity, toEntity)
+	}
+
+	survivor, loser := toEntity, fromEntity
+	if keepFromEntity {
+		survivor, loser = fromEntity, toEntity
+	}
+	if loser.ScimClientID != "" && loser.ScimClientID != survivor.ScimClientID {
+		i.logger.Warn("merging entities owned by different SCIM clients; keeping the older entity",
+			"kept_entity_id", survivor.ID, "kept_scim_client_id", survivor.ScimClientID,
+			"absorbed_entity_id", loser.ID, "absorbed_scim_client_id", loser.ScimClientID)
+	}
+
+	if loser == toEntity {
+		// mergeEntity looks up the absorbed entity in MemDB, which may not hold toEntity yet or may hold an older copy.
+		if err := i.MemDBUpsertEntityInTxn(txn, toEntity); err != nil {
+			return nil, err
+		}
+	}
+
+	// On conflicting aliases, keep the survivor's own copies so a SCIM-owned alias isn't replaced.
+	aliasIDsToKeep := make([]string, 0, len(survivor.Aliases))
+	for _, alias := range survivor.Aliases {
+		aliasIDsToKeep = append(aliasIDsToKeep, alias.ID)
+	}
+
+	// forceMergeAliases=false makes mergeEntity honor aliasIDsToKeep.
+	err1, err2, _ := i.mergeEntity(ctx, txn, survivor, []string{loser.ID}, aliasIDsToKeep, true, false, true, persist, false)
 	return err1, err2
+}
+
+// entityCreatedBefore reports whether a was created before b, using the entity ID to break ties so every
+// node picks the same survivor regardless of load order.
+func entityCreatedBefore(a, b *identity.Entity) bool {
+	aCreated, bCreated := a.GetCreationTime().AsTime(), b.GetCreationTime().AsTime()
+	if !aCreated.Equal(bCreated) {
+		return aCreated.Before(bCreated)
+	}
+	return a.ID < b.ID
 }
 
 // A small type to return useful information to the UI after an entity clash
@@ -1096,6 +1167,11 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 			// Set the desired canonical ID
 			fromAlias.CanonicalID = toEntity.ID
+			// Make transferred aliases with a different SCIM owner unmanaged so
+			// the survivor cannot leave foreign-managed aliases behind.
+			if fromAlias.ScimClientID != toEntity.ScimClientID {
+				fromAlias.ScimClientID = ""
+			}
 
 			fromAlias.MergedFromCanonicalIDs = append(fromAlias.MergedFromCanonicalIDs, fromEntity.ID)
 
@@ -1185,6 +1261,9 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	for _, group := range fromEntityGroups {
 		// Only the agent registry cohort that owns a group manages its members.
 		if group.GetAgentRegistryCohort() != nil {
+			continue
+		}
+		if group.ScimClientID != "" && group.ScimClientID != toEntity.ScimClientID {
 			continue
 		}
 		group.MemberEntityIDs = append(group.MemberEntityIDs, toEntity.ID)

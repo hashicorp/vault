@@ -336,7 +336,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context, isActive bool) error {
 			// Before pull#5786, entity memberships in groups were not getting
 			// updated when respective entities were deleted. This is here to
 			// check that the entity IDs in the group are indeed valid, and if
-			// not remove them.
+			// not replace absorbed IDs with compatible survivors or remove them.
 			for _, memberEntityID := range group.MemberEntityIDs {
 				entity, err := i.MemDBEntityByID(memberEntityID, false)
 				if err != nil {
@@ -344,8 +344,18 @@ func (i *IdentityStore) loadGroups(ctx context.Context, isActive bool) error {
 					return err
 				}
 				if entity == nil {
+					survivor, err := i.MemDBEntityByMergedEntityIDInTxn(txn, memberEntityID, false)
+					if err != nil {
+						txn.Abort()
+						return err
+					}
 					persist = true
 					group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, memberEntityID)
+					if survivor != nil && survivor.NamespaceID == group.NamespaceID &&
+						(group.ScimClientID == "" || group.ScimClientID == survivor.ScimClientID) &&
+						!strutil.StrListContains(group.MemberEntityIDs, survivor.ID) {
+						group.MemberEntityIDs = append(group.MemberEntityIDs, survivor.ID)
+					}
 				}
 			}
 

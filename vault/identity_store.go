@@ -863,6 +863,11 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 				}
 			}
 
+			if err := i.detachMovedAliasesFromStaleEntitiesInTxn(txn, bucketEntity, memDBEntities); err != nil {
+				i.logger.Error("failed to detach moved aliases from stale entities", "entity_id", bucketEntity.ID, "error", err)
+				return
+			}
+
 			_, err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false, false)
 			if err != nil {
 				i.logger.Error("failed to update entity in MemDB", "entity_id", bucketEntity.ID, "error", err)
@@ -912,6 +917,41 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 	}
 
 	txn.Commit()
+}
+
+func (i *IdentityStore) detachMovedAliasesFromStaleEntitiesInTxn(txn *memdb.Txn, entity *identity.Entity, memDBEntities []*identity.Entity) error {
+	for _, incomingAlias := range entity.Aliases {
+		indexedAlias, err := i.MemDBAliasByIDInTxn(txn, incomingAlias.ID, false, false)
+		if err != nil {
+			return err
+		}
+		if indexedAlias == nil || indexedAlias.CanonicalID == entity.ID {
+			continue
+		}
+
+		sourceEntity, err := i.MemDBEntityByIDInTxn(txn, indexedAlias.CanonicalID, true)
+		if err != nil {
+			return err
+		}
+		if sourceEntity != nil {
+			sourceEntity.DeleteAliasByID(incomingAlias.ID)
+			if err := i.MemDBUpsertEntityInTxn(txn, sourceEntity); err != nil {
+				return err
+			}
+			for index, cachedEntity := range memDBEntities {
+				if cachedEntity.ID == sourceEntity.ID {
+					memDBEntities[index] = sourceEntity
+					break
+				}
+			}
+		}
+
+		if err := i.MemDBDeleteAliasByIDInTxn(txn, incomingAlias.ID, false); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (i *IdentityStore) invalidateGroupBucket(ctx context.Context, key string) {
