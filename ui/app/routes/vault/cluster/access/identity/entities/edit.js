@@ -12,7 +12,7 @@ export default class IdentityEditRoute extends Route {
   @service capabilities;
 
   async model(params) {
-    const canCreatePolicy = await this.capabilities.for('policies').canCreate;
+    const canCreatePolicy = (await this.capabilities.for('policies')).canCreate;
     const identityCapabilities = await this.capabilities.for('identityCapabilities', {
       identityType: 'entity',
       id: params.item_id,
