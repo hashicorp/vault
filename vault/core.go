@@ -2379,6 +2379,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 		}
 
 		c.standby = false
+
+		c.entStartSecureHubConnect(ctx)
 	} else {
 		// Populate the metric sink cluster name from the barrier now that it is
 		// unsealed. This ensures standby nodes emit metrics with the correct
