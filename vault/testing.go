@@ -66,6 +66,7 @@ import (
 	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -2164,6 +2165,80 @@ func TestCreateDuplicateEntityAliasesInStorage(ctx context.Context, c *Core, n i
 	}
 
 	return entityIDs, nil
+}
+
+// TestSCIMEntityOwner describes an entity written by
+// TestCreateDuplicateSCIMEntitiesInStorage. An empty ClientID means unmanaged,
+// a zero CreationTime leaves the entity's creation time unset, and a non-empty
+// ExtraAliasMountAccessor gives the entity a second, unshared alias on that
+// mount, named after the entity and owned by ExtraAliasClientID if set.
+type TestSCIMEntityOwner struct {
+	ClientID                string
+	CreationTime            time.Time
+	ExtraAliasMountAccessor string
+	ExtraAliasClientID      string
+}
+
+// TestCreateDuplicateSCIMEntitiesInStorage writes one entity per element of
+// owners directly to storage, all sharing the same alias on the given userpass
+// mount, so they are merged on the next identity store load. Entity IDs are
+// returned in input order. This should only be used in testing.
+func TestCreateDuplicateSCIMEntitiesInStorage(ctx context.Context, c *Core, userpassAccessor string, owners []TestSCIMEntityOwner) ([]string, error) {
+	entityIDs := make([]string, 0, len(owners))
+	for i, owner := range owners {
+		entityID := fmt.Sprintf("scim-dup-entity-%d", i)
+		e := &identity.Entity{
+			ID: entityID,
+			// Distinct names keep duplicate-name handling out of the load path.
+			Name: entityID,
+			Aliases: []*identity.Alias{
+				{
+					ID:            fmt.Sprintf("scim-dup-alias-%d", i),
+					CanonicalID:   entityID,
+					MountType:     "userpass",
+					MountAccessor: userpassAccessor,
+					Name:          "scim-dup-alias",
+					NamespaceID:   namespace.RootNamespaceID,
+					ScimClientID:  owner.ClientID,
+				},
+			},
+			NamespaceID:  namespace.RootNamespaceID,
+			ScimClientID: owner.ClientID,
+			BucketKey:    c.identityStore.entityPacker.BucketKey(entityID),
+		}
+		if !owner.CreationTime.IsZero() {
+			e.CreationTime = timestamppb.New(owner.CreationTime)
+		}
+		if owner.ExtraAliasMountAccessor != "" {
+			// Stored first so it is indexed before the shared alias triggers the merge.
+			e.Aliases = append([]*identity.Alias{{
+				ID:            fmt.Sprintf("scim-dup-extra-alias-%d", i),
+				CanonicalID:   entityID,
+				MountType:     "userpass",
+				MountAccessor: owner.ExtraAliasMountAccessor,
+				Name:          entityID,
+				NamespaceID:   namespace.RootNamespaceID,
+				ScimClientID:  owner.ExtraAliasClientID,
+			}}, e.Aliases...)
+		}
+		if err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e); err != nil {
+			return nil, err
+		}
+		entityIDs = append(entityIDs, entityID)
+	}
+
+	return entityIDs, nil
+}
+
+// TestWriteEntityToStorage writes an entity directly to storage. This should
+// only be used in tests that simulate replicated storage updates.
+func TestWriteEntityToStorage(ctx context.Context, c *Core, entity *identity.Entity) error {
+	if entity == nil {
+		return fmt.Errorf("entity is nil")
+	}
+
+	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
+	return TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, entity.ID, entity)
 }
 
 // TestHelperWriteToStoragePacker takes care of boiler place to insert into a
