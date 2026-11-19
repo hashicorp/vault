@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/aws: Send `iam_tags` in the `CreateUser` request for `iam_user` roles, so SCPs that require tags on user creation no longer deny credential requests.
+```
