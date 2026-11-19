@@ -154,6 +154,11 @@ type IdentityStore struct {
 	scimCleanupCtx context.Context
 	// scimCleanupCancel cancels all background SCIM client cleanup goroutines.
 	scimCleanupCancel context.CancelFunc
+
+	// scimCleanupNudge tracks running cleanup goroutines by clientID. The value
+	// is a buffered channel (capacity 1) that can be sent to in order to wake
+	// the goroutine early from its backoff sleep.
+	scimCleanupNudge sync.Map // map[string]chan struct{}
 }
 
 type groupDiff struct {
