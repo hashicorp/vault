@@ -159,3 +159,5 @@ func (c *Core) IsMountTypeAllowed(mountType string) bool {
 func (c *Core) IsFlagEnabled(name string) bool {
 	return false
 }
+
+func (c *Core) entStartSecureHubConnect(ctx context.Context) {}

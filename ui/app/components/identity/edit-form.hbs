@@ -38,7 +38,7 @@
           @onChange={{fn (mut @model.form.data.policies)}}
           @onCreate={{this.onCreatePolicy}}
           @fallbackComponent="string-list"
-          @disallowNewItems={{not @model.canCreatePolicies}}
+          @disallowNewItems={{not @model.canCreatePolicy}}
         />
       {{else if (and (eq field.name "member_group_ids") (not-eq @model.form.data.type "external"))}}
         <SearchSelect

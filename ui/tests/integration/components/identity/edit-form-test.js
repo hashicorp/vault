@@ -5,7 +5,8 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import GroupIdentityForm from 'vault/forms/identity/group';
 import sinon from 'sinon';
@@ -29,7 +30,10 @@ module('Integration | Component | identity/edit-form', function (hooks) {
     sinon.stub(api.sys, 'systemListPoliciesRgp').resolves({ keys: [] });
   });
 
-  function renderGroupEditForm(ctx, { memberEntityIds = [], entities = [], groups = [] } = {}) {
+  function renderGroupEditForm(
+    ctx,
+    { memberEntityIds = [], entities = [], groups = [], canCreatePolicy = false } = {}
+  ) {
     const form = new GroupIdentityForm(
       { name: 'my-group', type: 'internal', member_entity_ids: memberEntityIds, member_group_ids: [] },
       { isNew: false }
@@ -40,7 +44,7 @@ module('Integration | Component | identity/edit-form', function (hooks) {
       groups,
       identityType: 'group',
       itemId: 'test-group-uuid',
-      canCreatePolicies: false,
+      canCreatePolicy,
     };
     ctx.onSave = sinon.stub();
     return render(hbs`
@@ -84,5 +88,32 @@ module('Integration | Component | identity/edit-form', function (hooks) {
     assert
       .dom(GENERAL.searchSelect.selectedOption(0))
       .includesText(unknownId, 'falls back to showing UUID when entity is not in options list');
+  });
+
+  test('offers to create a new policy and opens the policy modal when the user can create policies', async function (assert) {
+    await renderGroupEditForm(this, { canCreatePolicy: true });
+
+    await clickTrigger('#policies');
+    await fillIn(GENERAL.searchSelect.searchInput, 'new-policy');
+    assert
+      .dom(GENERAL.searchSelect.option())
+      .hasText('Click to add new item: new-policy', 'create option is offered');
+
+    await click(GENERAL.searchSelect.option());
+    assert.dom('#search-select-modal').exists('policy form modal opens');
+    assert.dom('[data-test-modal-title]').hasText('Create new policy');
+  });
+
+  test('does not offer to create a new policy when the user cannot create policies', async function (assert) {
+    // Without existing options and with new items disallowed, SearchSelect renders its fallback string list instead of a dropdown.
+    this.owner.lookup('service:api').sys.policiesListAclPolicies.resolves({ keys: ['default'] });
+    await renderGroupEditForm(this, { canCreatePolicy: false });
+
+    await clickTrigger('#policies');
+    await fillIn(GENERAL.searchSelect.searchInput, 'new-policy');
+    assert
+      .dom(GENERAL.searchSelect.options)
+      .doesNotIncludeText('Click to add new item', 'create option is not offered');
+    assert.dom('#search-select-modal').doesNotExist('policy form modal is not rendered');
   });
 });

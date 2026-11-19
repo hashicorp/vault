@@ -473,3 +473,150 @@ func Test_AttributionRetentionConfig_DisablesCollection(t *testing.T) {
 	require.Len(t, afterReEnable.Mounts, 1, "attribution should be stored after re-enabling")
 	require.Contains(t, afterReEnable.Mounts, "kv_reenabled")
 }
+
+// Test_BillingOverview_RefreshInProgressFlag verifies that a refresh_data=true request
+// covering the current month executes the scan and releases the in-progress lock upon completion,
+// and that historical-only date ranges do not acquire or contend for the lock.
+func Test_BillingOverview_RefreshInProgressFlag(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	core := cluster.Cores[0].Core
+	cb := core.GetCoreConsumptionBillingManager()
+	require.NotNil(t, cb)
+
+	// Happy path: the scan runs, records a non-zero timestamp, and releases the flag.
+	resp, err := client.Logical().ReadWithData("sys/billing/overview", map[string][]string{
+		"refresh_data": {"true"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotContains(t, resp.Warnings, vault.WarningRefreshAlreadyInProgress)
+
+	months, ok := resp.Data["months"].([]interface{})
+	require.True(t, ok)
+	currentMonth, ok := months[0].(map[string]interface{})
+	require.True(t, ok)
+	updatedAt, err := time.Parse(time.RFC3339, currentMonth["updated_at"].(string))
+	require.NoError(t, err)
+	require.False(t, updatedAt.IsZero(), "the scan should have recorded a last-update timestamp")
+	require.True(t, cb.RefreshInProgress.TryLock(), "lock should be released after the scan")
+	cb.RefreshInProgress.Unlock()
+
+	// Historical-only range: requests that do not include the current month should not acquire
+	// or contend for the lock, even if refresh_data=true is passed while another scan is running.
+	cb.RefreshInProgress.Lock()
+	// Release before cluster cleanup so a blocked background worker can't stall shutdown.
+	t.Cleanup(cb.RefreshInProgress.Unlock)
+	currentMonthStart := timeutil.StartOfMonth(time.Now().UTC())
+	lastMonth := currentMonthStart.AddDate(0, -1, 0).Format("2006-01")
+	twoMonthsAgo := currentMonthStart.AddDate(0, -2, 0).Format("2006-01")
+
+	resp, err = client.Logical().ReadWithData("sys/billing/overview", map[string][]string{
+		"refresh_data": {"true"},
+		"start_month":  {twoMonthsAgo},
+		"end_month":    {lastMonth},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotContains(t, resp.Warnings, vault.WarningRefreshAlreadyInProgress,
+		"historical-only query should not receive in-progress warning")
+}
+
+// Test_BillingOverview_RefreshInProgressReturnsWarningAndData verifies that when a refresh
+// is already in progress, a refresh_data=true request to sys/billing/overview does not fail
+// or return an empty response: it returns the in-progress warning and still returns the
+// stored billing data for the requested month, without scanning, and leaves the lock held
+// by the refresh that is running.
+func Test_BillingOverview_RefreshInProgressReturnsWarningAndData(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	core := cluster.Cores[0].Core
+	cb := core.GetCoreConsumptionBillingManager()
+	require.NotNil(t, cb)
+
+	// Seed a distinctive stored timestamp: a scan would overwrite it with the current time,
+	// so getting it back unchanged shows the request returned stored data without scanning.
+	seededAt := time.Date(2020, time.January, 2, 3, 4, 5, 0, time.UTC)
+	require.NoError(t, core.UpdateMetricsLastUpdateTime(t.Context(), time.Now().UTC(), seededAt))
+
+	// Simulate a refresh that is already running.
+	cb.RefreshInProgress.Lock()
+	// Release before cluster cleanup so a blocked background worker can't stall shutdown.
+	t.Cleanup(cb.RefreshInProgress.Unlock)
+
+	resp, err := client.Logical().ReadWithData("sys/billing/overview", map[string][]string{
+		"refresh_data": {"true"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Contains(t, resp.Warnings, vault.WarningRefreshAlreadyInProgress)
+
+	// The request must still return data for the current month despite the warning.
+	require.NotNil(t, resp.Data)
+	months, ok := resp.Data["months"].([]interface{})
+	require.True(t, ok)
+	require.NotEmpty(t, months)
+
+	currentMonth, ok := months[0].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, timeutil.StartOfMonth(time.Now().UTC()).Format("2006-01"), currentMonth["month"])
+	updatedAt, err := time.Parse(time.RFC3339, currentMonth["updated_at"].(string))
+	require.NoError(t, err)
+	require.True(t, seededAt.Equal(updatedAt), "skipped request must return stored data, not a refreshed timestamp")
+	usageMetrics, ok := currentMonth["usage_metrics"].([]interface{})
+	require.True(t, ok)
+	require.NotEmpty(t, usageMetrics)
+
+	require.False(t, cb.RefreshInProgress.TryLock(), "skipped request must leave the lock held for the running refresh")
+}
+
+// Test_BillingMetricsWorker_WaitsForAPIScanThenRuns verifies that the background billing
+// worker never skips its scan when the refresh-in-progress lock is held (as by an
+// API-triggered scan): it waits for the lock and then completes the contended flush
+// without waiting for another tick.
+func Test_BillingMetricsWorker_WaitsForAPIScanThenRuns(t *testing.T) {
+	t.Parallel()
+
+	const cadence = 2 * time.Second
+
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		BillingConfig: billing.BillingConfig{MetricsUpdateCadence: cadence},
+	})
+	core := cluster.Cores[0].Core
+	cb := core.GetCoreConsumptionBillingManager()
+	require.NotNil(t, cb)
+
+	// Simulate an API scan holding the lock before the first worker tick.
+	require.Eventually(t, cb.RefreshInProgress.TryLock,
+		15*time.Second, 10*time.Millisecond, "simulated API scan should acquire the refresh lock")
+	locked := true
+	t.Cleanup(func() {
+		if locked {
+			cb.RefreshInProgress.Unlock()
+		}
+	})
+
+	// Seed a distinctive timestamp that only a worker scan would overwrite.
+	seededAt := time.Date(2020, time.January, 2, 3, 4, 5, 0, time.UTC)
+	require.NoError(t, core.UpdateMetricsLastUpdateTime(t.Context(), time.Now().UTC(), seededAt))
+
+	// Hold the lock for longer than one tick cadence so a tick fires and blocks on the lock.
+	require.Never(t, func() bool {
+		updatedAt, err := core.GetMetricsLastUpdateTime(t.Context(), time.Now().UTC())
+		return err == nil && !updatedAt.Equal(seededAt)
+	}, cadence+500*time.Millisecond, 100*time.Millisecond, "worker should wait while the refresh lock is held")
+
+	// Release the lock. The blocked tick must complete immediately.
+	// The assertion timeout (cadence/2 = 1s) is strictly shorter than the next tick interval (2s),
+	// proving that the contended flush itself unblocked rather than waiting for another tick.
+	locked = false
+	cb.RefreshInProgress.Unlock()
+	require.Eventually(t, func() bool {
+		updatedAt, err := core.GetMetricsLastUpdateTime(t.Context(), time.Now().UTC())
+		return err == nil && !updatedAt.Equal(seededAt)
+	}, cadence/2, 50*time.Millisecond, "blocked flush should complete immediately without waiting for another tick")
+}
