@@ -43,17 +43,21 @@
           data-test-ttl-value={{this.label}}
         />
       </div>
-      <div class="control">
-        <label for="select-ttl-unit" class="sr-only">Unit for TTL</label>
-        {{! Select automatically gets id based on name }}
-        <Select
-          @ariaLabel="TTL unit for {{this.label}}"
-          @name="ttl-unit"
-          @options={{this.unitOptions}}
-          @onChange={{this.updateUnit}}
-          @selectedValue={{this.unit}}
-          data-test-ttl-unit={{this.label}}
-        />
+      <div class="control" data-test-ttl-unit={{this.label}}>
+        <Hds::Form::Select::Base
+          id="unit-{{this.elementId}}"
+          aria-label="TTL unit for {{this.label}}"
+          name="ttl-unit"
+          {{on "change" (pipe (pick "target.value") this.updateUnit)}}
+          data-test-select="ttl-unit"
+          as |S|
+        >
+          <S.Options>
+            {{#each this.unitOptions as |item|}}
+              <option value={{item.value}} selected={{eq this.unit item.value}}>{{item.label}}</option>
+            {{/each}}
+          </S.Options>
+        </Hds::Form::Select::Base>
       </div>
     </fieldset>
     {{#if this.validationMessage}}
@@ -110,17 +114,21 @@
             data-test-ttl-value={{this.label}}
           />
         </div>
-        <div class="control">
-          <label for="unit-{{this.elementId}}" class="sr-only">Unit for TTL</label>
-          <Select
+        <div class="control" data-test-ttl-unit={{this.label}}>
+          <Hds::Form::Select::Base
             id="unit-{{this.elementId}}"
-            @ariaLabel="TTL unit for {{this.label}}"
-            @name="ttl-unit"
-            @options={{this.unitOptions}}
-            @onChange={{this.updateUnit}}
-            @selectedValue={{this.unit}}
-            data-test-ttl-unit={{this.label}}
-          />
+            aria-label="TTL unit for {{this.label}}"
+            name="ttl-unit"
+            {{on "change" (pipe (pick "target.value") this.updateUnit)}}
+            data-test-select="ttl-unit"
+            as |S|
+          >
+            <S.Options>
+              {{#each this.unitOptions as |item|}}
+                <option value={{item.value}} selected={{eq this.unit item.value}}>{{item.label}}</option>
+              {{/each}}
+            </S.Options>
+          </Hds::Form::Select::Base>
         </div>
       </fieldset>
       {{#if this.validationMessage}}

@@ -264,14 +264,16 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     }
     // add targets
     for (const target of targets) {
-      await fillIn('[data-test-mlef-select="target-type"] select', target.type);
+      await fillIn(GENERAL.selectByAttr('target-type'), target.type);
       if (['Group', 'Entity'].includes(target.label)) {
         await click(`[data-test-mlef-search="${target.type}"] .ember-basic-dropdown-trigger`);
         await click('.ember-power-select-option');
       } else {
-        const key = target.label === 'Authentication method' ? 'auth-method' : 'accessor';
-        const value = target.label === 'Authentication method' ? 'userpass' : 'auth_userpass_1234';
-        await fillIn(`[data-test-mlef-select="${key}"] select`, value);
+        const isAuthMethod = target.label === 'Authentication method';
+        const selector = isAuthMethod
+          ? GENERAL.selectByAttr('auth-method')
+          : '[data-test-mlef-select="accessor"] select';
+        await fillIn(selector, isAuthMethod ? 'userpass' : 'auth_userpass_1234');
       }
       await click('[data-test-mlef-add-target]');
       assert.ok(this.form[target.key].length, `${target.label} added to correct form prop`);

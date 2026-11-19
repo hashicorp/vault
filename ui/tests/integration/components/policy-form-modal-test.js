@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { click, fillIn, render, findAll } from '@ember/test-helpers';
+import { click, fillIn, render, find, findAll } from '@ember/test-helpers';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import PolicyForm from 'vault/forms/policy';
@@ -40,6 +40,17 @@ module('Integration | Component | policy-form-modal', function (hooks) {
         'Select a policy type to continue creating.',
         'shows empty state message when no type is selected'
       );
+  });
+
+  test('it renders the policy type select with a visible label', async function (assert) {
+    await this.renderComponent();
+    const select = GENERAL.selectByAttr('policyType');
+    assert.dom(select).hasClass('hds-form-select', 'renders the HDS select');
+    assert.dom('[data-test-select-label]').hasText('Type');
+    assert
+      .dom('[data-test-select-label]')
+      .hasAttribute('for', find(select).id, 'label is associated with the select');
+    assert.dom(select).hasValue('', 'defaults to the empty "Select one" option');
   });
 
   test('it should render correct policy types in select', async function (assert) {

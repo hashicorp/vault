@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Replace select component with HDS Form::Select component
+```

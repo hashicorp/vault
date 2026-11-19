@@ -59,17 +59,21 @@
             </div>
           {{/each}}
           <div class="is-flex-row {{if this.targets 'has-top-padding-s has-border-top-light'}}">
-            <Select
-              class="is-marginless"
-              @options={{this.targetTypes}}
-              @labelAttribute="label"
-              @valueAttribute="type"
-              @selectedValue={{this.selectedTargetType}}
-              @onChange={{this.onTargetSelect}}
-              @name="target-type"
-              data-test-mlef-select="target-type"
+            <Hds::Form::Select::Base
+              @width="auto"
               aria-label="Target type"
-            />
+              name="target-type"
+              {{on "change" (pipe (pick "target.value") this.onTargetSelect)}}
+              data-test-select="target-type"
+              data-test-mlef-select="target-type"
+              as |S|
+            >
+              <S.Options>
+                {{#each this.targetTypes as |item|}}
+                  <option value={{item.type}} selected={{eq this.selectedTargetType item.type}}>{{item.label}}</option>
+                {{/each}}
+              </S.Options>
+            </Hds::Form::Select::Base>
             <div class="has-left-margin-s is-flex-grow-1">
               {{#if (eq this.selectedTargetType "accessor")}}
                 <MountAccessorSelect
@@ -81,18 +85,22 @@
                   data-test-mlef-select="accessor"
                 />
               {{else if (eq this.selectedTargetType "method")}}
-                <Select
-                  @options={{this.authMethods}}
-                  @labelAttribute="displayName"
-                  @valueAttribute="value"
-                  @isFullwidth={{true}}
-                  @noDefault={{true}}
-                  @selectedValue={{this.selectedTargetValue}}
-                  @onChange={{this.setTargetValue}}
-                  @name="Auth method"
-                  data-test-mlef-select="auth-method"
+                <Hds::Form::Select::Base
+                  @width="100%"
                   aria-label="Auth method"
-                />
+                  name="auth-method"
+                  {{on "change" (pipe (pick "target.value") this.setTargetValue)}}
+                  data-test-select="auth-method"
+                  data-test-mlef-select="auth-method"
+                  as |S|
+                >
+                  <S.Options>
+                    <option value="" selected={{not this.selectedTargetValue}}>Select one</option>
+                    {{#each this.authMethods as |method|}}
+                      <option value={{method}} selected={{eq this.selectedTargetValue method}}>{{method}}</option>
+                    {{/each}}
+                  </S.Options>
+                </Hds::Form::Select::Base>
               {{else}}
                 <SearchSelect
                   @id="existing-targets"
