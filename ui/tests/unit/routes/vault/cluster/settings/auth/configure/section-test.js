@@ -27,6 +27,80 @@ module('Unit | Route | vault/cluster/settings/auth/configure/section', function 
     };
   });
 
+  module('options', function (hooks) {
+    hooks.beforeEach(function () {
+      this.optionsFor = (config) => {
+        this.modelForStub.returns({
+          method: { id: 'userpass/' },
+          methodOptions: { type: 'userpass', config: { default_lease_ttl: 0, ...config } },
+        });
+        return this.route.modelForOptions().form;
+      };
+    });
+
+    test('it shows the lockout settings saved on the mount', function (assert) {
+      const form = this.optionsFor({
+        user_lockout_config: {
+          user_lockout_threshold: 7,
+          user_lockout_duration: 600,
+          user_lockout_counter_reset_duration: 1800,
+          user_lockout_disable: true,
+        },
+      });
+
+      assert.propEqual(
+        form.data.user_lockout_config,
+        {
+          lockout_threshold: '7',
+          lockout_duration: '600s',
+          lockout_counter_reset_duration: '1800s',
+          lockout_disable: true,
+        },
+        'saved settings use the keys the form sends back'
+      );
+    });
+
+    test('it leaves unset lockout settings empty', function (assert) {
+      const form = this.optionsFor({
+        user_lockout_config: {
+          user_lockout_threshold: 3,
+          user_lockout_duration: 0,
+          user_lockout_counter_reset_duration: 0,
+          user_lockout_disable: false,
+        },
+      });
+
+      assert.propEqual(
+        form.data.user_lockout_config,
+        { lockout_threshold: '3', lockout_disable: false },
+        'zero durations are not turned into a configured value'
+      );
+    });
+
+    test('it does not send back a threshold too large to read exactly', function (assert) {
+      // 18446744073709551615 is a valid threshold, but JSON parsing rounds it to this number
+      const form = this.optionsFor({
+        user_lockout_config: { user_lockout_threshold: 18446744073709552000, user_lockout_duration: 600 },
+      });
+
+      assert.propEqual(
+        form.data.user_lockout_config,
+        { lockout_duration: '600s' },
+        'the rounded threshold is left out so saving does not change or reject it'
+      );
+    });
+
+    test('it starts empty when the mount has no lockout settings', function (assert) {
+      const form = this.optionsFor({});
+      assert.propEqual(form.data.user_lockout_config, {}, 'nothing is pre-filled or sent');
+    });
+
+    test('it does not pass the saved lockout object on as mount config', function (assert) {
+      const form = this.optionsFor({ user_lockout_config: { user_lockout_threshold: 7 } });
+      assert.false('user_lockout_config' in form.data.config, 'the read-only shape is not resubmitted');
+    });
+  });
+
   test('it should remove jwks_pairs form field for jwt type', async function (assert) {
     const { field } = await this.testModelForConfiguration('jwt', 'jwks_pairs');
     assert.strictEqual(field, undefined, 'jwks_pairs field is removed for jwt type');

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -25,7 +25,7 @@ export default class AuthMethodForm extends MountForm<AuthMethodFormData> {
       helperTextDisabled: 'No lockout duration configured.',
     }),
 
-    new FormField('user_lockout_config.lockout_counter_reset', undefined, {
+    new FormField('user_lockout_config.lockout_counter_reset_duration', undefined, {
       label: 'Lockout counter reset',
       helperTextEnabled:
         'The duration after which the lockout counter is reset with no failed login attempts, e.g. "5s" or "30m".',

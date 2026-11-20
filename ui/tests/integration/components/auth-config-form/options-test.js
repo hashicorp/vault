@@ -90,6 +90,51 @@ module('Integration | Component | auth-config-form options', function (hooks) {
   });
 
   // Defined before the loops below: the `return` in the unsupported-types loop ends this module's setup.
+  module('saved lockout settings', function () {
+    test('it shows the saved values and saves them back unchanged', async function (assert) {
+      assert.expect(8);
+      const path = 'my-userpass-auth';
+      const requests = [];
+      this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
+        requests.push(JSON.parse(req.requestBody));
+        return {};
+      });
+      this.form = new AuthMethodForm({
+        path,
+        config: { listing_visibility: false },
+        user_lockout_config: {
+          lockout_threshold: '7',
+          lockout_duration: '600s',
+          lockout_counter_reset_duration: '1800s',
+          lockout_disable: true,
+        },
+      });
+      this.form.type = 'userpass';
+      await render(hbs`<AuthConfigForm::Options @form={{this.form}} />`);
+
+      assert.dom(GENERAL.inputByAttr('user_lockout_config.lockout_threshold')).hasValue('7');
+      assert.dom(GENERAL.inputByAttr('user_lockout_config.lockout_disable')).isChecked();
+      assert.dom(GENERAL.ttl.input('Lockout duration')).hasValue('10');
+      assert.dom(TTL_PICKER.unitInputByLabel('Lockout duration')).hasValue('m');
+      assert.dom(GENERAL.ttl.input('Lockout counter reset')).hasValue('30');
+      assert.dom(TTL_PICKER.unitInputByLabel('Lockout counter reset')).hasValue('m');
+
+      await click(GENERAL.submitButton);
+      assert.strictEqual(requests.length, 1, 'it saves once');
+      assert.propEqual(
+        requests[0].user_lockout_config,
+        {
+          lockout_threshold: '7',
+          lockout_duration: '600s',
+          lockout_counter_reset_duration: '1800s',
+          lockout_disable: true,
+        },
+        'the saved values are sent back with the keys Vault reads'
+      );
+    });
+  });
+
+  // Defined before the loops below: the `return` in the unsupported-types loop ends this module's setup.
   module('durations longer than Vault supports', function (hooks) {
     hooks.beforeEach(function () {
       this.path = 'my-userpass-auth';
@@ -109,7 +154,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       ['Default Lease TTL', 'config.default_lease_ttl'],
       ['Max Lease TTL', 'config.max_lease_ttl'],
       ['Lockout duration', 'user_lockout_config.lockout_duration'],
-      ['Lockout counter reset', 'user_lockout_config.lockout_counter_reset'],
+      ['Lockout counter reset', 'user_lockout_config.lockout_counter_reset_duration'],
     ];
 
     for (const [label, attr] of FIELDS) {
@@ -189,7 +234,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
           user_lockout_config: {
             lockout_threshold: '7',
             lockout_duration: '600s',
-            lockout_counter_reset: '5s',
+            lockout_counter_reset_duration: '5s',
             lockout_disable: true,
           },
         };

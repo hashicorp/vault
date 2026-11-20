@@ -13,6 +13,24 @@ import type PathHelpService from 'vault/services/path-help';
 import type Store from '@ember-data/store';
 import type { ClusterSettingsAuthConfigureRouteModel } from '../configure';
 import type { MountConfig } from 'vault/mount';
+import type { UserLockoutConfig, UserLockoutConfigResponse } from 'vault/auth/methods';
+
+// Vault reports lockout settings that were never set as 0. Those are left empty so that only
+// configured values are shown, and only those are sent back when the form is saved.
+const lockoutConfigForForm = (saved: UserLockoutConfigResponse = {}): UserLockoutConfig => {
+  const lockout: UserLockoutConfig = {};
+  // A threshold beyond the safe integer range was rounded when the response was parsed, so sending it
+  // back would change it or be rejected. It is left out and stays as saved unless the user sets one.
+  if (saved.user_lockout_threshold && Number.isSafeInteger(saved.user_lockout_threshold)) {
+    lockout.lockout_threshold = String(saved.user_lockout_threshold);
+  }
+  if (saved.user_lockout_duration) lockout.lockout_duration = `${saved.user_lockout_duration}s`;
+  if (saved.user_lockout_counter_reset_duration) {
+    lockout.lockout_counter_reset_duration = `${saved.user_lockout_counter_reset_duration}s`;
+  }
+  if (saved.user_lockout_disable !== undefined) lockout.lockout_disable = saved.user_lockout_disable;
+  return lockout;
+};
 
 export default class ClusterSettingsAuthConfigureRoute extends Route {
   @service declare readonly api: ApiService;
@@ -25,14 +43,17 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
 
   modelForOptions() {
     const { methodOptions, method } = this.configRouteModel;
-    const config = methodOptions.config as MountConfig;
+    // the saved lockout settings are read here and sent back under the keys Vault accepts, not as part of config
+    const { user_lockout_config: savedLockoutConfig, ...config } = methodOptions.config as MountConfig & {
+      user_lockout_config?: UserLockoutConfigResponse;
+    };
     const listing_visibility = config.listing_visibility === 'unauth' ? true : false;
 
     const form = new AuthMethodForm({
       ...methodOptions,
       path: method.id,
       config: { ...config, listing_visibility },
-      user_lockout_config: {},
+      user_lockout_config: lockoutConfigForForm(savedLockoutConfig),
     });
     // `type` is a tracked property on the form class and not a field param
     // so we need to set it here even though it is spread in methodOptions above.
