@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Reduce policy store lock contention by locking per policy instead of globally.
+```
