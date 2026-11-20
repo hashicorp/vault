@@ -840,8 +840,8 @@ github.com/hashicorp/vault-plugin-auth-kerberos v0.18.1 h1:53Vth8Kmnw7iUfjc65NW2
 github.com/hashicorp/vault-plugin-auth-kerberos v0.18.1/go.mod h1:h4V+/E+C/4ijT78rsCooG3iTcBzwGh4Not47Gd4JXfU=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.1 h1:lJwWhwe++aOWjOhYlKl878ZFVC29Hmp7ELwq5yExq6Q=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.1/go.mod h1:NlAw9bcKipqTDjeAV0yh0CGARSbjdUF4d3tyB6Bew40=
-github.com/hashicorp/vault-plugin-auth-oci v0.22.1 h1:tN2/PE+g9O7WRq2BFyIzL/lDYEMYGfjIe2O6O75CWGk=
-github.com/hashicorp/vault-plugin-auth-oci v0.22.1/go.mod h1:B2XoB4vzBO3NLOTdkRJmpqIno+BkDV7Ps1kerDSQYpk=
+github.com/hashicorp/vault-plugin-auth-oci v0.22.2-0.20261101002612-bb9bbf1157b8 h1:EDQwwgbkHDnyI+M3C7MINExCdFAwbFZC8phAV9ckMp4=
+github.com/hashicorp/vault-plugin-auth-oci v0.22.2-0.20261101002612-bb9bbf1157b8/go.mod h1:2aMc/1wI+X5nEQ7WJgVocOzx/B5XBAacOZEQUbrKYy8=
 github.com/hashicorp/vault-plugin-database-couchbase v0.17.1 h1:cC8qFXErzvqdFIC4aiCsCTAYlCCb7Zs14lAQqHePdzU=
 github.com/hashicorp/vault-plugin-database-couchbase v0.17.1/go.mod h1:TZ6T08/DqS42VpW2D87zS7BOp6SqPTAqxjq8iQ3bz78=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.1 h1:kqrxz7D40Fmzkvl+x5GrhohyvaXWuXjaYJXkXSoPJSM=
@@ -1137,8 +1137,8 @@ github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b h1:Ff
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b/go.mod h1:AC62GU6hc0BrNm+9RK9VSiwa/EUe1bkIeFORAMcHvJU=
 github.com/oracle/oci-go-sdk v24.3.0+incompatible h1:x4mcfb4agelf1O4/1/auGlZ1lr97jXRSSN5MxTgG/zU=
 github.com/oracle/oci-go-sdk v24.3.0+incompatible/go.mod h1:VQb79nF8Z2cwLkLS35ukwStZIg5F66tcBccjip/j888=
-github.com/oracle/oci-go-sdk/v65 v65.123.0 h1:OjoeFzFMIGqNLJzto+lmI8gLzLc0LhmlOAIO5qKzBDs=
-github.com/oracle/oci-go-sdk/v65 v65.123.0/go.mod h1:Pzy+BpgkDesvGZXEHgslwhIYobHCPHg6wRta1mWnlqQ=
+github.com/oracle/oci-go-sdk/v65 v65.128.0 h1:QWh0D4VsQ+94XMFy4sapwHVuW5+VOF4dom+h8/cyJsw=
+github.com/oracle/oci-go-sdk/v65 v65.128.0/go.mod h1:87yiCsoPSaOZkpt5KIEEThoSirgT8WolahE3I5/qz78=
 github.com/ory/dockertest v3.3.5+incompatible h1:iLLK6SQwIhcbrG783Dghaaa3WPzGc+4Emza6EbVUUGA=
 github.com/ory/dockertest v3.3.5+incompatible/go.mod h1:1vX4m9wsvi00u5bseYwXaSnhNrne+V0E6LAcBILJdPs=
 github.com/ory/dockertest/v3 v3.12.0 h1:3oV9d0sDzlSQfHtIaB5k6ghUCVMVLpAY8hwrqoCyRCw=
