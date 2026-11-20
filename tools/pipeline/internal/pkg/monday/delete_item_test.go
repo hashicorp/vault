@@ -25,7 +25,7 @@ func TestDeleteItemReq_Run(t *testing.T) {
 
 	const (
 		// The read query and mutation that Run() should be sending.
-		readItemQuery      = `query ($itemId:ID!){items(ids: [$itemId]){id,name,board{id},group{id,title},parent_item{id},subitems{id}}}`
+		readItemQuery      = `query ($itemId:ID!){items(ids: [$itemId]){id,name,state,updated_at,board{id},group{id,title},parent_item{id},subitems{id},column_values{id,type,text,value,column{title}}}}`
 		deleteItemMutation = `mutation ($itemId:ID!){delete_item(item_id: $itemId){id}}`
 
 		boardID        = "1111111111"
