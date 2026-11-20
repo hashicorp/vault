@@ -50,6 +50,57 @@ func TestListActiveVersionReq_unmarshalConfig(t *testing.T) {
 	}, versionsConfig)
 }
 
+// TestActiveEnterpriseBranches verifies how the enterprise branch list is
+// derived from the versions config. The config is built in memory, so the test
+// does not depend on the repository's .release/versions.hcl and will not change
+// when the active versions do.
+func TestActiveEnterpriseBranches(t *testing.T) {
+	t.Parallel()
+
+	versions := func(names ...string) *VersionsConfig {
+		m := map[string]*Version{}
+		for _, n := range names {
+			m[n] = &Version{}
+		}
+		return &VersionsConfig{ActiveVersion: &ActiveVersion{Versions: m}}
+	}
+
+	for name, tc := range map[string]struct {
+		cfg         *VersionsConfig
+		includeMain bool
+		want        []string
+	}{
+		"active versions only, sorted": {
+			cfg:  versions("1.21.x", "1.19.x", "1.20.x"),
+			want: []string{"release/1.19.x+ent", "release/1.20.x+ent", "release/1.21.x+ent"},
+		},
+		"include main sorts first": {
+			cfg:         versions("1.21.x"),
+			includeMain: true,
+			want:        []string{"main", "release/1.21.x+ent"},
+		},
+		"nil config with main": {
+			cfg:         nil,
+			includeMain: true,
+			want:        []string{"main"},
+		},
+		"nil config without main": {
+			cfg:  nil,
+			want: nil,
+		},
+		"nil active version with main": {
+			cfg:         &VersionsConfig{},
+			includeMain: true,
+			want:        []string{"main"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, ActiveEnterpriseBranches(tc.cfg, tc.includeMain))
+		})
+	}
+}
+
 func TestEnterpriseReleaseBranchForVersion(t *testing.T) {
 	t.Parallel()
 
