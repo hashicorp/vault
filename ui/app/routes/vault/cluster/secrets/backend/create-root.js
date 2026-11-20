@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025, 2026
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -18,14 +18,8 @@ import AlphabetForm from 'vault/forms/transform/alphabet';
 import TemplateForm from 'vault/forms/transform/template';
 import RoleForm from 'vault/forms/transform/role';
 import TransformationForm from 'vault/forms/transform/transformation';
+import SecretForm from 'vault/forms/secret';
 import { KeyManagementUpdateKeyRequestTypeEnum } from '@hashicorp/vault-client-typescript';
-
-const secretModel = (store, backend, key) => {
-  const model = store.createRecord('secret', {
-    path: key,
-  });
-  return model;
-};
 
 export default EditBase.extend({
   store: service(),
@@ -116,7 +110,10 @@ export default EditBase.extend({
     if (modelType !== 'secret') {
       return this.store.createRecord(modelType, { backend });
     }
-    return secretModel(this.store, backend, transition.to.queryParams.initialKey);
+    return new SecretForm(
+      { backend, path: transition.to.queryParams.initialKey, secretData: {} },
+      { isNew: true }
+    );
   },
 
   // Roles warn on the form when the user may not create the selected type of role.

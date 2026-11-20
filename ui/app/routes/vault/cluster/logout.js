@@ -6,12 +6,10 @@
 import Ember from 'ember';
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import clearModelCache from 'vault/utils/shared-model-boundary';
 
 export default class LogoutRoute extends Route {
   @service analytics;
   @service auth;
-  @service store;
   @service controlGroup;
   @service flashMessages;
   @service console;
@@ -20,8 +18,6 @@ export default class LogoutRoute extends Route {
   @service router;
   @service version;
   @service customMessages;
-
-  modelTypes = ['secret'];
 
   beforeModel({ to: { queryParams } }) {
     const ns = this.namespaceService.path;
@@ -51,8 +47,5 @@ export default class LogoutRoute extends Route {
       const { cluster_name } = this.paramsFor('vault.cluster');
       location.assign(this.router.urlFor('vault.cluster.auth', cluster_name, { queryParams }));
     }
-  }
-  deactivate() {
-    clearModelCache(this.store, this.modelTypes);
   }
 }

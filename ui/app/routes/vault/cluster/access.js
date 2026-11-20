@@ -3,20 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import clearModelCache from 'vault/utils/shared-model-boundary';
 
 export default class AccessRoute extends Route {
-  @service store;
-
-  modelTypes = ['capabilities'];
-
   model() {
     return {};
-  }
-
-  deactivate() {
-    clearModelCache(this.store, this.modelTypes);
   }
 }

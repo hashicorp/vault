@@ -84,15 +84,10 @@ module('Integration | Route | vault.cluster.secrets.backend.list external plugin
     route.paramsFor.withArgs('vault.cluster.secrets.backend').returns({ backend: 'external-kv-v1' });
     route.secretParam = this.stub().returns('');
     route.enginePathParam = this.stub().returns('external-kv-v1');
-    route.store = { unloadAll: this.stub() };
     route.routeName = 'vault.cluster.secrets.backend.list-root';
 
     await route.beforeModel();
     assert.true(this.mockRouter.transitionTo.notCalled, 'KV v1 stays on the standard list route');
-    assert.true(
-      route.store.unloadAll.calledOnceWithExactly('capabilities'),
-      'capabilities are refreshed before listing secrets'
-    );
   });
 
   test('external configuration-only plugin routes to configuration', async function (assert) {
