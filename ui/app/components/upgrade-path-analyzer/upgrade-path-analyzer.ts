@@ -12,7 +12,7 @@ import { FEEDBACK_SURVEY_URL } from 'vault/utils/constants/links';
 import { cleanVersion, compareVersions, parseVersion } from 'vault/utils/version-utils';
 
 import type ApiService from 'vault/services/api';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 import type CurrentClusterService from 'vault/services/current-cluster';
 import type { HTMLElementEvent } from 'vault/forms';
 import type RouterService from '@ember/routing/router-service';
@@ -177,7 +177,7 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
   }
 
   get cluster() {
-    return this.currentCluster.cluster as ClusterModel | null;
+    return this.currentCluster.cluster as ClusterResource | null;
   }
 
   /**

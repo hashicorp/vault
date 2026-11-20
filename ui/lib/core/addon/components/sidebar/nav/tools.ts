@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import type CurrentClusterService from 'vault/services/current-cluster';
 import type VersionService from 'vault/services/version';
 import type NamespaceService from 'vault/services/namespace';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 
 interface Args {
   isEngine?: boolean;
@@ -21,7 +21,7 @@ export default class SidebarNavToolsComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
 
   get cluster() {
-    return this.currentCluster.cluster as ClusterModel | null;
+    return this.currentCluster.cluster as ClusterResource | null;
   }
 
   get hasChrootNamespace() {

@@ -12,7 +12,7 @@ import ReplicationActions from 'core/mixins/replication-actions';
  * @module ReplicationSummary
  * ReplicationSummary component is a component to show the mode-specific summary for replication
  *
- * @param {ClusterModel} cluster - the cluster ember-data model
+ * @param {ClusterResource} cluster - the cluster
  * @param {string} initialReplicationMode - mode for replication details we want to see, either "dr" or "performance"
  */
 export default Component.extend(ReplicationActions, {

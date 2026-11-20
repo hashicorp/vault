@@ -99,7 +99,10 @@ export default defineConfig<UserSetupOptions>({
       if (isRaft) {
         // raft storage persists to disk (unlike inmem) — clear prior run data for a fresh cluster
         const raftDataDir = path.join(tmpDir, `${userType.name}-raft-data`);
-        fs.rmSync(raftDataDir, { recursive: true, force: true });
+        // Workers load this config after the server starts and would delete its live data directory.
+        if (process.env.TEST_WORKER_INDEX === undefined) {
+          fs.rmSync(raftDataDir, { recursive: true, force: true });
+        }
         fs.mkdirSync(raftDataDir, { recursive: true });
         config.storage.raft.path = raftDataDir;
         config.api_addr = `http://${getURL(index, true)}`;

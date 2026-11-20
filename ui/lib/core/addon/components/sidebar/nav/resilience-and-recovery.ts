@@ -9,7 +9,7 @@ import { RouteName } from 'core/helpers/display-nav-item';
 
 import type CurrentClusterService from 'vault/services/current-cluster';
 import type VersionService from 'vault/services/version';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 
 interface Args {
   isEngine?: boolean;
@@ -26,6 +26,6 @@ export default class SidebarNavResilienceAndRecoveryComponent extends Component<
   };
 
   get cluster() {
-    return this.currentCluster.cluster as ClusterModel | null;
+    return this.currentCluster.cluster as ClusterResource | null;
   }
 }

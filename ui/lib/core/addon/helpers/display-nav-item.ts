@@ -10,7 +10,7 @@ import { getOwner, setOwner } from '@ember/owner';
 import type CurrentClusterService from 'vault/services/current-cluster';
 import type VersionService from 'vault/services/version';
 import type NamespaceService from 'vault/services/namespace';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 import type PermissionsService from 'vault/services/permissions';
 import type FlagsService from 'vault/services/flags';
 
@@ -86,7 +86,7 @@ export default class NavBar extends Helper {
   }
 
   get cluster() {
-    return this.currentCluster.cluster as ClusterModel | null;
+    return this.currentCluster.cluster as ClusterResource | null;
   }
 
   get hasChrootNamespace() {

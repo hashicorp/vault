@@ -14,7 +14,7 @@ module('Integration | Route | ClusterRoute', function (hooks) {
 
   function createClusterRoute(
     context,
-    clusterModel = {},
+    cluster = {},
     methods = {
       auth: { currentToken: null },
     }
@@ -29,7 +29,7 @@ module('Integration | Route | ClusterRoute', function (hooks) {
     if (methods.auth) {
       instance.auth = methods.auth;
     }
-    instance.modelFor = () => clusterModel;
+    instance.modelFor = () => cluster;
     instance.router = { transitionTo: () => {} };
     return instance;
   }

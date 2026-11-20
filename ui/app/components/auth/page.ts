@@ -12,7 +12,7 @@ import type { AuthSuccessResponse } from 'vault/vault/services/auth';
 import type AuthMethodResource from 'vault/resources/auth/method';
 import type { NormalizedAuthData, UnauthMountsByType } from 'vault/vault/auth/form';
 import type AuthService from 'vault/vault/services/auth';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 import type CspEventService from 'vault/services/csp-event';
 import type { MfaAuthData } from 'vault/vault/auth/mfa';
 import type { Task } from 'ember-concurrency';
@@ -59,7 +59,7 @@ import type { Task } from 'ember-concurrency';
  *     ▸ Path dropdown is shown.
  *
  *
- * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {object} cluster - The cluster resource (see `vault/resources/cluster`). Contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
  * @param {object} loginSettings - * enterprise only * login settings configured for the namespace. If set, specifies a default auth method type and/or backup method types
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
@@ -73,7 +73,7 @@ export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
 interface Args {
-  cluster: ClusterModel;
+  cluster: ClusterResource;
   directLinkData: { type: string; path?: string } | null; // if "path" key is present then mount data is visible
   loginAndTransition: Task<AuthSuccessResponse, [AuthSuccessResponse]>;
   loginSettings: { defaultType: string; backupTypes: string[] | null }; // enterprise only

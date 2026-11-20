@@ -384,6 +384,39 @@ module('Acceptance | replication routes', function (hooks) {
       assert.strictEqual(this.state.requests.length, 0, 'cancelling does not call the api');
     });
 
+    test('revoking a secondary shows the API error and keeps the id', async function (assert) {
+      await this.mockReplication({ dr: 'primary' });
+      this.server.post(
+        '/sys/replication/dr/primary/revoke-secondary',
+        () => new Response(400, {}, { errors: ['secondary cluster with id "4" was not found'] })
+      );
+      await visit('/vault/replication/dr/secondaries/revoke');
+      await fillIn('[data-test-input="Secondary ID"]', '4');
+      await click('[data-test-confirm-action-trigger]');
+      await click(GENERAL.confirmButton);
+
+      assert
+        .dom('[data-test-message-error-description]')
+        .hasText('secondary cluster with id "4" was not found', 'it shows the error from the API');
+      assert.dom('[data-test-input="Secondary ID"]').hasValue('4', 'it keeps the id');
+    });
+
+    test('revoking a secondary shows an error returned as data.error', async function (assert) {
+      await this.mockReplication({ dr: 'primary' });
+      this.server.post(
+        '/sys/replication/dr/primary/revoke-secondary',
+        () => new Response(400, {}, { data: { error: 'revocation is not allowed' } })
+      );
+      await visit('/vault/replication/dr/secondaries/revoke');
+      await fillIn('[data-test-input="Secondary ID"]', '4');
+      await click('[data-test-confirm-action-trigger]');
+      await click(GENERAL.confirmButton);
+
+      assert
+        .dom('[data-test-message-error-description]')
+        .hasText('revocation is not allowed', 'it shows the error from the API');
+    });
+
     test('path filter config show renders the config and links to edit', async function (assert) {
       await this.mockReplication({ performance: 'primary', features: ALL_FEATURES });
 

@@ -29,7 +29,7 @@ import { tracked } from '@glimmer/tracking';
  * />
  * ```
  *
- * @param {string} action - adapter method name (kebab case) to call on attempt
+ * @param {string} action - kebab-case name of the flow to run on attempt: "generate-dr-operation-token" or "unseal"
  * @param {number} threshold - number of keys required to unlock
  * @param {number} progress - number of keys given so far for unlock
  * @param {string} inputLabel - (optional) Label for key input

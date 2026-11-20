@@ -288,15 +288,14 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     const LABEL = 'Time to Live (TTL) for generated secondary token';
 
     hooks.beforeEach(async function () {
-      this.actionSpy = sinon.spy(
-        this.owner.lookup('service:store').adapterFor('cluster'),
-        'replicationAction'
+      this.tokenSpy = sinon.spy(
+        this.owner.lookup('service:api').sys,
+        'systemWriteReplicationPerformancePrimarySecondaryToken'
       );
       await enableReplication('performance', 'primary');
       await pollCluster(this.owner);
       await settled();
-      this.tokenRequests = () =>
-        this.actionSpy.getCalls().filter((call) => call.args[0] === 'secondary-token');
+      this.tokenRequests = () => this.tokenSpy.getCalls();
       this.openAddSecondary = async (name) => {
         await visit('/vault/replication/performance/secondaries/add');
         await fillIn('[data-test-input="Secondary ID"]', name);
@@ -326,7 +325,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       await click(GENERAL.submitButton);
       assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested once the TTL is valid');
       assert.strictEqual(
-        this.tokenRequests()[0].args[3].ttl,
+        this.tokenRequests()[0].args[0].ttl,
         '9223286400s',
         'the maximum whole days is sent'
       );
@@ -352,7 +351,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       await click(GENERAL.submitButton);
 
       assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
-      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '1800s', 'the default TTL is sent');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '1800s', 'the default TTL is sent');
       assert.dom(GENERAL.infoRowValue('TTL')).hasText('1800s', 'the token modal shows the default TTL');
       await this.dismissTokenModal();
     });
@@ -366,7 +365,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       await click(GENERAL.submitButton);
 
       assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
-      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '172800s', 'the entered TTL is still sent');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '172800s', 'the entered TTL is still sent');
       await this.dismissTokenModal();
     });
 
@@ -376,7 +375,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       await click(GENERAL.submitButton);
 
       assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
-      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '1800s', 'the default TTL is sent');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '1800s', 'the default TTL is sent');
       assert.dom(GENERAL.infoRowValue('TTL')).hasText('1800s', 'the token modal shows the default TTL');
       await this.dismissTokenModal();
     });
@@ -388,7 +387,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       await click(GENERAL.submitButton);
 
       assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
-      assert.strictEqual(this.tokenRequests()[0].args[3].ttl, '172800s', 'the entered TTL is sent');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '172800s', 'the entered TTL is sent');
       await this.dismissTokenModal();
     });
   });

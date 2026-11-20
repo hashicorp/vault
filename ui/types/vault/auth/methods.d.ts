@@ -92,8 +92,16 @@ export interface UsernameLoginResponse extends ApiResponse {
 export type UserLockoutConfig = {
   lockout_threshold?: string;
   lockout_duration?: string;
-  lockout_counter_reset?: string;
+  lockout_counter_reset_duration?: string;
   lockout_disable?: boolean;
+};
+
+// The lockout settings as returned for an existing mount, with durations in seconds.
+export type UserLockoutConfigResponse = {
+  user_lockout_threshold?: number;
+  user_lockout_duration?: number;
+  user_lockout_counter_reset_duration?: number;
+  user_lockout_disable?: boolean;
 };
 
 export type AuthMethodFormData = AuthEnableMethodRequest & {

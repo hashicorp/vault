@@ -8,11 +8,11 @@ import Controller from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { action } from '@ember/object';
+import ReplicationAttributesResource from 'vault/resources/replication-attributes';
 
 export default class ReplicationModeBaseController extends Controller {
   @service('replication-mode') rm;
   @service('app-router') router;
-  @service store;
 
   get replicationMode() {
     return this.rm.mode;
@@ -45,18 +45,12 @@ export default class ReplicationModeBaseController extends Controller {
       return;
     }
     // do something to show model is pending
-    cluster.set(
-      replicationMode,
-      this.store.createRecord('replication-attributes', {
-        mode: 'bootstrapping',
-      })
-    );
+    cluster[replicationMode] = new ReplicationAttributesResource({ mode: 'bootstrapping' });
     try {
       await cluster.reload();
     } catch (e) {
       // no error handling here
     }
-    cluster.rollbackAttributes();
     // we should only do the transitions if called from vault.cluster.replication.index
     if (doTransition) {
       if (replicationMode == 'dr' && clusterMode === 'secondary') {

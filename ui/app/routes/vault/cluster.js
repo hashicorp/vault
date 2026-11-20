@@ -10,7 +10,6 @@ import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import getStorage from '../../lib/token-storage';
 import localStorage from 'vault/lib/local-storage';
-import clearModelCache from 'vault/utils/shared-model-boundary';
 import { assert } from '@ember/debug';
 import config from 'vault/config/environment';
 
@@ -58,10 +57,7 @@ export default class ClusterRoute extends Route {
   @service('namespace') namespaceService;
   @service permissions;
   @service router;
-  @service store;
   @service version;
-
-  modelTypes = ['node'];
 
   queryParams = {
     namespaceQueryParam: {
@@ -69,11 +65,8 @@ export default class ClusterRoute extends Route {
     },
   };
 
-  getClusterId(params) {
-    const { cluster_name } = params;
-    const records = this.store.peekAll('cluster');
-    const cluster = records.find((record) => record.name === cluster_name);
-    return cluster?.id ?? null;
+  getCluster(params) {
+    return this.modelFor('vault').find((cluster) => cluster.name === params.cluster_name);
   }
 
   async beforeModel() {
@@ -105,9 +98,9 @@ export default class ClusterRoute extends Route {
       }
     }
     this.namespaceService.setNamespace(namespace);
-    const id = this.getClusterId(params);
-    if (id) {
-      this.auth.setCluster(id);
+    const cluster = this.getCluster(params);
+    if (cluster) {
+      this.auth.setCluster(cluster.id);
       if (this.auth.currentToken) {
         this.version.fetchVersion();
         await this.permissions.getPaths.perform();
@@ -122,8 +115,7 @@ export default class ClusterRoute extends Route {
     // if a user's browser settings block localStorage they will be unable to use Vault. The method will throw the error and the rest of the application will not load.
     localStorage.isLocalStorageSupported();
 
-    const id = this.getClusterId(params);
-    return this.store.findRecord('cluster', id);
+    return this.getCluster(params).reload();
   }
 
   poll = task({ keepLatest: true }, async () => {
@@ -240,7 +232,6 @@ export default class ClusterRoute extends Route {
   }
 
   deactivate() {
-    clearModelCache(this.store, this.modelTypes);
     this.poll.cancelAll();
   }
 

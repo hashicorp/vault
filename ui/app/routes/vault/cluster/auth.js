@@ -32,12 +32,12 @@ export default class AuthRoute extends Route {
   }
 
   async model(params) {
-    const clusterModel = this.modelFor('vault.cluster');
+    const cluster = this.modelFor('vault.cluster');
     const wrapped_token = params?.wrapped_token;
     if (wrapped_token) {
       // log user in directly (i.e. no form interaction) via URL query param
-      const authResponse = await this.unwrapToken(wrapped_token, clusterModel.id);
-      return { clusterModel, unwrapResponse: authResponse };
+      const authResponse = await this.unwrapToken(wrapped_token, cluster.id);
+      return { cluster, unwrapResponse: authResponse };
     }
 
     const loginSettings = this.version.isEnterprise ? await this.fetchLoginSettings() : null;
@@ -45,7 +45,7 @@ export default class AuthRoute extends Route {
     const authMount = params?.authMount;
 
     return {
-      clusterModel,
+      cluster,
       visibleAuthMounts,
       directLinkData: this.getDirectLinkData(authMount, visibleAuthMounts),
       loginSettings,
