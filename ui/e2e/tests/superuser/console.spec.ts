@@ -6,6 +6,7 @@
 import { expect } from '@playwright/test';
 import { test } from '../../fixtures/demo';
 import { BasePage } from '../../pages/base';
+import { ensureMount, rootApi } from '../../fixtures/root-api';
 
 test('console workflow', async ({ page }) => {
   const basePage = new BasePage(page);
@@ -96,4 +97,44 @@ test('console read, list, delete, wrap and error output', async ({ page }) => {
     await page.getByRole('button', { name: 'Close console' }).click();
     await basePage.disableEngine(mount);
   });
+});
+
+// The console refresh command re-fetches the data of the list page being viewed.
+test('console refresh re-fetches the current list page', async ({ page, playwright }, testInfo) => {
+  const mount = 'console-refresh-test';
+  const api = await rootApi(playwright, testInfo);
+  try {
+    await ensureMount(api, mount, 'generic');
+    for (const key of ['refresh-first', 'refresh-second']) {
+      await api.delete(`/v1/${mount}/${key}`);
+    }
+    await expect(await api.post(`/v1/${mount}/refresh-first`, { data: { seeded: 'one' } })).toBeOK();
+
+    await page.goto(`secrets-engines/${mount}/list/`);
+    await expect(page.getByRole('link', { name: 'refresh-first', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'refresh-second', exact: true })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Console toggle' }).click();
+    const repl = page.getByRole('textbox', { name: 'Web R.E.P.L.' });
+    await repl.fill(`write ${mount}/refresh-second seeded=two`);
+    await repl.press('Enter');
+    await expect(
+      page.locator('.console-ui-panel').getByText(`Success! Data written to: ${mount}/refresh-second`)
+    ).toBeVisible();
+
+    await repl.fill('refresh');
+    await repl.press('Enter');
+    await expect(page.getByText('The current screen has been refreshed!')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'refresh-second', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'refresh-first', exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Close console' }).click();
+    await page.goto(`secrets-engines/${mount}/list/?pageFilter=second`);
+    await expect(page.getByRole('link', { name: 'refresh-second', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'refresh-first', exact: true })).toHaveCount(0);
+  } finally {
+    const response = await api.delete(`/v1/sys/mounts/${mount}`);
+    expect([204, 404]).toContain(response.status());
+    await api.dispose();
+  }
 });

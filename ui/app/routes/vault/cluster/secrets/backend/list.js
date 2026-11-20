@@ -54,7 +54,6 @@ function getValidPage(pageParam) {
 }
 
 export default Route.extend({
-  pagination: service(),
   store: service(),
   api: service(),
   capabilitiesService: service('capabilities'),
@@ -714,23 +713,6 @@ export default Route.extend({
     } else if (modelType === 'secret') {
       secrets = await this.fetchGenericSecrets(backend, secret, getValidPage(params.page), params.pageFilter);
       this.set('has404', false);
-    } else {
-      try {
-        secrets = await this.pagination.lazyPaginatedQuery(modelType, {
-          id: secret,
-          backend,
-          responsePath: 'data.keys',
-          page: getValidPage(params.page),
-          pageFilter: params.pageFilter,
-        });
-        this.set('has404', false);
-      } catch (err) {
-        if (backendModel && err.httpStatus === 404) {
-          secrets = [];
-        } else {
-          throw err;
-        }
-      }
     }
 
     return {
@@ -746,10 +728,6 @@ export default Route.extend({
     const backend = getEnginePathParam(this);
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const has404 = this.has404;
-    // only clear store cache if this is a new model
-    if (secret !== controller?.baseKey?.id) {
-      this.pagination.clearDataset();
-    }
     controller.set('hasModel', true);
     controller.setProperties({
       model,
@@ -802,15 +780,11 @@ export default Route.extend({
       return true;
     },
 
-    willTransition(transition) {
+    willTransition() {
       window.scrollTo(0, 0);
-      if (transition.targetName !== this.routeName) {
-        this.pagination.clearDataset();
-      }
       return true;
     },
     reload() {
-      this.pagination.clearDataset();
       this.refresh();
     },
   },

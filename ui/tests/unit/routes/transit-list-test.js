@@ -20,7 +20,6 @@ module('Unit | Route | transit list', function (hooks) {
     sinon.stub(this.route, 'paramsFor').returns({ backend: 'transit-manual' });
     sinon.stub(this.route, 'modelFor').returns({ engineType: 'transit' });
     sinon.stub(this.route, 'secretParam').returns('');
-    this.legacyQuery = sinon.stub(this.owner.lookup('service:pagination'), 'lazyPaginatedQuery');
     sinon.stub(this.owner.lookup('service:capabilities'), 'fetch').resolves({
       'transit-manual/keys/aes-key': { canRead: true, canUpdate: true },
       'transit-manual/keys/signing-key': { canRead: true, canUpdate: false },
@@ -33,7 +32,6 @@ module('Unit | Route | transit list', function (hooks) {
       this.list.calledWithExactly('transit-manual', SecretsApiTransitListKeysListEnum.TRUE),
       'lists keys at the Transit endpoint'
     );
-    assert.false(this.legacyQuery.called, 'does not query the removed model');
     assert.deepEqual(
       secrets.map(({ id }) => id),
       ['aes-key', 'signing-key'],
