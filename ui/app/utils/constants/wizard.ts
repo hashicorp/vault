@@ -13,5 +13,6 @@ export const WIZARD_ID_MAP = {
   agentRegistry: 'agent-registry',
   identityGroups: 'identity-groups',
   identityEntities: 'identity-entities',
+  mfa: 'mfa',
   oidcProvider: 'oidc-provider',
 } as const;
