@@ -173,7 +173,6 @@ func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string)
 	for version, cfg := range l.VersionsConfig.ActiveVersion.Versions {
 		// Enterprise branch (all versions)
 		entBranch := EnterpriseReleaseBranchForVersion(version)
-		res.ActiveBranches = append(res.ActiveBranches, entBranch)
 		res.AllActiveBranches = append(res.AllActiveBranches, entBranch)
 
 		// CE branch (only if ce_active: true)
@@ -215,10 +214,10 @@ func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string)
 		}
 	}
 
+	res.ActiveBranches = ActiveEnterpriseBranches(l.VersionsConfig, includeMain)
+
 	// Handle --include-main flag
 	if includeMain {
-		res.ActiveBranches = append(res.ActiveBranches, "main")
-
 		ceMain := "main"
 		if cePrefix != "" {
 			ceMain = fmt.Sprintf("%s/main", cePrefix)
@@ -276,6 +275,27 @@ func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string)
 	}
 
 	return b, nil
+}
+
+// ActiveEnterpriseBranches returns the sorted enterprise release branches for
+// the active versions in cfg. If includeMain is true, "main" is included. A nil
+// config has no active versions, so only "main" is returned when requested.
+func ActiveEnterpriseBranches(cfg *VersionsConfig, includeMain bool) []string {
+	var branches []string
+
+	if includeMain {
+		branches = append(branches, "main")
+	}
+
+	if cfg != nil && cfg.ActiveVersion != nil {
+		for version := range cfg.ActiveVersion.Versions {
+			branches = append(branches, EnterpriseReleaseBranchForVersion(version))
+		}
+	}
+
+	slices.Sort(branches)
+
+	return branches
 }
 
 // EnterpriseReleaseBranchForVersion returns the enterprise release branch name for a version.
