@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Fix signing requests with an invalid key_version (e.g. negative) returning a 500 instead of a 400.
+```
