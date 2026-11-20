@@ -36,6 +36,7 @@ func newMondayCmd() *cobra.Command {
 
 	mondayCmd.AddCommand(newMondayCreateBoardCmd())
 	mondayCmd.AddCommand(newMondayCreateSubitemCmd())
+	mondayCmd.AddCommand(newMondayDeleteItemCmd())
 	mondayCmd.AddCommand(newMondayDuplicateBoardCmd())
 	mondayCmd.AddCommand(newMondayUpdateItemCmd())
 	mondayCmd.AddCommand(newMondayGetItemIDCmd())
