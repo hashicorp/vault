@@ -170,7 +170,8 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"auth/*",
-				"mounts/auth/+/tune",
+				// Paths under sys/mounts/auth/ act on auth methods, like those under sys/auth/.
+				"mounts/auth/*",
 				"remount",
 				"audit",
 				"audit/*",
@@ -2796,7 +2797,7 @@ func (b *SystemBackend) internalTuneReadCommon(ctx context.Context, path string)
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(ctx, path)
-	if mountEntry == nil {
+	if mountEntry == nil || !tunePathMatchesMountTable(path, mountEntry) {
 		b.Backend.Logger().Error("cannot fetch mount entry", "path", path)
 		lResp, err := handleError(fmt.Errorf("cannot fetch mount entry for path %q", path))
 		return nil, nil, lResp, err
@@ -2935,6 +2936,13 @@ func (t *tuneDefers) revert() {
 	}
 }
 
+// tunePathMatchesMountTable reports whether path addresses mountEntry through
+// the route prefix of the entry's own table. Tuning picks its lock and the
+// table to persist from the path prefix, so the two must agree.
+func tunePathMatchesMountTable(path string, mountEntry *MountEntry) bool {
+	return strings.HasPrefix(path, credentialRoutePrefix) == (mountEntry.Table == credentialTableType)
+}
+
 // handleWriteTuneCommon is used to set config settings on a path
 // Vault Enterprise replaces handleWriteTuneCommon with entHandleTuneWriteCommon
 func (b *SystemBackend) handleWriteTuneCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
@@ -2953,7 +2961,7 @@ func (b *SystemBackend) handleWriteTuneCommon(ctx context.Context, path string, 
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(ctx, path)
-	if mountEntry == nil {
+	if mountEntry == nil || !tunePathMatchesMountTable(path, mountEntry) {
 		b.Backend.Logger().Error("tune failed", "error", "no mount entry found", "path", path)
 		return nil, fmt.Errorf("tune of path %q failed: no mount entry found", path)
 	}
@@ -2974,7 +2982,7 @@ func (b *SystemBackend) handleWriteTuneCommon(ctx context.Context, path string, 
 
 	// Check again after grabbing the lock
 	mountEntry = b.Core.router.MatchingMountEntry(ctx, path)
-	if mountEntry == nil {
+	if mountEntry == nil || !tunePathMatchesMountTable(path, mountEntry) {
 		b.Backend.Logger().Error("tune failed", "error", "no mount entry found", "path", path)
 		return nil, fmt.Errorf("tune of path %q failed: no mount entry found", path)
 	}

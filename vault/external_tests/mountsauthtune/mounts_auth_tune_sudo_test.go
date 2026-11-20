@@ -5,8 +5,10 @@ package mountsauthtune
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -15,10 +17,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestMountsAuthTuneRequiresSudo ensures sys/mounts/auth/<path>/tune requires
-// sudo-equivalent privilege while sys/mounts/auth/<path> remains readable
-// without sudo when ACL allows it.
-func TestMountsAuthTuneRequiresSudo(t *testing.T) {
+// TestMountsAuthPathsRequireSudo verifies that sys/mounts/auth/<path> and
+// sys/mounts/auth/<path>/tune require sudo, matching sys/auth/<path>, for auth
+// methods mounted at single-segment and nested paths. A token that can read and
+// update those paths is denied without sudo and allowed with it.
+func TestMountsAuthPathsRequireSudo(t *testing.T) {
 	t.Parallel()
 
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
@@ -29,77 +32,109 @@ func TestMountsAuthTuneRequiresSudo(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
+	rootClient := cluster.Cores[0].Client
 
-	client := cluster.Cores[0].Client
-	rootToken := cluster.RootToken
+	for _, mountPath := range []string{"userpass", "team/userpass", "a/b/c/userpass"} {
+		testName := strings.ReplaceAll(mountPath, "/", "-")
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
 
-	require.NoError(t, client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
-		Type: "userpass",
-	}))
+			require.NoError(t, rootClient.Sys().EnableAuthWithOptions(mountPath, &api.EnableAuthOptions{
+				Type: "userpass",
+			}))
+			mountInfoPath := "sys/mounts/auth/" + mountPath
+			tunePath := mountInfoPath + "/tune"
 
-	noSudoPolicy := `
-path "sys/mounts/auth/userpass/tune" {
+			require.NoError(t, rootClient.Sys().PutPolicy(testName+"-no-sudo", fmt.Sprintf(`
+path %q {
 	capabilities = ["read", "update"]
 }
-path "sys/mounts/auth/userpass*" {
+path %q {
 	capabilities = ["read"]
 }
-`
-	require.NoError(t, client.Sys().PutPolicy("mounts-auth-tune-no-sudo", noSudoPolicy))
+`, tunePath, mountInfoPath)))
+			noSudoToken, err := rootClient.Auth().Token().Create(&api.TokenCreateRequest{
+				Policies: []string{testName + "-no-sudo"},
+			})
+			require.NoError(t, err)
+			noSudoClient, err := rootClient.Clone()
+			require.NoError(t, err)
+			noSudoClient.SetToken(noSudoToken.Auth.ClientToken)
 
-	noSudoTokenResp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: []string{"mounts-auth-tune-no-sudo"},
-	})
-	require.NoError(t, err)
-	require.NotNil(t, noSudoTokenResp)
-	require.NotNil(t, noSudoTokenResp.Auth)
-	require.NotEmpty(t, noSudoTokenResp.Auth.ClientToken)
+			_, err = noSudoClient.Logical().Write(tunePath, map[string]interface{}{
+				"max_lease_ttl": "2h",
+			})
+			require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+			_, err = noSudoClient.Logical().Read(tunePath)
+			require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+			_, err = noSudoClient.Logical().Read(mountInfoPath)
+			require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
 
-	client.SetToken(noSudoTokenResp.Auth.ClientToken)
-
-	// Non-tune path should remain readable without sudo.
-	nonTuneResp, err := client.Logical().Read("sys/mounts/auth/userpass")
-	require.NoError(t, err)
-	require.NotNil(t, nonTuneResp)
-
-	// Tune endpoints should fail without sudo.
-	_, err = client.Logical().Write("sys/mounts/auth/userpass/tune", map[string]interface{}{
-		"max_lease_ttl": "2h",
-	})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), logical.ErrPermissionDenied.Error())
-
-	_, err = client.Logical().Read("sys/mounts/auth/userpass/tune")
-	require.Error(t, err)
-	require.Contains(t, err.Error(), logical.ErrPermissionDenied.Error())
-
-	client.SetToken(rootToken)
-
-	sudoPolicy := `
-path "sys/mounts/auth/userpass/tune" {
-	capabilities = ["sudo", "read", "update"]
+			require.NoError(t, rootClient.Sys().PutPolicy(testName+"-sudo", fmt.Sprintf(`
+path %q {
+	capabilities = ["read", "update", "sudo"]
 }
-`
-	require.NoError(t, client.Sys().PutPolicy("mounts-auth-tune-with-sudo", sudoPolicy))
+path %q {
+	capabilities = ["read", "sudo"]
+}
+`, tunePath, mountInfoPath)))
+			sudoToken, err := rootClient.Auth().Token().Create(&api.TokenCreateRequest{
+				Policies: []string{testName + "-sudo"},
+			})
+			require.NoError(t, err)
+			sudoClient, err := rootClient.Clone()
+			require.NoError(t, err)
+			sudoClient.SetToken(sudoToken.Auth.ClientToken)
 
-	withSudoTokenResp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: []string{"mounts-auth-tune-with-sudo"},
+			_, err = sudoClient.Logical().Write(tunePath, map[string]interface{}{
+				"max_lease_ttl": "3h",
+			})
+			require.NoError(t, err)
+			tuneResp, err := sudoClient.Logical().Read(tunePath)
+			require.NoError(t, err)
+			require.Equal(t, "10800", fmt.Sprint(tuneResp.Data["max_lease_ttl"]))
+			mountInfoResp, err := sudoClient.Logical().Read(mountInfoPath)
+			require.NoError(t, err)
+			require.Equal(t, "userpass", mountInfoResp.Data["type"])
+		})
+	}
+}
+
+// TestMountsTuneSecretsEngineWithoutSudo verifies that tuning a secrets engine
+// through sys/mounts/<path>/tune still needs only read and update, so the sudo
+// requirement for auth methods doesn't extend to secrets engines.
+func TestMountsTuneSecretsEngineWithoutSudo(t *testing.T) {
+	t.Parallel()
+
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	})
+	rootClient := cluster.Cores[0].Client
+
+	require.NoError(t, rootClient.Sys().Mount("team/kv", &api.MountInput{Type: "kv"}))
+	require.NoError(t, rootClient.Sys().PutPolicy("kv-tune", `
+path "sys/mounts/team/kv/tune" {
+	capabilities = ["read", "update"]
+}
+`))
+	token, err := rootClient.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"kv-tune"},
 	})
 	require.NoError(t, err)
-	require.NotNil(t, withSudoTokenResp)
-	require.NotNil(t, withSudoTokenResp.Auth)
-	require.NotEmpty(t, withSudoTokenResp.Auth.ClientToken)
+	client, err := rootClient.Clone()
+	require.NoError(t, err)
+	client.SetToken(token.Auth.ClientToken)
 
-	client.SetToken(withSudoTokenResp.Auth.ClientToken)
-
-	_, err = client.Logical().Write("sys/mounts/auth/userpass/tune", map[string]interface{}{
+	_, err = client.Logical().Write("sys/mounts/team/kv/tune", map[string]interface{}{
 		"max_lease_ttl": "3h",
 	})
 	require.NoError(t, err)
-
-	tuneResp, err := client.Logical().Read("sys/mounts/auth/userpass/tune")
+	tuneResp, err := client.Logical().Read("sys/mounts/team/kv/tune")
 	require.NoError(t, err)
-	require.NotNil(t, tuneResp)
-	require.Contains(t, tuneResp.Data, "max_lease_ttl")
 	require.Equal(t, "10800", fmt.Sprint(tuneResp.Data["max_lease_ttl"]))
 }
