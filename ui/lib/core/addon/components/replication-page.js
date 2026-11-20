@@ -19,7 +19,7 @@ import { getOwner } from '@ember/owner';
  * @example
  * <ReplicationPage @model={{cluster}}/>
  *
- * @param {Object} model=null - An Ember data object that is pulled from the Ember Cluster Model.
+ * @param {Object} model=null - The cluster resource (see `vault/resources/cluster`).
  */
 
 const MODE = {

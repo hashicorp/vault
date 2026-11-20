@@ -16,7 +16,7 @@ import type { HTMLElementEvent } from 'vault/forms';
 import type { LoginFields, NormalizedAuthData, NormalizeAuthResponseKeys } from 'vault/auth/form';
 import type { AuthResponseAuthKey, AuthResponseDataKey } from 'vault/auth/methods';
 import type ApiService from 'vault/services/api';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
 import type AuthService from 'vault/services/auth';
@@ -25,14 +25,14 @@ import type AuthService from 'vault/services/auth';
  * @module Auth::Base
  *
  * @param {string} authType - chosen login method type
- * @param {object} cluster - The cluster model which contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {object} cluster - The cluster resource (see `vault/resources/cluster`). Contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {function} onError - callback if there is a login error
  * @param {function} handleAuthResponse - calls onAuthResponse in auth/page redirects if successful
  */
 
 interface Args {
   authType: string;
-  cluster: ClusterModel;
+  cluster: ClusterResource;
   handleAuthResponse: CallableFunction;
   onError: CallableFunction;
 }

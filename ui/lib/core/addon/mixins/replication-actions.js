@@ -127,7 +127,6 @@ export default Mixin.create({
     } catch (e) {
       // no error handling here
     }
-    cluster.rollbackAttributes();
     if (action === 'disable') {
       yield this.onDisable();
     }

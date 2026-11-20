@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render, fillIn, click, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -258,6 +259,28 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       this.version.features = ['Performance Replication', 'DR Replication'];
       this.successSpy = sinon.spy();
       this.set('onSuccess', this.successSpy);
+    });
+    test('it shows the fallback message when the error response is not JSON', async function (assert) {
+      this.set('replicationMode', 'dr');
+      this.server.post(
+        '/sys/replication/dr/primary/enable',
+        () => new Response(502, { 'Content-Type': 'text/html' }, '<html>Bad Gateway</html>')
+      );
+      await render(
+        hbs`<EnableReplicationForm
+          @replicationMode={{this.replicationMode}}
+          @canEnablePrimary={{true}}
+          @canEnableSecondary={{true}}
+          @performanceMode="disabled"
+          @onSuccess={{this.onSuccess}}
+        />`,
+        this.context
+      );
+      await fillIn(ENABLE_FORM.clusterAddr, 'some-addr');
+      await click(GENERAL.submitButton);
+      assert
+        .dom(ENABLE_FORM.error)
+        .hasText('Enable replication failed. Check Vault logs for details.', 'it shows the fallback message');
     });
     ['dr', 'performance'].forEach((replicationMode) => {
       test(`${replicationMode} primary`, async function (assert) {

@@ -31,7 +31,6 @@ export default Controller.extend(structuredClone(DEFAULTS), {
   isTokenCopied: false,
   expirationDate: null,
   router: service('app-router'),
-  store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
   secondaryToRevoke: null,
@@ -41,12 +40,33 @@ export default Controller.extend(structuredClone(DEFAULTS), {
     this.set('filterConfig', new PathFilterConfigForm({}, { isNew: true }));
   },
 
-  submitError(e) {
-    if (e.errors) {
-      this.set('errors', e.errors);
+  async submitError(e) {
+    const { status, message, response } = await this.api.parseError(e);
+    if (response?.errors) {
+      this.set('errors', response.errors);
+    } else if (status) {
+      // errors returned as { data: { error } } or without a body are summarized in the message
+      this.set('errors', [message]);
     } else {
       throw e;
     }
+  },
+
+  replicationRequest(action, replicationMode, clusterMode, data) {
+    const { sys } = this.api;
+    if (clusterMode === 'primary') {
+      if (action === 'secondary-token') {
+        return replicationMode === 'dr'
+          ? sys.systemWriteReplicationDrPrimarySecondaryToken(data)
+          : sys.systemWriteReplicationPerformancePrimarySecondaryToken(data);
+      }
+      if (action === 'revoke-secondary') {
+        return replicationMode === 'dr'
+          ? sys.systemWriteReplicationDrPrimaryRevokeSecondary(data)
+          : sys.systemWriteReplicationPerformancePrimaryRevokeSecondary(data);
+      }
+    }
+    throw new Error(`Unsupported replication action: ${replicationMode}/${clusterMode}/${action}`);
   },
 
   async saveFilterConfig() {
@@ -99,7 +119,7 @@ export default Controller.extend(structuredClone(DEFAULTS), {
     return;
   },
 
-  submitHandler(action, clusterMode, data, event) {
+  async submitHandler(action, clusterMode, data, event) {
     const waiterToken = waiter.beginAsync();
     const replicationMode = this.replicationMode;
     if (event && event.preventDefault) {
@@ -119,21 +139,19 @@ export default Controller.extend(structuredClone(DEFAULTS), {
       }, {});
     }
 
-    return this.store
-      .adapterFor('cluster')
-      .replicationAction(action, replicationMode, clusterMode, data)
-      .then(
-        (resp) => {
-          return this.saveFilterConfig().then(() => {
-            return this.submitSuccess(resp, action, clusterMode);
-          });
-        },
-        (...args) => this.submitError(...args)
-      )
-      .finally(() => {
-        this.set('secondaryToRevoke', null);
-        waiter.endAsync(waiterToken);
-      });
+    try {
+      let resp;
+      try {
+        resp = await this.replicationRequest(action, replicationMode, clusterMode, data);
+      } catch (e) {
+        return await this.submitError(e);
+      }
+      await this.saveFilterConfig();
+      return this.submitSuccess(resp, action, clusterMode);
+    } finally {
+      this.set('secondaryToRevoke', null);
+      waiter.endAsync(waiterToken);
+    }
   },
 
   actions: {

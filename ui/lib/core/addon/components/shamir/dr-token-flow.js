@@ -17,7 +17,7 @@ import ShamirFlowComponent from './flow';
  * ```js
  * <Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{this.closeModal}} />
  * ```
- * @param {string} action - required kebab-case-string which refers to an action within the cluster adapter
+ * @param {string} action - required kebab-case-string that selects the Shamir flow to run, e.g. "generate-dr-operation-token"
  * @param {function} onCancel - if provided, function will be triggered on Cancel
  */
 export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {

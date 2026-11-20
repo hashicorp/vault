@@ -260,7 +260,11 @@ export default class ApiService extends Service {
         // instances where an error is thrown multiple times could result in the body already being read
         // this will result in a readable stream failure and we can't parse the body
         // to avoid this, clone the response so we can access the body consistently
-        const error = (await e.response.clone().json()) as ApiErrorResponse;
+        // proxies and some endpoints respond with an empty or non-JSON body, keep the status and use the fallback message
+        const error = ((await e.response
+          .clone()
+          .json()
+          .catch(() => ({}))) ?? {}) as ApiErrorResponse;
         // typically the Vault API error response looks like { errors: ['some error message'] }
         // but sometimes (eg RespondWithStatusCode) it's { data: { error: 'some error message' } }
         const errors = error.data?.error && !error.errors ? [error.data.error] : error.errors;

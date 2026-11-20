@@ -8,14 +8,14 @@ import { service } from '@ember/service';
 import { computeNavBar, RouteName } from 'core/helpers/display-nav-item';
 
 import type CurrentClusterService from 'vault/services/current-cluster';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 
 export default class ResilienceRecoveryRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly currentCluster: CurrentClusterService;
 
   beforeModel() {
-    const cluster = this.currentCluster.cluster as ClusterModel | null;
+    const cluster = this.currentCluster.cluster as ClusterResource | null;
 
     if (computeNavBar(this, RouteName.SECRETS_RECOVERY)) {
       this.router.replaceWith('vault.cluster.recovery.snapshots');

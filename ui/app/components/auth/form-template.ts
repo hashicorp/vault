@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { supportedTypes } from 'vault/utils/auth-form-helpers';
 
 import type VersionService from 'vault/services/version';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 import type { UnauthMountsByType } from 'vault/vault/auth/form';
 import type { HTMLElementEvent } from 'vault/forms';
 
@@ -27,7 +27,7 @@ import type { HTMLElementEvent } from 'vault/forms';
  *
  * @param {object | null} alternateView - if an alternate view exists, this is the `FormView` (see interface below) data to render that view.
  * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
- * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {object} cluster - The cluster resource (see `vault/resources/cluster`). Contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} defaultView - The `FormView` (see the interface below) data to render the initial view.
  * @param {object} initialFormState - sets selectedAuthMethod and showAlternateView based on the login form configuration computed in parent component
  * @param {function} handleAuthResponse - callback after the initial authentication request, if an mfaRequirement exists the parent renders the mfa form otherwise it fires the loginAndTransition task in the auth controller
@@ -36,7 +36,7 @@ import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
   alternateView: FormView | null;
-  cluster: ClusterModel;
+  cluster: ClusterResource;
   defaultView: FormView;
   handleAuthResponse: CallableFunction;
   initialFormState: { initialAuthType: string; showAlternate: boolean };

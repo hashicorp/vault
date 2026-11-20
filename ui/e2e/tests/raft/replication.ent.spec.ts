@@ -642,3 +642,215 @@ test.describe('secondary capability gating', () => {
     });
   }
 });
+
+// Revoking submits through the replication application controller. The backend, not the page,
+// decides whether a secondary is gone, so each outcome is read back from the primary's status.
+test.describe('secondary revocation', () => {
+  const secondaries = 'replication/performance/secondaries';
+  const revokePath = '/v1/sys/replication/performance/primary/revoke-secondary';
+  let api: APIRequestContext;
+
+  test.describe.configure({ timeout: 120_000 });
+
+  const readKnownSecondaries = async (): Promise<string[]> => {
+    const response = await api.get('/v1/sys/replication/performance/status');
+    await expect(response).toBeOK();
+    return [...(await response.json()).data.known_secondaries].sort();
+  };
+
+  // Enabling and disabling replication only schedules the change, so wait for the mode and a healthy node.
+  const waitForPerformanceMode = async (mode: 'primary' | 'disabled') => {
+    await expect
+      .poll(
+        async () => {
+          const status = await api.get('/v1/sys/replication/status');
+          const health = await api.get('/v1/sys/health');
+          return status.ok() && health.status() === 200 ? (await status.json()).data.performance.mode : null;
+        },
+        { timeout: 60_000 }
+      )
+      .toBe(mode);
+  };
+
+  // Each test creates its own secondaries, so it does not depend on what other tests revoked.
+  const createSecondaries = async (...ids: string[]) => {
+    for (const id of ids) {
+      await expect(
+        await api.post('/v1/sys/replication/performance/primary/secondary-token', { data: { id } })
+      ).toBeOK();
+    }
+  };
+
+  test.beforeAll(async ({ playwright }, testInfo) => {
+    api = await rootApi(playwright, testInfo);
+    await waitForPerformanceMode('disabled');
+    await expect(await api.post('/v1/sys/replication/performance/primary/enable', { data: {} })).toBeOK();
+    await waitForPerformanceMode('primary');
+  });
+
+  test.afterAll(async () => {
+    if (!api) return;
+    try {
+      await expect(await api.post('/v1/sys/replication/performance/primary/disable')).toBeOK();
+      await waitForPerformanceMode('disabled');
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  test('revoking from the list removes the secondary from the backend', async ({ page }) => {
+    const listId = 'edm-revoke-list';
+    const otherId = 'edm-revoke-list-other';
+    await createSecondaries(listId, otherId);
+
+    await page.goto(secondaries);
+    const row = page.locator(`[data-test-secondary-name="${listId}"]`);
+    await expect(row).toBeVisible();
+    expect(await readKnownSecondaries()).toEqual(expect.arrayContaining([listId, otherId]));
+
+    await row.getByRole('button', { name: 'Secondary popup nav menu' }).click();
+    await page.getByRole('button', { name: 'Revoke', exact: true }).click();
+    await expect(page.getByText('Revoke token?')).toBeVisible();
+    const revoked = page.waitForResponse(
+      (response) => response.url().endsWith(revokePath) && response.request().method() === 'POST'
+    );
+    await page.locator('[data-test-confirm-button]').click();
+    const response = await revoked;
+    expect(response.ok()).toBe(true);
+    expect(response.request().postDataJSON()).toEqual({ id: listId });
+    // The response can arrive before the page handles it, so wait for the confirmation to close.
+    await expect(page.locator('[data-test-confirm-modal]')).toHaveCount(0);
+
+    const knownSecondaries = await readKnownSecondaries();
+    expect(knownSecondaries).not.toContain(listId);
+    expect(knownSecondaries).toContain(otherId);
+    await test.info().attach('revoke-list-readback', {
+      body: JSON.stringify({ status: response.status(), knownSecondaries }),
+      contentType: 'application/json',
+    });
+
+    // The list is not refreshed after a revoke, so the row only disappears once the page reloads.
+    await page.reload();
+    await expect(row).toHaveCount(0);
+    await expect(page.locator(`[data-test-secondary-name="${otherId}"]`)).toBeVisible();
+    await highlightElement(page, page.locator(`[data-test-secondary-name="${otherId}"]`));
+  });
+
+  test('the revoke page shows the backend error for an unknown id, then revokes a real one', async ({
+    page,
+  }) => {
+    const pageId = 'edm-revoke-page';
+    const unknownId = 'edm-revoke-unknown';
+    await createSecondaries(pageId);
+
+    await page.goto(`${secondaries}/revoke`);
+    const idInput = page.getByLabel('Secondary ID', { exact: true });
+    const knownBefore = await readKnownSecondaries();
+    expect(knownBefore).toContain(pageId);
+
+    await test.step('an unknown id is rejected and nothing changes', async () => {
+      await idInput.fill(unknownId);
+      await page.locator('[data-test-confirm-action-trigger]').click();
+      const rejected = page.waitForResponse(
+        (response) => response.url().endsWith(revokePath) && response.request().method() === 'POST'
+      );
+      await page.locator('[data-test-confirm-button]').click();
+      const response = await rejected;
+      expect(response.status()).toBe(400);
+      expect(response.request().postDataJSON()).toEqual({ id: unknownId });
+      await expect(page.locator('[data-test-message-error-description]')).toContainText(
+        `secondary cluster with id "${unknownId}" was not found`
+      );
+      expect(await readKnownSecondaries()).toEqual(knownBefore);
+      await highlightElement(page, page.locator('[data-test-message-error]'));
+    });
+
+    await test.step('a known id is revoked, clearing the error and the form', async () => {
+      await idInput.fill(pageId);
+      await page.locator('[data-test-confirm-action-trigger]').click();
+      const revoked = page.waitForResponse(
+        (response) => response.url().endsWith(revokePath) && response.request().method() === 'POST'
+      );
+      await page.locator('[data-test-confirm-button]').click();
+      const response = await revoked;
+      expect(response.ok()).toBe(true);
+      expect(response.request().postDataJSON()).toEqual({ id: pageId });
+      await expect(page.locator('[data-test-confirm-modal]')).toHaveCount(0);
+      await expect(page.locator('[data-test-message-error]')).toHaveCount(0);
+      await expect(idInput).toHaveValue('');
+      const knownSecondaries = await readKnownSecondaries();
+      expect(knownSecondaries).not.toContain(pageId);
+      await test.info().attach('revoke-page-readback', {
+        body: JSON.stringify({ status: response.status(), knownSecondaries }),
+        contentType: 'application/json',
+      });
+    });
+  });
+});
+
+// The cluster's dr and performance replication states are read separately, so DR needs its own pass.
+test.describe('disaster recovery primary', () => {
+  let api: APIRequestContext;
+
+  test.describe.configure({ timeout: 120_000 });
+
+  const readDrMode = async (): Promise<string | null> => {
+    const status = await api.get('/v1/sys/replication/status');
+    const health = await api.get('/v1/sys/health');
+    return status.ok() && health.status() === 200 ? (await status.json()).data.dr.mode : null;
+  };
+
+  test.beforeAll(async ({ playwright }, testInfo) => {
+    api = await rootApi(playwright, testInfo);
+    await expect.poll(readDrMode, { timeout: 60_000 }).toBe('disabled');
+  });
+
+  test.afterAll(async () => {
+    if (!api) return;
+    try {
+      await api.post('/v1/sys/replication/dr/primary/disable');
+      await expect.poll(readDrMode, { timeout: 60_000 }).toBe('disabled');
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  test('enables and disables DR replication as a primary through the UI', async ({ page }) => {
+    await test.step('DR replication starts disabled', async () => {
+      await page.goto('replication/dr');
+      await expect(page.getByRole('heading', { name: 'Enable disaster recovery replication' })).toBeVisible();
+    });
+
+    await test.step('enabling shows the cluster as a DR primary and persists the mode', async () => {
+      await page
+        .locator('[data-test-replication-enable-form]')
+        .getByRole('button', { name: 'Enable' })
+        .click();
+      await expect(page.locator('[data-test-badge="primary"]')).toBeVisible({ timeout: 60_000 });
+      await expect.poll(readDrMode, { timeout: 60_000 }).toBe('primary');
+      await page.reload();
+      await expect(page.locator('[data-test-badge="primary"]')).toBeVisible();
+      await highlightElement(page, page.locator('[data-test-badge="primary"]'));
+    });
+
+    await test.step('the overview lists DR as enabled', async () => {
+      await page.goto('replication');
+      await expect(page.getByRole('heading', { name: 'Disaster Recovery (DR)' })).toBeVisible();
+      await expect(page.locator('main').getByText('Enabled').first()).toBeVisible();
+      await expect(page.locator('main').getByText('Primary').first()).toBeVisible();
+    });
+
+    await test.step('disabling returns the cluster to the enable form and persists the mode', async () => {
+      await page.goto('replication/dr/manage');
+      await page.getByRole('button', { name: 'Disable Replication' }).click();
+      await page
+        .locator('[data-test-confirmation-modal-input="Disable Replication?"]')
+        .fill('Disaster recovery');
+      await page.locator('[data-test-confirm-button="Disable Replication?"]').click();
+      await expect(page.getByRole('heading', { name: 'Enable replication' })).toBeVisible({
+        timeout: 60_000,
+      });
+      await expect.poll(readDrMode, { timeout: 60_000 }).toBe('disabled');
+    });
+  });
+});

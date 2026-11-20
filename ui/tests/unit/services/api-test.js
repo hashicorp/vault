@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
 import config from 'vault/config/environment';
-import { RequiredError } from '@hashicorp/vault-client-typescript';
+import { RequiredError, ResponseError } from '@hashicorp/vault-client-typescript';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Unit | Service | api', function (hooks) {
@@ -342,6 +342,18 @@ module('Unit | Service | api', function (hooks) {
       const fallback = 'Everything is broken, sorry';
       e = await this.apiService.parseError('some random error', fallback);
       assert.strictEqual(e.message, fallback, 'Returns custom fallback');
+    });
+
+    test('it should tolerate empty and non-JSON error bodies', async function (assert) {
+      const response = { status: 502, url: `${document.location.origin}/v1/sys/init` };
+      for (const body of [Promise.reject(new SyntaxError('Unexpected token <')), Promise.resolve(null)]) {
+        const res = { ...response, json: () => body };
+        const error = new ResponseError({ ...res, clone: () => res });
+        const { status, message, path } = await this.apiService.parseError(error, 'Request failed');
+        assert.strictEqual(status, 502, 'status is kept');
+        assert.strictEqual(message, 'Request failed', 'fallback message is used');
+        assert.strictEqual(path, '/v1/sys/init', 'path is kept');
+      }
     });
 
     test('it should return status', async function (assert) {

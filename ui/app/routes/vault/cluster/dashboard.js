@@ -28,14 +28,14 @@ export default class VaultClusterDashboardRoute extends Route {
   }
 
   async model() {
-    const clusterModel = this.modelFor('vault.cluster');
-    const hasChroot = clusterModel?.hasChrootNamespace;
+    const cluster = this.modelFor('vault.cluster');
+    const hasChroot = cluster?.hasChrootNamespace;
     const replication =
-      hasChroot || clusterModel.replicationRedacted
+      hasChroot || cluster.replicationRedacted
         ? null
         : {
-            dr: clusterModel.dr,
-            performance: clusterModel.performance,
+            dr: cluster.dr,
+            performance: cluster.performance,
           };
     const requests = [
       this.getVaultConfiguration(hasChroot),

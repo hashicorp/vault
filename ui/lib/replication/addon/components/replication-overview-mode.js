@@ -14,7 +14,7 @@ import Component from '@glimmer/component';
  * <ReplicationOverviewModeComponent @mode="dr" @model={{this.cluster.dr}} @clusterName={{this.cluster.name}} />
  *
  * @param {string} mode - should be "dr" or "performance"
- * @param {ReplicationAttributesModel} model - either the dr or performance attribute of the cluster model
+ * @param {ReplicationAttributesResource} model - either the dr or performance attribute of the cluster resource
  * @param {string} clusterName - used for the link to the mode details
  */
 export default class ReplicationOverviewModeComponent extends Component {

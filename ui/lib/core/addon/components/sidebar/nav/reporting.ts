@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { RouteName } from 'core/helpers/display-nav-item';
 
 import type CurrentClusterService from 'vault/services/current-cluster';
-import type ClusterModel from 'vault/models/cluster';
+import type ClusterResource from 'vault/resources/cluster';
 
 interface Args {
   isEngine?: boolean;
@@ -23,6 +23,6 @@ export default class SidebarNavReportingComponent extends Component<Args> {
   };
 
   get cluster() {
-    return this.currentCluster.cluster as ClusterModel | null;
+    return this.currentCluster.cluster as ClusterResource | null;
   }
 }
