@@ -1,0 +1,3 @@
+```release-note:bug
+serviceregistration: Fix a bug where a failed Kubernetes label update could be retried after a newer update for the same label had succeeded, leaving the active node labelled as not active.
+```
