@@ -19,24 +19,40 @@
     </Hds::Link::Inline>
   </:description>
   <:actions>
-    <Hds::Button @text="Configure MFA" @route="vault.cluster.access.mfa.methods.create" data-test-mfa-configure />
+    {{#if this.showContent}}
+      <Hds::Button
+        class="has-right-margin-4"
+        @color="secondary"
+        @icon="bulb"
+        @text="New to MFA?"
+        {{on "click" this.showIntroPage}}
+        data-test-button="intro"
+      />
+      <Hds::Button @text="Configure MFA" @route="vault.cluster.access.mfa.methods.create" data-test-mfa-configure />
+    {{/if}}
   </:actions>
 </Page::Header>
 
-<div class="box is-fullwidth is-shadowless">
-  <p>
-    <b>Step 1:</b>
-    Set up an MFA configuration using one of the methods: TOTP, Okta, Duo, or PingID.
-  </p>
-  <p>
-    <b>Step 2:</b>
-    Set up an enforcement to map the MFA configuration to your chosen auth method(s).
-  </p>
-</div>
+{{#if this.showWizard}}
+  <Wizard::Mfa::MfaWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshRoute}} />
+{{/if}}
 
-<div class="box is-fullwidth is-shadowless">
-  <img
-    src={{if this.theme.isDarkMode (img-path "~/mfa-landing-dark.png") (img-path "~/mfa-landing.png")}}
-    alt="MFA configure diagram"
-  />
-</div>
+{{#if this.showContent}}
+  <div class="box is-fullwidth is-shadowless">
+    <p>
+      <b>Step 1:</b>
+      Set up an MFA configuration using one of the methods: TOTP, Okta, Duo, or PingID.
+    </p>
+    <p>
+      <b>Step 2:</b>
+      Set up an enforcement to map the MFA configuration to your chosen auth method(s).
+    </p>
+  </div>
+
+  <div class="box is-fullwidth is-shadowless">
+    <img
+      src={{if this.theme.isDarkMode (img-path "~/mfa-landing-dark.png") (img-path "~/mfa-landing.png")}}
+      alt="MFA configure diagram"
+    />
+  </div>
+{{/if}}

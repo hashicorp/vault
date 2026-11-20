@@ -12,6 +12,7 @@ import mfaConfigHandler from 'vault/mirage/handlers/mfa-config';
 import { Response } from 'miragejs';
 import { underscore } from '@ember/string';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 import { duration } from 'vault/helpers/format-duration';
 
 module('Acceptance | mfa-method', function (hooks) {
@@ -32,6 +33,7 @@ module('Acceptance | mfa-method', function (hooks) {
     const notFound = () => new Response(404, {}, { errors: [] });
     this.server.get('/identity/mfa/method/', notFound);
     this.server.get('/identity/mfa/method', notFound);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.mfa);
     await visit('/vault/access/mfa/methods');
     assert.strictEqual(
       currentRouteName(),

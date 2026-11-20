@@ -1,0 +1,31 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @imageAlt="Diagram of a user authenticating with an auth method, then passing MFA with TOTP, PingID, Okta, or Duo before Vault issues a token"
+  @imageCaption="To access Vault, a user/app must present an authentication method and validate through MFA"
+  @imageSrc={{img-path "~/mfa-intro.png"}}
+>
+  <:description>
+    An MFA (Multi-factor authentication) enforcement adds a verification step to Vault logins. After a user authenticates,
+    Vault holds the request until they confirm a TOTP passcode or approve a push notification, then issues the token.
+  </:description>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="grid">
+      <strong>Four methods.</strong>
+      TOTP is built into Vault, which generates the key and QR code. Okta, Duo, and PingID send a push to the user's enrolled
+      device.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="queue">
+      <strong>Target an enforcement precisely.</strong>
+      One enforcement can apply to an entity, a group, a specific auth mount, or every mount of an auth method type. The
+      token auth method cannot use login MFA.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="shopping-cart">
+      <strong>Rate limiting is not automatic.</strong>
+      Vault allows five consecutive failed TOTP attempts by default. Apply per-client rate limits to your login and
+      "sys/mfa/validate" paths for anything stronger.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>
