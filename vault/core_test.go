@@ -2171,6 +2171,106 @@ func TestCore_Standby_Seal(t *testing.T) {
 	}
 }
 
+// TestCore_Standby_LeadershipSetupRetry verifies that a standby retries
+// leadership instead of sealing only the barrier when setup fails transiently.
+func TestCore_Standby_LeadershipSetupRetry(t *testing.T) {
+	tests := []struct {
+		name string
+		// inject makes the next leadership setup on core2 fail and returns a
+		// function that makes it succeed again.
+		inject func(core2 *Core, inm *inmem.InmemBackend) (restore func())
+	}{
+		{
+			name: "seal reload error",
+			inject: func(core2 *Core, _ *inmem.InmemBackend) func() {
+				var fail atomic.Bool
+				fail.Store(true)
+				core2.SetSealReloadFunc(func(context.Context) error {
+					if fail.Load() {
+						return errors.New("transient storage error")
+					}
+					return nil
+				})
+				return func() { fail.Store(false) }
+			},
+		},
+		{
+			name: "seal config read error",
+			inject: func(_ *Core, inm *inmem.InmemBackend) func() {
+				inm.FailGet(true)
+				return func() { inm.FailGet(false) }
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := logging.NewVaultLogger(log.Trace)
+			phys, err := inmem.NewInmem(nil, logger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			inm := phys.(*inmem.InmemBackend)
+			inmha, err := inmem.NewInmemHA(nil, logger)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			core, err := NewCore(&CoreConfig{
+				Physical:     inm,
+				HAPhysical:   inmha.(physical.HABackend),
+				RedirectAddr: "http://127.0.0.1:8200",
+				DisableMlock: true,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer core.Shutdown()
+			keys, _ := TestCoreInit(t, core)
+			for _, key := range keys {
+				if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+					t.Fatalf("unseal err: %s", err)
+				}
+			}
+			TestWaitActive(t, core)
+
+			core2, err := NewCore(&CoreConfig{
+				Physical:     inm,
+				HAPhysical:   inmha.(physical.HABackend),
+				RedirectAddr: "http://127.0.0.1:8500",
+				DisableMlock: true,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer core2.Shutdown()
+			for _, key := range keys {
+				if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
+					t.Fatalf("unseal err: %s", err)
+				}
+			}
+
+			restore := tt.inject(core2, inm)
+			if err := core.Shutdown(); err != nil {
+				t.Fatal(err)
+			}
+			// Let core2 grab the lock and fail at least once.
+			time.Sleep(2 * time.Second)
+			restore()
+
+			TestWaitActive(t, core2)
+			if core2.Sealed() {
+				t.Fatal("core2 should not be sealed")
+			}
+			if sealed, err := core2.barrier.Sealed(); err != nil {
+				t.Fatal(err)
+			} else if sealed {
+				t.Fatal("core2 barrier should not be sealed")
+			}
+		})
+	}
+}
+
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
 	logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
