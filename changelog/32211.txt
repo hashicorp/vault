@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Reduce the time and memory used to check requests against policies with many segment wildcard (`+`) paths.
+```

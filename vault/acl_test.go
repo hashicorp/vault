@@ -2871,3 +2871,49 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 		})
 	}
 }
+
+// BenchmarkACL_SegmentWildcardRules measures checking a path against an ACL
+// whose policies use many segment-wildcard ("+") rules. Every check that misses
+// the exact rules is matched against each of them.
+func BenchmarkACL_SegmentWildcardRules(b *testing.B) {
+	ctx := namespace.RootContext(context.Background())
+	for _, numRules := range []int{10, 100, 1000} {
+		var raw strings.Builder
+		for i := 0; i < numRules; i++ {
+			fmt.Fprintf(&raw, "path \"engine%d/+/team%d/*\" { capabilities = [\"read\", \"list\"] }\n", i%10, i)
+		}
+		policy, err := ParseACLPolicy(namespace.RootNamespace, raw.String())
+		require.NoError(b, err)
+		acl, err := NewACL(ctx, []*Policy{policy})
+		require.NoError(b, err)
+
+		path := fmt.Sprintf("engine%d/data/team%d/app/secret", (numRules-1)%10, numRules-1)
+		req := &logical.Request{Path: path, Operation: logical.ReadOperation}
+
+		b.Run(fmt.Sprintf("rules=%d/AllowOperation", numRules), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				if res := acl.AllowOperation(ctx, req, false); !res.Allowed {
+					b.Fatal("expected the request to be allowed")
+				}
+			}
+		})
+		b.Run(fmt.Sprintf("rules=%d/Capabilities", numRules), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				if caps := acl.Capabilities(ctx, path); len(caps) != 2 {
+					b.Fatalf("unexpected capabilities: %v", caps)
+				}
+			}
+		})
+		// sys/internal/ui/mounts checks every mount; this one is not covered.
+		b.Run(fmt.Sprintf("rules=%d/MountAccess", numRules), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				if hasMountAccess(ctx, acl, "other/") {
+					b.Fatal("expected no access to the mount")
+				}
+			}
+		})
+	}
+}
