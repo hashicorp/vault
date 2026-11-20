@@ -32,15 +32,11 @@ export default Mixin.create({
     }
   },
   actions: {
-    willTransition(transition) {
+    willTransition() {
       window.scrollTo(0, 0);
-      if (transition.targetName !== this.routeName) {
-        this.pagination.clearDataset();
-      }
       return true;
     },
     reload() {
-      this.pagination.clearDataset();
       this.refresh();
     },
   },
