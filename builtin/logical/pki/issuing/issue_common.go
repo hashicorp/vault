@@ -59,6 +59,17 @@ var (
 	// input, so it will allow e.g. host^123.example.com straight through. So
 	// we still need to use this to check the output.
 	wildHostnameRegex = regexp.MustCompile(wildHostnamePattern)
+
+	// relaxedLabelPattern is labelPattern with underscores also permitted, for
+	// roles that set enforce_hostnames=false. underscores are not valid in
+	// hostnames but are common in dns names such as _acme-challenge.example.com.
+	// everything else (allowed characters, label boundaries, wildcard
+	// placement, and the wildcard label itself) is unchanged so a relaxed name
+	// is still a plausible dns name.
+	relaxedLabelPattern        = `([a-zA-Z0-9_]|[a-zA-Z0-9_][a-zA-Z0-9_\-]*[a-zA-Z0-9_])`
+	relaxedHostnamePattern     = fmt.Sprintf(`(%s\.)*%s\.?$`, relaxedLabelPattern, relaxedLabelPattern)
+	relaxedWildHostnamePattern = fmt.Sprintf(`^(%s\.)?%s`, leftWildLabelPattern, relaxedHostnamePattern)
+	relaxedWildHostnameRegex   = regexp.MustCompile(relaxedWildHostnamePattern)
 )
 
 type EntityInfo struct {
@@ -70,6 +81,16 @@ type CertificateCounter interface {
 	IsInitialized() bool
 	IncrementTotalCertificatesCount(certsCounted bool, newSerial string)
 	IncrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string)
+}
+
+// dnsSANRegex returns the regular expression a requested name must match to
+// be included as a dns san. roles with enforce_hostnames=false opt out of
+// strict hostname validation and additionally accept underscores in labels.
+func dnsSANRegex(role *RoleEntry) *regexp.Regexp {
+	if role.EnforceHostnames {
+		return wildHostnameRegex
+	}
+	return relaxedWildHostnameRegex
 }
 
 func NewEntityInfoFromReq(req *logical.Request) EntityInfo {
@@ -152,7 +173,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 				if err != nil {
 					return nil, nil, errutil.UserError{Err: err.Error()}
 				}
-				if wildHostnameRegex.MatchString(converted) {
+				if dnsSANRegex(role).MatchString(converted) {
 					dnsNames = append(dnsNames, converted)
 				}
 			}
@@ -172,7 +193,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 						if err != nil {
 							return nil, nil, errutil.UserError{Err: err.Error()}
 						}
-						if wildHostnameRegex.MatchString(converted) {
+						if dnsSANRegex(role).MatchString(converted) {
 							dnsNames = append(dnsNames, converted)
 						} else {
 							return nil, nil, errutil.UserError{Err: fmt.Sprintf("subject alternate name %s is not a valid DNS name and cannot be included as a SAN", v)}
