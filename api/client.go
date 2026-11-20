@@ -571,6 +571,19 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 	return u, nil
 }
 
+// requestAddressForError reports the address to display in error output.
+// When the client talks to Vault over a Unix domain socket, requests carry
+// a synthetic http://localhost URL, which misleads in errors. In that case
+// report the configured address instead. It returns "" otherwise.
+func (c *Client) requestAddressForError() string {
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	if strings.HasPrefix(c.config.Address, "unix://") {
+		return strings.TrimSuffix(c.config.Address, "/")
+	}
+	return ""
+}
+
 func parseRateLimit(val string) (rate float64, burst int, err error) {
 	_, err = fmt.Sscanf(val, "%f:%d", &rate, &burst)
 	if err != nil {
@@ -1520,7 +1533,7 @@ START:
 	var result *Response
 	resp, err := client.Do(req)
 	if resp != nil {
-		result = &Response{Response: resp}
+		result = &Response{Response: resp, requestAddress: c.requestAddressForError()}
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "tls: oversized") {
@@ -1652,7 +1665,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	resp, err := httpClient.Do(req)
 
 	if resp != nil {
-		result = &Response{Response: resp}
+		result = &Response{Response: resp, requestAddress: c.requestAddressForError()}
 	}
 
 	if err != nil {
