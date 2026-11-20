@@ -7,8 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -30,11 +28,12 @@ var _ api.AuthMethod = (*GCPAuth)(nil)
 type LoginOption func(a *GCPAuth) error
 
 const (
-	iamType             = "iam"
-	gceType             = "gce"
-	defaultMountPath    = "gcp"
-	defaultAuthType     = gceType
-	identityMetadataURL = "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity"
+	iamType          = "iam"
+	gceType          = "gce"
+	defaultMountPath = "gcp"
+	defaultAuthType  = gceType
+
+	identityMetadataSuffix = "instance/service-accounts/default/identity"
 )
 
 // NewGCPAuth initializes a new GCP auth method interface to be
@@ -79,7 +78,7 @@ func (a *GCPAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 	}
 	switch a.authType {
 	case gceType:
-		jwt, err := a.getJWTFromMetadataService(client.Address())
+		jwt, err := a.getJWTFromMetadataService(ctx, client.Address())
 		if err != nil {
 			return nil, fmt.Errorf("unable to retrieve JWT from GCE metadata service: %w", err)
 		}
@@ -157,34 +156,25 @@ func (a *GCPAuth) signJWT() (*credentialspb.SignJwtResponse, error) {
 	return jwtResp, nil
 }
 
-func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error) {
+func (a *GCPAuth) getJWTFromMetadataService(ctx context.Context, vaultAddress string) (string, error) {
+	// Deliberately not OnGCEWithContext(ctx): the result is memoized in a
+	// sync.Once for the life of the process, so a caller whose context expires
+	// during the probe would cache "not on GCE" and break every later login.
 	if !metadata.OnGCE() {
 		return "", fmt.Errorf("GCE metadata service not available")
 	}
 
-	// build request to metadata server
-	c := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, identityMetadataURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("error creating http request: %w", err)
-	}
-
-	req.Header.Add("Metadata-Flavor", "Google")
 	q := url.Values{}
 	q.Add("audience", fmt.Sprintf("%s/vault/%s", vaultAddress, a.roleName))
 	q.Add("format", "full")
-	req.URL.RawQuery = q.Encode()
-	resp, err := c.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error making request to metadata service: %w", err)
-	}
-	defer resp.Body.Close()
 
-	// get jwt from response
-	body, err := io.ReadAll(resp.Body)
-	jwt := string(body)
+	// The metadata client checks the response status, so an endpoint that
+	// declines to issue an identity token surfaces its own error here instead
+	// of having its error body returned as the JWT. It also honours ctx and
+	// sets the Metadata-Flavor header itself.
+	jwt, err := metadata.GetWithContext(ctx, identityMetadataSuffix+"?"+q.Encode())
 	if err != nil {
-		return "", fmt.Errorf("error reading response from metadata service: %w", err)
+		return "", fmt.Errorf("error requesting identity token: %w", err)
 	}
 
 	return jwt, nil
