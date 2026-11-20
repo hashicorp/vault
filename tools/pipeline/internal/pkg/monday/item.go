@@ -17,16 +17,30 @@ import (
 // ErrItemNotFound is returned when no item exists with the requested id.
 var ErrItemNotFound = errors.New("item not found")
 
+// itemColumnValue is one column value of an item. Text is the display text
+// and Value is the raw JSON string Monday.com stores for the column.
+type itemColumnValue struct {
+	ID    string
+	Title string
+	Type  string
+	Text  string
+	Value string
+}
+
 // item is the subset of a Monday.com item that commands read before acting
 // on it, for example to confirm the target before a destructive change.
 type item struct {
 	ID           string
 	Name         string
+	State        string
+	UpdatedAt    string
 	BoardID      string
 	GroupID      string
 	GroupTitle   string
 	ParentItemID string // empty unless the item is a subitem
+	SubitemIDs   []string
 	SubitemCount int
+	ColumnValues []itemColumnValue
 }
 
 // getItem reads a single item by id. items(ids:) is not scoped to a board, so
@@ -35,9 +49,11 @@ type item struct {
 func getItem(ctx context.Context, client *graphql.Client, itemID string, retryDelay time.Duration) (*item, error) {
 	var query struct {
 		Items []struct {
-			ID    string `graphql:"id"`
-			Name  string `graphql:"name"`
-			Board struct {
+			ID        string `graphql:"id"`
+			Name      string `graphql:"name"`
+			State     string `graphql:"state"`
+			UpdatedAt string `graphql:"updated_at"`
+			Board     struct {
 				ID string `graphql:"id"`
 			} `graphql:"board"`
 			Group struct {
@@ -50,6 +66,15 @@ func getItem(ctx context.Context, client *graphql.Client, itemID string, retryDe
 			Subitems []struct {
 				ID string `graphql:"id"`
 			} `graphql:"subitems"`
+			ColumnValues []struct {
+				ID     string `graphql:"id"`
+				Type   string `graphql:"type"`
+				Text   string `graphql:"text"`
+				Value  string `graphql:"value"`
+				Column struct {
+					Title string `graphql:"title"`
+				} `graphql:"column"`
+			} `graphql:"column_values"`
 		} `graphql:"items(ids: [$itemId])"`
 	}
 
@@ -86,6 +111,8 @@ func getItem(ctx context.Context, client *graphql.Client, itemID string, retryDe
 	it := &item{
 		ID:           found.ID,
 		Name:         found.Name,
+		State:        found.State,
+		UpdatedAt:    found.UpdatedAt,
 		BoardID:      found.Board.ID,
 		GroupID:      found.Group.ID,
 		GroupTitle:   found.Group.Title,
@@ -93,6 +120,14 @@ func getItem(ctx context.Context, client *graphql.Client, itemID string, retryDe
 	}
 	if found.ParentItem != nil {
 		it.ParentItemID = found.ParentItem.ID
+	}
+	for _, s := range found.Subitems {
+		it.SubitemIDs = append(it.SubitemIDs, s.ID)
+	}
+	for _, cv := range found.ColumnValues {
+		it.ColumnValues = append(it.ColumnValues, itemColumnValue{
+			ID: cv.ID, Title: cv.Column.Title, Type: cv.Type, Text: cv.Text, Value: cv.Value,
+		})
 	}
 
 	return it, nil
