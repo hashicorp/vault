@@ -1372,22 +1372,24 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("paths must be supplied"), nil
 	}
 
-	for _, path := range paths {
-		var pathCap []string
-		var err error
-		if strings.HasSuffix(req.Path, "capabilities-self") {
-			capReq := *req
-			capReq.Path = path
-			pathCap, _, err = b.Core.capabilitiesAndSubscribeEventTypesForRequest(ctx, &capReq)
-		} else {
-			pathCap, err = b.Core.Capabilities(ctx, token, path)
+	capReq := req
+	if !strings.HasSuffix(req.Path, "capabilities-self") {
+		capReq = &logical.Request{
+			ClientToken: token,
+			Operation:   logical.ListOperation,
 		}
-		if err != nil {
-			if !strings.HasSuffix(req.Path, "capabilities-self") && errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-				return nil, &logical.StatusBadRequest{Err: "invalid token"}
-			}
-			return nil, err
+	}
+
+	// Look up the token and build its ACL once for all the paths, rather than
+	// once per path.
+	pathCaps, err := b.Core.capabilitiesForPaths(ctx, capReq, paths)
+	if err != nil {
+		if !strings.HasSuffix(req.Path, "capabilities-self") && errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+			return nil, &logical.StatusBadRequest{Err: "invalid token"}
 		}
+		return nil, err
+	}
+	for path, pathCap := range pathCaps {
 		ret.Data[path] = pathCap
 	}
 
