@@ -989,6 +989,9 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 
 	var fetchedGroups bool
 	var groups []*identity.Group
+	var sdkEntity *logical.Entity
+	var sdkGroups []*logical.Group
+	opts := parseACLPolicyOptions{denySlashInTemplatedPaths: ps.core.denySlashInTemplatedPolicyPaths}
 	for i, policy := range allPolicies {
 		if policy.Type == PolicyTypeACL && policy.Templated {
 			if !fetchedGroups {
@@ -1000,8 +1003,19 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 					}
 					groups = append(directGroups, inheritedGroups...)
 				}
+				sdkEntity = identity.ToSDKEntity(entity)
+				sdkGroups = identity.ToSDKGroups(groups)
 			}
-			p, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups, parseACLPolicyOptions{denySlashInTemplatedPaths: ps.core.denySlashInTemplatedPolicyPaths})
+
+			// Policies loaded through the parser keep their unresolved paths, so
+			// resolve the templates without parsing the raw HCL again.
+			var p *Policy
+			var err error
+			if policy.canResolveTemplatedPaths() {
+				p, err = policy.resolveTemplatedPaths(sdkEntity, sdkGroups, opts)
+			} else {
+				p, err = parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups, opts)
+			}
 			if err != nil {
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
 			}

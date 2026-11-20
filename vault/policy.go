@@ -161,6 +161,11 @@ type PathRules struct {
 	MFAMethodsHCL          []string                 `hcl:"mfa_methods"`
 	ControlGroupHCL        *ControlGroupHCL         `hcl:"control_group"`
 	SubscribeEventTypesHCL []string                 `hcl:"subscribe_event_types"`
+
+	// rawPath is the path as written in the policy, before identity
+	// templating and normalization. ACL uses it to resolve templated paths
+	// without parsing the policy again.
+	rawPath string
 }
 
 type ControlGroupHCL struct {
@@ -371,6 +376,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		if len(item.Keys) > 0 {
 			key = item.Keys[0].Token.Value().(string)
 		}
+		rawPath := key
 
 		// Check the path
 		if performTemplating {
@@ -424,6 +430,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		pc.Permissions = new(ACLPermissions)
 
 		pc.Path = key
+		pc.rawPath = rawPath
 
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -600,4 +607,54 @@ func (pr *PathRules) normalizePath(ns *namespace.Namespace) error {
 	}
 
 	return nil
+}
+
+// canResolveTemplatedPaths reports whether every path rule of p records the
+// path as written, which holds for every policy produced by the parser.
+func (p *Policy) canResolveTemplatedPaths() bool {
+	if len(p.Paths) == 0 {
+		return false
+	}
+	for _, rule := range p.Paths {
+		if rule.rawPath == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// resolveTemplatedPaths returns a copy of p with the identity templates in
+// its paths evaluated against entity and groups. It reuses p's parsed path
+// rules instead of parsing p.Raw again, and otherwise matches
+// parseACLPolicyWithTemplating with performTemplating set: paths whose
+// templates can't be resolved are dropped. The returned rules share their
+// permissions with p's rules, the same way NewACL already shares the rules of
+// cached policies. p must satisfy canResolveTemplatedPaths.
+func (p *Policy) resolveTemplatedPaths(entity *logical.Entity, groups []*logical.Group, opts parseACLPolicyOptions) (*Policy, error) {
+	resolved := *p
+	resolved.Templated = false
+	resolved.Paths = make([]*PathRules, 0, len(p.Paths))
+	for _, rule := range p.Paths {
+		_, templated, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+			Mode:                      identitytpl.ACLTemplating,
+			String:                    rule.rawPath,
+			Entity:                    entity,
+			Groups:                    groups,
+			NamespaceID:               p.namespace.ID,
+			DenySlashInTemplatedPaths: opts.denySlashInTemplatedPaths,
+		})
+		if err != nil {
+			continue
+		}
+
+		r := *rule
+		r.Path = templated
+		r.IsPrefix = false
+		r.HasSegmentWildcards = false
+		if err := r.normalizePath(p.namespace); err != nil {
+			return nil, fmt.Errorf("failed to parse policy: %w", err)
+		}
+		resolved.Paths = append(resolved.Paths, &r)
+	}
+	return &resolved, nil
 }
