@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 type StorageView struct {
@@ -96,7 +98,7 @@ func (s *StorageView) SubView(prefix string) *StorageView {
 
 // SanityCheck is used to perform a sanity check on a key
 func (s *StorageView) SanityCheck(key string) error {
-	if strings.Contains(key, "..") {
+	if consts.PathContainsParentReferences(key) {
 		return ErrRelativePath
 	}
 	return nil
