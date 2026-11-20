@@ -1264,7 +1264,7 @@ scenario "pr_replication" {
 
   step "remove_primary_leader" {
     description = <<-EOF
-      Simulate a catostrophic failure by forcefully removing the the primary leader node from the
+      Simulate a catostrophic failure by forcefully removing the primary leader node from the
       Vault Cluster without allowing a graceful shutdown.
     EOF
     module      = module.shutdown_node
@@ -1284,7 +1284,7 @@ scenario "pr_replication" {
 
   step "get_remaining_hosts_replication_data" {
     description = <<-EOF
-      An arithmetic module that we use to determine various metadata about the the leader and
+      An arithmetic module that we use to determine various metadata about the leader and
       follower nodes of the primary cluster so that we can correctly enable performance replication.
 
       We execute this to determine information about our hosts after having forced the leader
