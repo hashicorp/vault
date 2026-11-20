@@ -9,6 +9,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { filterEnginesByMountCategory, isAddonEngine } from 'core/utils/all-engines-metadata';
 import { paginate } from 'core/utils/paginate-list';
+import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
@@ -33,6 +34,7 @@ import {
   SecretsApiTransformListTemplatesListEnum,
   SecretsApiTransformListAlphabetsListEnum,
   SecretsApiTransitListKeysListEnum,
+  SecretsApiKvV1ListListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
@@ -106,19 +108,6 @@ export default Route.extend({
       // if it's KV v2 but not registered as an addon, it's type generic
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
-    // API-backed routes do not use the legacy capabilities records.
-    if (
-      effectiveType === 'keymgmt' ||
-      effectiveType === 'totp' ||
-      effectiveType === 'ssh' ||
-      effectiveType === 'aws' ||
-      effectiveType === 'transit' ||
-      effectiveType === 'transform'
-    ) {
-      return resolve();
-    }
-
-    this.store.unloadAll('capabilities');
     return resolve();
   },
 
@@ -621,6 +610,54 @@ export default Route.extend({
     }
   },
 
+  async fetchGenericSecrets(backend, path, page, pageFilter) {
+    let keys;
+    try {
+      const response = await this.api.secrets.kvV1List(path, backend, SecretsApiKvV1ListListEnum.TRUE);
+      keys = response.keys || [];
+    } catch (error) {
+      const { status, response } = await this.api.parseError(error);
+      if (response?.isControlGroupError) {
+        throw response;
+      }
+      if (status === 404) {
+        return paginate([], { page });
+      }
+      throw error;
+    }
+
+    const items = keys.map((name) => {
+      const id = (path ? `${path}${name}` : name) || ' ';
+      const parentKey = parentKeyForKey(id);
+      return {
+        id,
+        backend,
+        isGenericSecret: true,
+        isFolder: keyIsFolder(id),
+        keyWithoutParent: id ? id.replace(parentKey || '', '') : null,
+        secretPath: { isLoading: false },
+      };
+    });
+
+    const paginationOptions = { filter: pageFilter, filterKey: 'keyWithoutParent' };
+    let pageItems = paginate(items, { ...paginationOptions, page });
+    const currentPage = pageItems.meta.lastPage ? Math.min(page, pageItems.meta.lastPage) : 1;
+    if (pageItems.meta.currentPage !== currentPage) {
+      pageItems = paginate(items, { ...paginationOptions, page: currentPage });
+    }
+
+    const paths = pageItems.map((item) => `${backend}/${item.id}`);
+    const capabilities = paths.length ? await this.capabilitiesService.fetch(paths, { strict: true }) : {};
+    pageItems.forEach((item, index) => {
+      const itemCapabilities = capabilities[paths[index]];
+      item.canRead = itemCapabilities?.canRead === true;
+      item.canEdit = itemCapabilities?.canUpdate === true;
+      item.canDelete = itemCapabilities?.canDelete === true;
+    });
+
+    return pageItems;
+  },
+
   async model(params) {
     const secret = this.secretParam() || '';
     const backend = getEnginePathParam(this);
@@ -673,6 +710,9 @@ export default Route.extend({
       } else {
         secrets = await this.fetchTransformTransformations(backend, page, filter);
       }
+      this.set('has404', false);
+    } else if (modelType === 'secret') {
+      secrets = await this.fetchGenericSecrets(backend, secret, getValidPage(params.page), params.pageFilter);
       this.set('has404', false);
     } else {
       try {

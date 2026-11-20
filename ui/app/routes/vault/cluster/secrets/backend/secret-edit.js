@@ -29,6 +29,7 @@ import TemplateForm from 'vault/forms/transform/template';
 import RoleForm from 'vault/forms/transform/role';
 import TransformationForm from 'vault/forms/transform/transformation';
 import Form from 'vault/forms/form';
+import SecretForm from 'vault/forms/secret';
 import {
   SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
   SecretsApiTransformListRolesListEnum,
@@ -49,7 +50,7 @@ export default Route.extend({
     return secret ? normalizePath(secret) : '';
   },
 
-  capabilities(secret, modelType) {
+  async capabilities(secret, modelType) {
     const backend = getEnginePathParam(this);
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const backendType = getEffectiveEngineType(backendModel.engineType);
@@ -63,7 +64,8 @@ export default Route.extend({
     } else {
       path = backend + '/' + secret;
     }
-    return this.store.findRecord('capabilities', path);
+    const capabilities = await this.capabilitiesService.fetch([path], { strict: true });
+    return capabilities[path];
   },
 
   buildTransformPath(backend, secret, modelType) {
@@ -628,25 +630,20 @@ export default Route.extend({
     };
   },
 
-  async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
-    // capabilities is a promise proxy, not a real object
-    // to work around this we explicitly assign it to a const and await it
-    const capabilities = await capabilitiesPromise;
+  async handleSecretModelError(capabilities, secretId, modelType, error, backend) {
     // can't read the path and don't have update capability, so re-throw
     if (!capabilities.canUpdate && modelType === 'secret') {
+      set(error, 'httpStatus', 403);
       throw error;
     }
-    this.store.push({
-      data: {
-        id: secretId,
-        type: modelType,
-        attributes: {
-          failedServerRead: true,
-        },
-      },
-    });
-    const secretModel = this.store.peekRecord(modelType, secretId);
-    return secretModel;
+    return {
+      id: secretId,
+      type: modelType,
+      backend,
+      canDelete: capabilities.canDelete,
+      failedServerRead: true,
+      secretData: {},
+    };
   },
 
   async model(params, { to: { queryParams } }) {
@@ -706,19 +703,34 @@ export default Route.extend({
     } else if (modelType === 'transform') {
       secretModel = await this.fetchTransformTransformation(backend, secret);
       capabilities = await this.fetchTransformTransformationCapabilities(backend, secret);
-    } else {
+    } else if (modelType === 'secret') {
       capabilities = await this.capabilities(secret, modelType);
       try {
-        secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
-      } catch (err) {
-        // we've failed the read request, but if it's a kv-v1 type backend, we want to
-        // do additional checks of the capabilities
-        if (err.httpStatus === 403 && modelType === 'secret') {
-          secretModel = await this.handleSecretModelError(capabilities, secret, modelType, err);
+        const { data } = await this.api.secrets.kvV1Read(secret, backend);
+        secretModel = {
+          id: secret,
+          backend,
+          canDelete: capabilities.canDelete,
+          secretData: data || {},
+        };
+      } catch (error) {
+        const { status, response } = await this.api.parseError(error);
+        if (response?.isControlGroupError) {
+          throw response;
+        }
+        if (status === 403) {
+          secretModel = await this.handleSecretModelError(capabilities, secret, modelType, error, backend);
         } else {
-          throw err;
+          set(error, 'httpStatus', status);
+          throw error;
         }
       }
+      if (this.routeName.startsWith('vault.cluster.secrets.backend.edit')) {
+        secretModel = new SecretForm(secretModel, { isNew: false });
+      }
+    } else {
+      capabilities = await this.capabilities(secret, modelType);
+      secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
     }
 
     return {

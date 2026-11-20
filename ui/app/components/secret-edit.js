@@ -23,18 +23,14 @@
  * @param {boolean} preferAdvancedEdit - property set from the controller of show/edit/create route passed in through secret-edit-layout
  */
 
-import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import KVObject from 'vault/lib/kv-object';
-import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
-import { alias, or } from '@ember/object/computed';
+import { or } from '@ember/object/computed';
 import { dump } from 'js-yaml';
 
 export default class SecretEdit extends Component {
-  @service store;
-
   @tracked secretData = null;
   @tracked editorString = null;
   @tracked editorFormat = 'json';
@@ -62,27 +58,14 @@ export default class SecretEdit extends Component {
     this.secretData = KVObject.create({ content: [] }).fromJSON(model.secretData);
     this.editorString = this.secretData.toJSONString();
   }
-  // TODO move this to the secret model
-  @maybeQueryRecord(
-    'capabilities',
-    (context) => {
-      if (!context.args.model || context.args.mode === 'create') {
-        return;
-      }
-      const backend = context.args.model.backend;
-      const id = context.args.model.id;
-      const path = `${backend}/${id}`;
-      return {
-        id: path,
-      };
-    },
-    'model',
-    'model.id',
-    'mode'
-  )
-  checkSecretCapabilities;
-  @alias('checkSecretCapabilities.canUpdate') canUpdateSecret;
-  @alias('checkSecretCapabilities.canRead') canReadSecret;
+
+  get canUpdateSecret() {
+    return this.args.capabilities?.canUpdate ?? this.args.model?.canUpdate;
+  }
+
+  get canReadSecret() {
+    return this.args.capabilities?.canRead ?? this.args.model?.canRead;
+  }
 
   @or('model.isLoading', 'model.isReloading', 'model.isSaving') requestInFlight;
   @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
@@ -90,7 +73,14 @@ export default class SecretEdit extends Component {
   get modelForData() {
     const { model } = this.args;
     if (!model) return null;
-    return model;
+    if (model.secretKeyAndValue) return model;
+    return {
+      ...model,
+      secretKeyAndValue: Object.keys(model.secretData || {}).map((key) => ({
+        key,
+        value: model.secretData[key],
+      })),
+    };
   }
 
   get basicModeDisabled() {

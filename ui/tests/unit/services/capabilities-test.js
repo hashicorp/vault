@@ -143,6 +143,33 @@ module('Unit | Service | capabilities', function (hooks) {
     assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
   });
 
+  test('fetch: strict mode denies paths omitted by the capabilities response', async function (assert) {
+    const paths = ['/my/api/path', 'another/api/path'];
+
+    this.server.post('/sys/capabilities-self', () => ({
+      request_id: '6cc7a484-921a-a730-179c-eaf6c6fbe97e',
+      data: { '/my/api/path': ['read'] },
+    }));
+
+    const actual = await this.capabilities.fetch(paths, { strict: true });
+
+    assert.true(actual['/my/api/path'].canRead, 'the returned path retains its read capability');
+    assert.false(actual['another/api/path'].canRead, 'an omitted path does not grant read access');
+    assert.false(actual['another/api/path'].canUpdate, 'an omitted path does not grant update access');
+  });
+
+  test('fetch: strict mode propagates capabilities request errors', async function (assert) {
+    const paths = ['/my/api/path'];
+    const error = new Error('capabilities lookup failed');
+    sinon.stub(this.capabilities.api.sys, 'queryTokenSelfCapabilities').rejects(error);
+
+    await assert.rejects(
+      this.capabilities.fetch(paths, { strict: true }),
+      (actual) => actual === error,
+      'strict capability lookups preserve the request error'
+    );
+  });
+
   test('fetch: it caches paths when routeForCache is provided', async function (assert) {
     const paths = ['/my/api/path', 'another/api/path'];
     const route = 'vault.cluster.some-route';

@@ -14,6 +14,7 @@ import type { Capabilities, CapabilitiesMap, CapabilitiesData, CapabilityTypes }
 
 type CapabilityFetchOptions = {
   routeForCache?: string;
+  strict?: boolean;
 };
 
 export default class CapabilitiesService extends Service {
@@ -84,17 +85,22 @@ export default class CapabilitiesService extends Service {
   }
 
   // map capabilities to friendly names like canRead, canUpdate, etc.
-  mapCapabilities(paths: string[], capabilitiesData: CapabilitiesData) {
+  mapCapabilities(
+    paths: string[],
+    capabilitiesData: CapabilitiesData,
+    { strict = false }: CapabilityFetchOptions = {}
+  ) {
     // request may not return capabilities for all provided paths
-    // loop provided paths and map capabilities, defaulting to true for missing paths
+    // Missing paths retain the legacy permissive behavior unless strict mode is requested.
     return paths.reduce((mappedCapabilities: CapabilitiesMap, path) => {
       // key in capabilitiesData includes relativeNamespace if applicable
       const key = this.relativeNamespacePath(path);
       const capabilities = capabilitiesData[key];
+      const hasCapabilities = Object.prototype.hasOwnProperty.call(capabilitiesData, key);
 
       const getCapability = (capability: CapabilityTypes) => {
-        if (!(key in capabilitiesData)) {
-          return true;
+        if (!hasCapabilities) {
+          return !strict;
         }
         if (!capabilities?.length || capabilities.includes('deny')) {
           return false;
@@ -135,8 +141,11 @@ export default class CapabilitiesService extends Service {
         payload,
         this.api.buildHeaders({ namespace: sanitizePath(this.namespace.userRootNamespace) })
       );
-      return this.mapCapabilities(paths, data as CapabilitiesData);
+      return this.mapCapabilities(paths, data as CapabilitiesData, fetchOptions);
     } catch (e) {
+      if (fetchOptions.strict) {
+        throw e;
+      }
       // default to true if there is a problem fetching the model
       // we can rely on the API to gate as a fallback
       return paths.reduce((obj: CapabilitiesMap, path: string) => {

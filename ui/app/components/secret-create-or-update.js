@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -51,7 +51,7 @@ export default class SecretCreateOrUpdate extends Component {
   @service controlGroup;
   @service flashMessages;
   @service router;
-  @service store;
+  @service api;
 
   whitespaceWarning = WHITESPACE_WARNING('path');
 
@@ -104,10 +104,11 @@ export default class SecretCreateOrUpdate extends Component {
     this.pathWhiteSpaceWarning = validation.test(value);
   }
   // successCallback is called in the context of the component
-  persistKey(successCallback) {
+  async persistKey(successCallback) {
     const secret = this.args.model;
     const secretData = this.args.modelForData;
 
+    this.error = null;
     let key = secretData?.path || secret.id;
 
     if (key.startsWith('/')) {
@@ -115,21 +116,19 @@ export default class SecretCreateOrUpdate extends Component {
       secretData.set(secretData.pathAttr, key);
     }
 
-    return secretData
-      .save()
-      .then(() => {
-        if (!secretData.isError) {
-          this.saveComplete(successCallback, key);
-        }
-      })
-      .catch((error) => {
-        if (error.isControlGroupError) {
-          this.controlGroup.saveTokenFromError(error);
-          const errorMessage = this.controlGroup.logFromError(error);
-          this.error = errorMessage.content;
-        }
-        throw error;
-      });
+    try {
+      await this.api.secrets.kvV1Write(key, secret.backend, secretData.secretData || {});
+      this.saveComplete(successCallback, key);
+    } catch (error) {
+      const { message, response } = await this.api.parseError(error);
+      if (response?.isControlGroupError) {
+        this.controlGroup.saveTokenFromError(response);
+        const errorMessage = this.controlGroup.logFromError(response);
+        this.error = errorMessage.content;
+      } else {
+        this.error = message;
+      }
+    }
   }
   saveComplete(callback, key) {
     callback(key);
@@ -152,10 +151,10 @@ export default class SecretCreateOrUpdate extends Component {
   @action
   addRow() {
     const data = this.args.secretData;
-    // fired off on init
     if (isNone(data.find((d) => d.name === ''))) {
       data.pushObject({ name: '', value: '' });
-      this.handleChange();
+      // This also runs during render. The blank row is editor-only and doesn't change the form payload.
+      this.formatJSON();
     }
     this.checkRows();
   }
