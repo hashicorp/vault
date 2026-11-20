@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Retry failed initialization prerequisites with bounded concurrency, attempts, and backoff, and report unready mounts unavailable. Failed storage migrations require operator inspection and are not automatically replayed.
+```
