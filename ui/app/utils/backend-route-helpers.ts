@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { recoverEngineMountPath } from 'vault/utils/path-encoding-helpers';
 
 /**
  * Utility functions for backend-related route operations.
@@ -31,5 +32,5 @@ export function getBackendEffectiveType(route: Route): string {
  */
 export function getEnginePathParam(route: Route): string {
   const params = route.paramsFor('vault.cluster.secrets.backend') as { backend: string };
-  return params?.backend;
+  return recoverEngineMountPath(params?.backend);
 }
