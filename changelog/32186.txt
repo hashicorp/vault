@@ -1,0 +1,3 @@
+```release-note:bug
+auth/aws: Fix token renewal for IAM logins when `auth_type` is not included in `iam_metadata`.
+```
