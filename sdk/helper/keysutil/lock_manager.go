@@ -27,6 +27,12 @@ const (
 
 var errNeedExclusiveLock = errors.New("an exclusive lock is needed for this operation")
 
+// ErrKeyAlreadyExists is returned by RestorePolicy when the key being restored
+// already exists and force was not specified. It is a user error, not an
+// internal failure, so callers should surface it as a client-facing (4xx)
+// error rather than a server failure. Use errors.Is to detect it.
+var ErrKeyAlreadyExists = errors.New("key already exists")
+
 // PolicyRequest holds values used when requesting a policy. Most values are
 // only used during an upsert.
 type PolicyRequest struct {
@@ -191,7 +197,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if lm.useCache {
 		pRaw, ok = lm.cache.Load(name)
 		if ok && !force {
-			return "", fmt.Errorf("key %q already exists", name)
+			return "", fmt.Errorf("%w: %q", ErrKeyAlreadyExists, name)
 		}
 	}
 
@@ -213,7 +219,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 			return "", err
 		}
 		if p != nil && !force {
-			return "", fmt.Errorf("key %q already exists", name)
+			return "", fmt.Errorf("%w: %q", ErrKeyAlreadyExists, name)
 		}
 	}
 
