@@ -1,0 +1,3 @@
+```release-note:bug
+auth/okta: fix Okta login discarding the token in the web UI by no longer returning an empty Data map on login
+```

@@ -70,6 +70,15 @@ type backend struct {
 	verifyCache *ttlcache.Cache[string, int]
 }
 
+// newOktaLoginResponse returns the response carried through a successful
+// Okta login. Data is deliberately left nil: an empty, non-nil Data map is
+// serialized as "data": {}, which the UI's generated API client prefers
+// over the "auth" block (json.data || json.auth), so the issued token
+// would be discarded and the user logged out immediately (see #32193).
+func newOktaLoginResponse() *logical.Response {
+	return &logical.Response{}
+}
+
 func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp, nonce, preferredProvider string) ([]string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
@@ -137,9 +146,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		return nil, logical.ErrorResponse("okta auth method unexpected failure"), nil, nil
 	}
 
-	oktaResponse := &logical.Response{
-		Data: map[string]interface{}{},
-	}
+	oktaResponse := newOktaLoginResponse()
 
 	// More about Okta's Auth transaction state here:
 	// https://developer.okta.com/docs/api/resources/authn#transaction-state
