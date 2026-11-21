@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go"
@@ -214,6 +215,89 @@ func TestBackend_throttled(t *testing.T) {
 	}
 	if code != http.StatusBadGateway {
 		t.Fatalf("expected HTTP status 'bad gateway', got: (%d)", code)
+	}
+}
+
+// tagRecordingIAMClient records the CreateUser and TagUser requests made while
+// creating iam_user credentials.
+type tagRecordingIAMClient struct {
+	iamAPI
+	createUserInput *iam.CreateUserInput
+	tagUserCalls    int
+}
+
+func (m *tagRecordingIAMClient) CreateUser(_ context.Context, input *iam.CreateUserInput, _ ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
+	m.createUserInput = input
+	return &iam.CreateUserOutput{}, nil
+}
+
+func (m *tagRecordingIAMClient) TagUser(_ context.Context, _ *iam.TagUserInput, _ ...func(*iam.Options)) (*iam.TagUserOutput, error) {
+	m.tagUserCalls++
+	return &iam.TagUserOutput{}, nil
+}
+
+func (m *tagRecordingIAMClient) CreateAccessKey(_ context.Context, input *iam.CreateAccessKeyInput, _ ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
+	return &iam.CreateAccessKeyOutput{
+		AccessKey: &iamtypes.AccessKey{
+			AccessKeyId:     aws.String("AKIAEXAMPLE"),
+			SecretAccessKey: aws.String("secret"),
+			UserName:        input.UserName,
+		},
+	}, nil
+}
+
+// TestBackend_iamUserTagsOnCreate checks that the role's iam_tags are sent in
+// the CreateUser request, so that SCPs that require tags on iam:CreateUser
+// allow it, and that no separate TagUser call is made.
+func TestBackend_iamUserTagsOnCreate(t *testing.T) {
+	t.Parallel()
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(t.Context(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/tagged",
+		Storage:   config.StorageView,
+		Data: map[string]interface{}{
+			"credential_type": iamUserCred,
+			"iam_tags":        map[string]string{"team": "sre", "env": "prod"},
+		},
+	}
+	resp, err := b.HandleRequest(t.Context(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to write role: resp:%#v err:%s", resp, err)
+	}
+
+	mock := &tagRecordingIAMClient{}
+	b.iamClient = mock
+
+	credResp, err := b.HandleRequest(t.Context(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "creds/tagged",
+		Storage:   config.StorageView,
+	})
+	if err != nil || (credResp != nil && credResp.IsError()) {
+		t.Fatalf("failed to create credentials: resp:%#v err:%s", credResp, err)
+	}
+
+	if mock.createUserInput == nil {
+		t.Fatal("CreateUser was not called")
+	}
+	got := map[string]string{}
+	for _, tag := range mock.createUserInput.Tags {
+		got[aws.ToString(tag.Key)] = aws.ToString(tag.Value)
+	}
+	expected := map[string]string{"team": "sre", "env": "prod"}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("CreateUser tags: expected %v, got %v", expected, got)
+	}
+	if mock.tagUserCalls != 0 {
+		t.Fatalf("expected no TagUser call, got %d", mock.tagUserCalls)
 	}
 }
 
