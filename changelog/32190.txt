@@ -1,0 +1,3 @@
+```release-note:bug
+core: do not treat replayed pre-join raft configurations as node removal
+```

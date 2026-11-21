@@ -816,6 +816,142 @@ func TestRaft_Removed(t *testing.T) {
 	})
 }
 
+// TestRaft_RemovedChecker_ReplayedPreJoinConfig reproduces
+// https://github.com/hashicorp/vault/issues/32099: a node joining a cluster
+// bootstraps with a fabricated configuration that already lists it, and the
+// removed checker counts that as "has been present". While the log is still
+// being replayed the node then observes an older replicated configuration
+// that predates its join and does not list it, and removes itself
+// permanently. The checker must only count presence in configurations that
+// arrived through replication.
+//
+// The test drives the removed checker through the exact sequence of
+// configurations it observes in the issue — the bootstrapped configuration
+// listing the node, then an older configuration that does not list it — by
+// appending the older configuration to the node's log and restarting its
+// raft instance, instead of depending on replication timing to freeze the
+// replay mid-flight. It also includes a positive control: once the node is
+// present in a replicated configuration and is then genuinely removed, the
+// checker must still detect that.
+func TestRaft_RemovedChecker_ReplayedPreJoinConfig(t *testing.T) {
+	t.Parallel()
+	testBothRaftBackends(t, func(t *testing.T, raftWALValue string) {
+		conf := map[string]string{
+			"trailing_logs": "100",
+			"raft_wal":      raftWALValue,
+		}
+
+		// raft1 is the leader; raft2 joins first, so the cluster has a
+		// real configuration that predates raft3's join and does not list
+		// raft3.
+		raft1, _ := GetRaftWithConfig(t, true, true, conf)
+		raft2, _ := GetRaftWithConfig(t, false, true, conf)
+		addPeer(t, raft1, raft2)
+
+		// The configuration recorded before raft3 joined: raft1 and raft2,
+		// but not raft3.
+		preJoinConfig := raft.Configuration{
+			Servers: []raft.Server{
+				{ID: raft.ServerID(raft1.NodeID()), Address: raft.ServerAddress(raft1.NodeID()), Suffrage: raft.Voter},
+				{ID: raft.ServerID(raft2.NodeID()), Address: raft.ServerAddress(raft2.NodeID()), Suffrage: raft.Voter},
+			},
+		}
+
+		// raft3 bootstraps with the fabricated configuration listing
+		// itself, exactly like a node joining the cluster. Its log holds
+		// only the bootstrap entry (index 1) at this point.
+		raft3, _ := GetRaftWithConfig(t, false, true, conf)
+		removedCallbackCalled := atomic.Bool{}
+		removedCallback := func() { removedCallbackCalled.Store(true) }
+		bootstrapConfig := raft.Configuration{
+			Servers: []raft.Server{
+				{ID: raft.ServerID(raft1.NodeID()), Address: raft.ServerAddress(raft1.NodeID()), Suffrage: raft.Voter},
+				{ID: raft.ServerID(raft2.NodeID()), Address: raft.ServerAddress(raft2.NodeID()), Suffrage: raft.Voter},
+				{ID: raft.ServerID(raft3.NodeID()), Address: raft.ServerAddress(raft3.NodeID()), Suffrage: raft.Voter},
+			},
+		}
+		if err := raft3.Bootstrap([]Peer{
+			{ID: raft1.NodeID(), Address: raft1.NodeID()},
+			{ID: raft2.NodeID(), Address: raft2.NodeID()},
+			{ID: raft3.NodeID(), Address: raft3.NodeID()},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		err := raft3.SetupCluster(context.Background(), SetupOpts{
+			RemovedCallback: removedCallback,
+		})
+		require.NoError(t, err)
+
+		// replayConfig replays a configuration entry the way a node
+		// receives it during log replay: the entry is appended to the log
+		// and becomes the latest configuration, and the FSM applies it as
+		// the leader's commit index advances past it. The raft instance is
+		// restarted so it picks the entry up from the log, as it would when
+		// the entry arrives through replication. The restart goes through
+		// TeardownCluster so the raft field is cleared under the backend
+		// lock; clearing it directly would race with the removed checker
+		// goroutine's GetConfiguration calls.
+		replayConfig := func(index uint64, config raft.Configuration) {
+			t.Helper()
+			entry := &raft.Log{
+				Index: index,
+				Term:  1,
+				Type:  raft.LogConfiguration,
+				Data:  raft.EncodeConfiguration(config),
+			}
+			require.NoError(t, raft3.TeardownCluster(nil))
+			require.NoError(t, raft3.logStore.StoreLog(entry))
+			require.NoError(t, raft3.SetupCluster(context.Background(), SetupOpts{
+				RemovedCallback: removedCallback,
+			}))
+			raft3.fsm.ApplyBatch([]*raft.Log{entry})
+		}
+
+		// The bootstrapped configuration is applied first, as it is when
+		// the node first contacts the leader.
+		raft3.fsm.ApplyBatch([]*raft.Log{{
+			Index: 1,
+			Term:  1,
+			Type:  raft.LogConfiguration,
+			Data:  raft.EncodeConfiguration(bootstrapConfig),
+		}})
+
+		// Let the removed checker observe the bootstrapped configuration
+		// (which lists raft3) at least once before any older configuration
+		// is replayed.
+		time.Sleep(2 * time.Second)
+
+		// Replay the older configuration that predates raft3's join.
+		replayConfig(2, preJoinConfig)
+
+		// The removed checker must not remove raft3: it has never been
+		// present in a configuration that arrived through replication.
+		time.Sleep(3 * time.Second)
+		require.False(t, raft3.IsRemoved(), "node removed itself while replaying a pre-join configuration")
+		require.False(t, removedCallbackCalled.Load())
+
+		// Positive control: raft3 is present in a replicated configuration
+		// and is then genuinely removed, which the checker must still
+		// detect. Replay the join configuration listing raft3, then the
+		// removal configuration.
+		joinConfig := raft.Configuration{
+			Servers: []raft.Server{
+				{ID: raft.ServerID(raft1.NodeID()), Address: raft.ServerAddress(raft1.NodeID()), Suffrage: raft.Voter},
+				{ID: raft.ServerID(raft2.NodeID()), Address: raft.ServerAddress(raft2.NodeID()), Suffrage: raft.Voter},
+				{ID: raft.ServerID(raft3.NodeID()), Address: raft.ServerAddress(raft3.NodeID()), Suffrage: raft.Voter},
+			},
+		}
+		replayConfig(3, joinConfig)
+		// Let the checker observe raft3 present in the replicated join
+		// configuration before it is removed.
+		time.Sleep(2 * time.Second)
+
+		replayConfig(4, preJoinConfig)
+		require.Eventually(t, raft3.IsRemoved, 15*time.Second, 500*time.Millisecond)
+		require.True(t, removedCallbackCalled.Load())
+	})
+}
+
 // TestRaft_TransactionalLimitsEnvOverride ensures the ENV var overrides for
 // transaction size limits are plumbed through as expected.
 func TestRaft_TransactionalLimitsEnvOverride(t *testing.T) {

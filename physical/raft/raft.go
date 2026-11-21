@@ -282,6 +282,13 @@ func (b *RaftBackend) IsRemoved() bool {
 
 var removedKey = []byte("removed")
 
+// bootstrapConfigIndex is the raft log index of the configuration entry
+// written locally by raft.BootstrapCluster() when a node joins a cluster.
+// The FSM records the index of the configuration entry it applied, so an
+// applied configuration index of at most this value means the node has only
+// ever seen its locally bootstrapped configuration.
+const bootstrapConfigIndex = 1
+
 func (b *RaftBackend) RemoveSelf() error {
 	b.removed.Store(true)
 	return b.stableStore.SetUint64(removedKey, 1)
@@ -1476,6 +1483,22 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	return nil
 }
 
+// hasReplicatedConfiguration reports whether this node has applied a raft
+// configuration that arrived through replication. The FSM records the index
+// of the latest configuration entry it applied, including configurations
+// installed from a snapshot.
+//
+// Note that RaftConfigurationResponse.Index (and raft's GetConfiguration
+// future Index) cannot be used here: with hashicorp/raft v1.7.3
+// GetConfiguration never populates the index, so it is always 0.
+func (b *RaftBackend) hasReplicatedConfiguration() bool {
+	if b.fsm == nil {
+		return false
+	}
+	_, appliedConfig := b.fsm.LatestState()
+	return appliedConfig != nil && appliedConfig.Index > bootstrapConfigIndex
+}
+
 func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(time.Second)
@@ -1499,12 +1522,31 @@ func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 				if !b.Initialized() {
 					return
 				}
-				removed, err := b.IsNodeRemoved(ctx, b.localID)
+				conf, err := b.GetConfiguration(ctx)
 				if err != nil {
 					logger.Error("failed to check if node is removed", "node ID", b.localID, "error", err)
 					continue
 				}
-				if !removed {
+				removed := true
+				for _, srv := range conf.Servers {
+					if srv.NodeID == b.localID {
+						removed = false
+						break
+					}
+				}
+				if !removed && b.hasReplicatedConfiguration() {
+					// Only count presence in a configuration that arrived
+					// through replication as evidence that this node has
+					// been present in the cluster. The configuration at
+					// the bootstrap index is written locally by
+					// raft.BootstrapCluster() when the node joins, and it
+					// already lists the node before the node has received
+					// any configuration from the leader. Counting it
+					// would let an older replicated configuration that
+					// predates the join look like a removal while the log
+					// is still being replayed, and the node would remove
+					// itself permanently. See
+					// https://github.com/hashicorp/vault/issues/32099.
 					hasBeenPresent = true
 				}
 				// the node must have been previously present in the config,
