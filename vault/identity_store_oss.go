@@ -41,3 +41,5 @@ func (i *IdentityStore) recordEntityActivity(_, _ string, _, _ time.Time) {
 }
 
 func (i *IdentityStore) startEntityMetadataLoad(context.Context) {}
+
+func (i *IdentityStore) addEntityMetadataToResponse(string, map[string]interface{}) {}

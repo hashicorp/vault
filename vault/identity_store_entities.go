@@ -480,6 +480,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	respData["scim_client_id"] = entity.ScimClientID
 
 	addExtraEntityDataToResponse(entity, respData)
+	i.addEntityMetadataToResponse(entity.ID, respData)
 
 	// Fetch the groups this entity belongs to and return their identifiers
 	groups, inheritedGroups, err := i.groupsByEntityID(entity.ID)
@@ -800,6 +801,7 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 			"last_update_time": ptypes.TimestampString(entity.LastUpdateTime),
 			"disabled":         entity.Disabled,
 		}
+		i.addEntityMetadataToResponse(entity.ID, entityInfoEntry)
 		if len(entity.Aliases) > 0 {
 			aliasList := make([]interface{}, 0, len(entity.Aliases))
 			for _, alias := range entity.Aliases {
