@@ -1790,7 +1790,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
+		entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
 		if err != nil {
 			// Best-effort clean up on error, so we log the cleanup error as a
 			// warning but still return as internal error.
@@ -1842,6 +1842,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					leaseGenerated = true
 				}
 			}
+		}
+		// Tracking token expiration timestamp metadata across token creation and renewal
+		if entity != nil {
+			c.identityStore.recordEntityActivity(entity.ID, entity.NamespaceID, time.Time{}, resp.Auth.ExpirationTime())
 		}
 
 		// We do these later since it's not meaningful for backends/expmgr to
@@ -2798,6 +2802,10 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 		return false, nil, err
 	default:
 		return false, logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if entity != nil {
+		c.identityStore.recordEntityActivity(entity.ID, entity.NamespaceID, time.Now(), auth.ExpirationTime())
 	}
 
 	auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies[ns.ID], policyutil.DoNotAddDefaultPolicy)
