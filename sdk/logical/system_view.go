@@ -161,6 +161,18 @@ type ExtendedSystemView interface {
 	// for the given TPM ID.
 	TPMByID(ctx context.Context, id string) (*TPM, error)
 
+	// TPMByName returns a subset of information related to the TPM record
+	// for the given TPM name.
+	TPMByName(ctx context.Context, name string) (*TPM, error)
+
+	// TPMGroupByID returns a subset of information related to the TPM group
+	// record for the given TPM group ID.
+	TPMGroupByID(ctx context.Context, id string) (*TPMGroup, error)
+
+	// TPMGroupByName returns a subset of information related to the TPM group
+	// record for the given TPM group name.
+	TPMGroupByName(ctx context.Context, name string) (*TPMGroup, error)
+
 	// GroupsForTPM returns the TPM group membership information for the provided
 	// TPM ID.
 	GroupsForTPM(ctx context.Context, id string) ([]*TPMGroup, error)
@@ -277,6 +289,18 @@ func (d StaticSystemView) GroupsForEntity(entityID string) ([]*Group, error) {
 
 func (d StaticSystemView) TPMByID(ctx context.Context, id string) (*TPM, error) {
 	return nil, errors.New("TPMByID is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) TPMByName(ctx context.Context, name string) (*TPM, error) {
+	return nil, errors.New("TPMByName is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) TPMGroupByID(ctx context.Context, id string) (*TPMGroup, error) {
+	return nil, errors.New("TPMGroupByID is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) TPMGroupByName(ctx context.Context, name string) (*TPMGroup, error) {
+	return nil, errors.New("TPMGroupByName is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) GroupsForTPM(ctx context.Context, id string) ([]*TPMGroup, error) {
