@@ -106,7 +106,7 @@ export default class MfaLoginEnforcementForm extends Component {
   }
 
   async fetchMfaMethods() {
-    // @methods now contains API response data (plain objects) instead of Ember Data models
+    // @methods contains API response data (plain objects)
     const methods = this.args.methods || [];
 
     // If the form already has mfa_methods set (e.g., editing existing enforcement),

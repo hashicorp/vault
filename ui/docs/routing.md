@@ -3,8 +3,6 @@
 - [Guidelines](#guidelines)
 - [File structure](#file-structure)
 - [Shared functionality](#shared-functionality)
-- [Decorators](#decorators)
-  - [@withConfirmLeave()](#withconfirmleave)
 
 ## Guidelines
 
@@ -54,13 +52,6 @@ Below, `details.js` and `edit.js` will automatically receive the model returned 
 To guide users, we sometimes have a call to action that depends on a resource's state. For example, if a secret engine hasn't been configured routing to the first step to do so, and otherwise navigating to its overview page.
 
 Instead of extending route classes to share this `isConfigured` state, consider a decorator! [withConfig()](../../ui/lib/kubernetes/addon/decorators/fetch-config.js) is a great example.
-
-## Decorators
-
-### [@withConfirmLeave()](../lib/core/addon/decorators/confirm-leave.js)
-
-- Renders `window.confirm()` alert that a user has unsaved changes if navigaing away from route with the decorator
-- Unloads or rolls back Ember data model record
 
 <!-- TODO add withConfig() if we refactor for more general use -->
 

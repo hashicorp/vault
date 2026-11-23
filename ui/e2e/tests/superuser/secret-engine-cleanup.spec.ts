@@ -24,7 +24,7 @@ test.afterAll(async ({ playwright }, testInfo) => {
   }
 });
 
-// Logging out after loading engine Resources must not unload a removed Ember Data model.
+// Logging out after loading engine Resources must not throw.
 test('superuser can log out after viewing secrets engines', async ({ page }) => {
   await test.step('load and reload the mounted engine list', async () => {
     await page.goto('secrets-engines');

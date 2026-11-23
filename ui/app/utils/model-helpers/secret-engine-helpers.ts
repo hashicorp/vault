@@ -4,17 +4,10 @@
  */
 
 /**
- * Ember Data model type mapping utilities for secret engines.
+ * Item type mapping utilities for secret engines.
  *
- * This file contains functions that determine the appropriate Ember model type
- * based on engine type and context. These utilities are specifically related to
- * Ember Data model management.
- *
- * TODO: Migrate to API service instead of Ember Data model types.
- * When routes are converted to TypeScript, the string-based model type approach
- * becomes problematic for type safety. Direct API service calls would provide
- * better type safety and eliminate the need for model type mapping utilities.
- * This would align with the eventual migration away from Ember Data.
+ * The item type (for example `transit-key` or `role-ssh`) is the key the secrets routes use to decide
+ * how to load, create and display an item for a given engine type.
  */
 
 /**
@@ -75,8 +68,8 @@ function getTransformModelType(context: {
 }
 
 /**
- * Engine type to Ember model type mapping for secrets engines.
- * Used by routes to determine the correct Ember model type for a given engine.
+ * Engine type to item type mapping for secrets engines.
+ * Used by routes to determine the correct item type for a given engine.
  */
 const ENGINE_TYPE_TO_MODEL_TYPE_MAP = {
   database: (context: { isRole?: boolean; tab?: string; secret?: string }) => {
@@ -98,11 +91,11 @@ const ENGINE_TYPE_TO_MODEL_TYPE_MAP = {
 } as const;
 
 /**
- * Get the appropriate Ember model type for a given effective engine type and context.
+ * Get the appropriate item type for a given effective engine type and context.
  *
  * @param effectiveEngineType - The effective engine type (after external plugin mapping)
  * @param context - Context object with additional parameters needed for some engines
- * @returns The Ember model type string
+ * @returns The item type string
  */
 export function getModelTypeForEngine(
   effectiveEngineType: string,

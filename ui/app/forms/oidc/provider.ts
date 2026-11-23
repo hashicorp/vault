@@ -24,8 +24,7 @@ export default class OidcProviderForm extends Form<OidcProviderFormData> {
         placeholder: 'e.g. https://example.com:8200',
         docLink: '/vault/api-docs/secret/identity/oidc-provider#create-or-update-a-provider',
       }),
-      // SearchSelect within the FormField component works in conjunction with Ember Data Models
-      // we can still use the component since it supports passing in an array of objects as options for the select
+      // SearchSelect supports passing in an array of objects as options for the select
       // yield out the field so scopes can be fetched in the route and passed directly to SearchSelect
       new FormField('supported_scopes', undefined, {
         label: 'Supported scopes',

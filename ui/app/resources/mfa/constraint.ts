@@ -14,7 +14,6 @@ Although there is overlap, there are slight differences between the two and are 
     - the `self_enrollment_enabled` boolean for example is flipped by the backend if a user has already enrolled, 
       meaning it doesn't just return the config value but whether or not the UI should enter the self-enroll workflow.
  * "MfaLoginEnforcement" is reserved for parameters used when configuring the enforcement. (see https://developer.hashicorp.com/vault/api-docs/secret/identity/mfa/login-enforcement#create-a-login-enforcement)
-  (The MfaLoginEnforcement resource will exist when we migrate away from the ember data model mfa-login-enforcement )
 */
 
 export default class MfaConstraint {

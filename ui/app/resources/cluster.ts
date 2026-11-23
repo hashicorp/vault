@@ -49,7 +49,7 @@ interface ReplicationStatus extends Partial<ClusterData> {
 
 type ReplicationMode = 'dr' | 'performance';
 
-// Values are coerced like the Ember Data transforms did, and only when the API returned the key.
+// Values are coerced to the expected types, and only when the API returned the key.
 const asBoolean = (value: unknown) => {
   if (value === undefined) return undefined;
   if (typeof value === 'string') return /^(true|t|1)$/i.test(value);
@@ -97,7 +97,7 @@ export default class ClusterResource extends baseResourceFactory<ClusterBase>() 
     if (reload < this.appliedReload) return this;
     this.appliedReload = reload;
 
-    // like an Ember Data push, values that are missing from a response keep their previous value
+    // values that are missing from a response keep their previous value
     let data = { ...this.data, ...health };
     if (sealStatus) {
       this.sealStatus = { ...this.sealStatus, ...sealStatus };

@@ -74,7 +74,7 @@ export default class SearchSelect extends Component {
     );
     if (this.args.models) {
       debug(
-        'DEVELOPER NOTICE: @models is deprecated as part of the Ember Data migration. Please use @options and pass array of items to render.'
+        'DEVELOPER NOTICE: @models is deprecated. Please use @options and pass array of items to render.'
       );
     }
   }
@@ -214,7 +214,7 @@ export default class SearchSelect extends Component {
   }
 
   /**
-   * Temporary method to maintain backwards compatibility with original Ember Data model query functionality
+   * Temporary method that fetches the options for each model type passed in the @models argument
    * The @models argument is deprecated and the remaining usages need to be converted to fetch options from the route and pass them via the @options arg
    */
   async fetchWithApiClient(modelType, backend) {

@@ -1,10 +1,9 @@
 # Background
 
-The `Form` class was created as a replacement for form related functionality
-that previously lived in Ember Data models. Given that the `FormField` component
-was designed around the metadata that was defined on model attributes, it was
-imperative to preserve this pattern while moving the functionality to a dependency-free
-native javascript solution.
+The `Form` class holds form related functionality: field definitions and metadata,
+default values, validations and the request payload. The `FormField` component is designed
+around the metadata defined on each field, which this pattern preserves in a dependency-free
+native javascript class.
 
 # Usage
 
@@ -56,7 +55,7 @@ async model() {
 ```
 
 The route model (`MyForm` instance) can be passed into the form component in
-the same manner as an Ember Data model and the `formFields` can be looped
+the same manner as any other object and the `formFields` can be looped
 to render `FormField` components.
 
 ```hbs

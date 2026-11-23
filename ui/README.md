@@ -206,8 +206,8 @@ Hello and thank you for contributing to the Vault UI! Below is a list of pattern
 > **Remember** prefixing your branch name with `ui/` will run UI tests and skip the go tests. If your PR includes backend changes, _do not_ prefix your branch, instead add the `ui` label on github. This will trigger the UI test suite to run, in addition to the backend Go tests.
 
 - [routing](docs/routing.md)
-- [serializers/adapters](docs/serializers-adapters.md)
-- [models](docs/models.md)
+- [capabilities](docs/capabilities.md)
+- [form validations](docs/form-validations.md)
 - [components](docs/components.md)
 - [forms](docs/forms.md)
 - [css](docs/css.md)

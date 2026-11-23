@@ -1,93 +1,44 @@
 # Client-side pagination
 
-Our custom `pagination` service allows us to paginate LIST responses while maintaining good performance, particularly when the LIST response includes tens of thousands of keys in the data response. It does this by caching the entire response, and then filtering the full response into the datastore for the client. It was originally a custom method in our `store` service that extended the ember-data `store` but now is it's own `pagination` service.
+LIST endpoints return every key in one response, so lists are paginated in the browser. A route fetches the full list from the API service and passes it to `paginate`, which filters and slices it and attaches the `meta` the pagination components read.
 
 ## Using pagination
 
-Rather than use `store.query`, use `pagination.lazyPaginatedQuery`. It generally uses the same inputs, but accepts additional keys in the query object `size`, `page`, `responsePath`, `pageFilter`
-
-### Before
-
 ```js
+import { paginate } from 'core/utils/paginate-list';
+import { SecretsApiDatabaseListConnectionsListEnum } from '@hashicorp/vault-client-typescript';
+
 export default class ExampleRoute extends Route {
-  @service store;
+  @service api;
 
-  model(params) {
-    const { secret } = params;
+  async model(params) {
+    const { page, pageFilter } = params;
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return this.store.query('pki/role', { backend, id })
-  }
-```
-
-### After
-
-```js
-export default class ExampleRoute extends Route {
-  @service pagination;
-
-  model(params) {
-    const { page, pageFilter, secret } = params;
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return this.pagination.lazyPaginatedQuery('secret', {
+    const { keys = [] } = await this.api.secrets.databaseListConnections(
       backend,
-      id: secret,
-      size,
-      page,
-      responsePath,
-      pageFilter
-    })
+      SecretsApiDatabaseListConnectionsListEnum.TRUE
+    );
+    // filterKey names the property to match for lists of objects; omit it for lists of strings
+    return paginate(
+      keys.map((name) => ({ id: name, name, backend })),
+      { page, filter: pageFilter, filterKey: 'name' }
+    );
   }
+}
 ```
 
-The `size` param defaults to the default page size set in [the app config](../config/environment.js). `responsePath` and `page` are required, and typically `responsePath` is going to be `data.keys` since that is where the LIST responses typically return their array data.
+`paginate(data, { page, pageSize, filter, filterKey })`:
 
-### Serializing
+- `page` defaults to 1. A page beyond the last page falls back to the first.
+- `pageSize` defaults to the default page size set in [the app config](../config/environment.js).
+- `filter` keeps items that contain the text, ignoring case. `filterKey` names the property to match, or an array of properties where any may match.
 
-In order to interrupt the regular serialization when using `lazyPaginatedData`, define `extractLazyPaginatedData` on the modelType's serializer. This will be called with the raw response before being cached on the store. `extractLazyPaginatedData` should return an array of objects.
+The result is the page of items with a read-only `meta` property: `currentPage`, `lastPage`, `nextPage`, `prevPage`, `total`, `filteredTotal`, `totalItems` and `pageSize`. Pass `meta.totalItems` to `Hds::Pagination::Numbered @totalItems` since it reflects the active filter. See [paginate-list.ts](../lib/core/addon/utils/paginate-list.ts).
+
+## Capabilities for a page
+
+Fetch capabilities only for the items on the current page, in one request. See [Capabilities](./capabilities.md).
 
 ## Gotchas
 
-The data is cached from whenever the original API call is made, which means that if a user views a list and then creates or deletes an item, viewing the list page again will show outdated information unless the cache for the item is cleared first. For this reason, it is best practice to clear the dataset with `pagination.clearDataset(modelName)` after successfully deleting or creating an item.
-
-## How it works
-
-When using the `lazyPaginatedQuery` method, the full response is cached in a [tracked Map](https://github.com/tracked-tools/tracked-built-ins/tree/master) within the service. `pagination.lazyCaches` is actually a Map of [Maps](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map), keyed first on the normalized modelType and then on a stringified version of the base query (all keys except ones related to pagination). So, at the top level `pagination.lazyCaches` looks like this:
-
-```
-lazyCaches = new Map({
-  "secret": <Map>,
-  "kmip": <Map>,
-  "namespace": <Map>,
-})
-```
-
-Within each top-level modelType, we need to separate cached responses based on the details of the query. Typically (but not always) this includes the backend name. In list items that can be nested (see KV V2 secrets or namespaces for example) `id` is also provided, so that the keys nested under the given ID is returned. The pagination.lazyCaches may look something like the following after a user navigates to a couple different KV v2 lists, and clicks into the `app/` item:
-
-```
-lazyCaches = new Map({
-  "secret": {
-    "{ backend: 'secret', id: '' }: <CachedData>,
-    "{ backend: 'secret', id: 'app/' }: <CachedData>,
-    "{ backend: 'kv2', id: '' }: <CachedData>,
-  },
-  ...
-})
-```
-
-The cached data at the given key is an object with `response` and `dataset` keys. The response is the full response from the original API call, with the `responsePath` nulled out (it is repopulated before "sending" the data back to the store). `dataset` is the full, original value at `responsePath`, usually an array of strings. An example of what the data might look like:
-
-```
-lazyCaches = new Map({
-  "secret": {
-    "{ backend: 'secret', id: 'app/' }: {
-      dataset: ['some', 'nested', 'secrets'],
-      response: {
-        request_id: 'foobar',
-        data: {},
-        ...
-      }
-    },
-  },
-  ...
-})
-```
+The full list is fetched each time the route's model hook runs, so a list is current after an item is created or deleted as long as the route refreshes. `paginate` assigns `meta` to the returned array, so assign properties onto its items in place (for example capabilities) rather than mapping to a new array.
