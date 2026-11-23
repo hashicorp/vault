@@ -2991,6 +2991,7 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			if c.identityStore == nil {
 				return nil
 			}
+			c.identityStore.startEntityMetadataLoad(ctx)
 			return c.identityStore.loadArtifacts(ctx, isActive)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
@@ -3331,6 +3332,7 @@ func (c *Core) preSeal() error {
 	}
 
 	if c.identityStore != nil {
+		c.identityStore.stopEntityMetadataLoad()
 		c.identityStore.stopSCIMDeletingClientCleanup()
 	}
 

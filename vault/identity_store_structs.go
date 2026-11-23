@@ -63,6 +63,12 @@ type IdentityStore struct {
 	// separated to prevent frequent changes from affecting the main memdb instance.
 	entityMetadataDB *memdb.MemDB
 
+	// entityMetadataLoadComplete closes only after all entity metadata objects have been
+	// merged into memdb. This indicates vault is ready to 1) handle archive requests 2) flush timestamps
+	entityMetadataLoadComplete chan struct{}
+	entityMetadataLoadLock     sync.Mutex
+	entityMetadataLoadCancel   context.CancelFunc
+
 	// lock is the high-level IdentityStore lock, which protects underlying
 	// state against concurrent modification/access. If needed, callers should
 	// be sure to take this lock **before** (and never after) taking out any of
