@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/etcd: configure grpc keepalive timeouts to detect unresponsive etcd members
+```
