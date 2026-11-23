@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
+import { ResponseError } from '@hashicorp/vault-client-typescript';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
 
@@ -60,7 +61,7 @@ module('Unit | Service | path-help', function (hooks) {
     this.pathHelp = this.owner.lookup('service:path-help');
   });
 
-  test('schema properties preserve identifiers, sensitivity, groups and legacy field names', async function (assert) {
+  test('schema properties preserve identifiers, sensitivity, groups and API field names', async function (assert) {
     this.server.get('/auth/schema/users/example', () => ({
       ...openapiStub,
       openapi: {
@@ -86,27 +87,26 @@ module('Unit | Service | path-help', function (hooks) {
       },
     }));
 
-    const props = await this.pathHelp.getProps('/v1/auth/schema/users/example?help=true');
+    const props = await this.pathHelp.getProps('/auth/schema/users/example?help=true');
     assert.deepEqual(
       Object.keys(props),
-      ['username', 'password', 'tokenPolicies', 'tokenTtl'],
+      ['username', 'password', 'token_policies', 'token_ttl'],
       'deprecated fields are omitted and identifiers come first'
     );
-    assert.strictEqual(props.username.fieldValue, 'mutableId', 'path identifier uses the editable record ID');
     assert.true(props.username.readOnly, 'path identifier is omitted from the request body');
     assert.true(props.password.sensitive, 'password remains masked');
     assert.deepEqual(
-      props.tokenPolicies,
+      props.token_policies,
       {
         editType: 'stringArray',
-        helpText: 'Policies applied to generated tokens.',
+        subText: 'Policies applied to generated tokens.',
         fieldGroup: 'Tokens',
         label: 'Token policies',
       },
       'array field metadata preserves its group and label'
     );
-    assert.strictEqual(props.tokenTtl.editType, 'ttl', 'duration fields use TTL inputs');
-    assert.false('type' in props.tokenTtl, 'duration values are not coerced by a number transform');
+    assert.strictEqual(props.token_ttl.editType, 'ttl', 'duration fields use TTL inputs');
+    assert.false('type' in props.token_ttl, 'duration values are not coerced by a number transform');
   });
 
   test('inline schemas produce the same fields as referenced schemas', async function (assert) {
@@ -128,8 +128,8 @@ module('Unit | Service | path-help', function (hooks) {
       },
     }));
 
-    const referenced = await this.pathHelp.getProps('/v1/auth/schema/reference?help=true');
-    const inline = await this.pathHelp.getProps('/v1/auth/schema/inline?help=true');
+    const referenced = await this.pathHelp.getProps('/auth/schema/reference?help=true');
+    const inline = await this.pathHelp.getProps('/auth/schema/inline?help=true');
     assert.deepEqual(inline, referenced, 'both schema shapes preserve the same field contract');
   });
 
@@ -137,13 +137,13 @@ module('Unit | Service | path-help', function (hooks) {
     this.server.get('/auth/schema/denied', () => new Response(403, {}, { errors: ['permission denied'] }));
 
     await assert.rejects(
-      this.pathHelp.getProps('/v1/auth/schema/denied?help=true'),
-      /permission denied/,
+      this.pathHelp.getProps('/auth/schema/denied?help=true'),
+      (error) => error instanceof ResponseError && error.response.status === 403,
       'failed schema requests do not return success-shaped metadata'
     );
   });
 
-  test('form metadata preserves API field names, field options and ordered groups without model registration', async function (assert) {
+  test('form metadata preserves API field names, field options and ordered groups', async function (assert) {
     this.server.get('/auth/schema/forms', () => ({
       ...openapiStub,
       openapi: {
@@ -173,7 +173,7 @@ module('Unit | Service | path-help', function (hooks) {
       },
     }));
     const { formFields, formFieldGroups, identifier } =
-      await this.pathHelp.getFormMetadata('/v1/auth/schema/forms');
+      await this.pathHelp.getFormMetadata('/auth/schema/forms');
     assert.deepEqual(
       formFields.map(({ name }) => name),
       ['username', 'token_policies', 'password', 'token_ttl', 'max_uses'],
@@ -236,8 +236,8 @@ module('Unit | Service | path-help', function (hooks) {
       },
     }));
     assert.deepEqual(
-      await this.pathHelp.getFormMetadata('/v1/auth/schema/inline'),
-      await this.pathHelp.getFormMetadata('/v1/auth/schema/reference'),
+      await this.pathHelp.getFormMetadata('/auth/schema/inline'),
+      await this.pathHelp.getFormMetadata('/auth/schema/reference'),
       'both schema shapes preserve the same form field and group contract'
     );
   });
@@ -250,17 +250,17 @@ module('Unit | Service | path-help', function (hooks) {
       openapi: { ...openapiStub.openapi, components: { schemas: {} } },
     }));
     await assert.rejects(
-      this.pathHelp.getFormMetadata('/v1/auth/schema/denied'),
-      /permission denied/,
+      this.pathHelp.getFormMetadata('/auth/schema/denied'),
+      (error) => error instanceof ResponseError && error.response.status === 403,
       'denied metadata requests propagate the backend error'
     );
     await assert.rejects(
-      this.pathHelp.getFormMetadata('/v1/auth/schema/missing'),
+      this.pathHelp.getFormMetadata('/auth/schema/missing'),
       /OpenAPI request schema not found/,
       'missing schemas do not silently return an empty form'
     );
     await assert.rejects(
-      this.pathHelp.getFormMetadata('/v1/auth/schema/broken-reference'),
+      this.pathHelp.getFormMetadata('/auth/schema/broken-reference'),
       /OpenAPI request properties not found/,
       'unresolved schema references fail explicitly'
     );

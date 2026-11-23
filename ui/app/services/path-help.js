@@ -4,8 +4,7 @@
  */
 
 /** @module path-help Runtime OpenAPI discovery and form metadata for mounted plugins. */
-import Service from '@ember/service';
-import { getOwner } from '@ember/owner';
+import Service, { service } from '@ember/service';
 import { debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
 
@@ -14,12 +13,12 @@ import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
 
 export default class PathHelpService extends Service {
-  ajax(url, options = {}) {
-    const appAdapter = getOwner(this).lookup(`adapter:application`);
-    const { data } = options;
-    return appAdapter.ajax(url, 'GET', {
-      data,
-    });
+  @service api;
+
+  // The help endpoints return plain JSON; errors surface as the API service's ResponseError.
+  async fetchHelp(path) {
+    const response = await this.api.request.get(path);
+    return response.json();
   }
 
   /**
@@ -37,7 +36,7 @@ export default class PathHelpService extends Service {
         ? `Fetching relevant paths for ${backend} ${itemType} ${itemID} from ${apiPath}`
         : `Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`;
     debug(debugString);
-    return this.ajax(`/v1/${apiPath}?help=1`, backend).then((help) => {
+    return this.fetchHelp(`/${apiPath}?help=1`).then((help) => {
       const pathInfo = help.openapi.paths;
       const paths = Object.entries(pathInfo);
 
@@ -52,15 +51,14 @@ export default class PathHelpService extends Service {
   }
 
   /**
-   * Fetches runtime schema properties; legacy consumers retain camelCase model metadata.
-   * @param {string} helpUrl
-   * @param {'model' | 'form'} outputFormat
+   * Fetches runtime schema properties with snake_case names, as expected by forms.
+   * @param {string} helpUrl help path relative to the API base path (`/v1`)
    */
-  getProps(helpUrl, outputFormat = 'model') {
+  getProps(helpUrl) {
     // add name of thing you want
     debug(`Fetching schema properties from ${helpUrl}`);
 
-    return this.ajax(helpUrl).then((help) => {
+    return this.fetchHelp(helpUrl).then((help) => {
       // paths is an array but it will have a single entry
       // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
@@ -102,24 +100,23 @@ export default class PathHelpService extends Service {
       }
       // put url params (e.g. {name}, {role}) at the front of the props list
       const newProps = { ...paramProp, ...props };
-      return expandOpenApiProps(newProps, outputFormat);
+      return expandOpenApiProps(newProps);
     });
   }
 
   /**
-   * Returns snake_case fields and ordered groups without registering a model or adapter.
+   * Returns snake_case fields and ordered groups.
    * The path identifier (e.g. `username`) is marked read-only and returned as `identifier`,
    * since it is sent in the request URL rather than the body.
-   * @param {string} helpUrl Runtime help URL for a plugin's create endpoint.
+   * @param {string} helpUrl Runtime help path for a plugin's create endpoint, relative to the API base path.
    * @returns {Promise<import('vault/services/path-help').FormMetadata>}
    */
   async getFormMetadata(helpUrl) {
-    const props = await this.getProps(helpUrl, 'form');
+    const props = await this.getProps(helpUrl);
     const formFields = [];
     const groups = new Map([['default', []]]);
     let identifier;
     for (const [name, prop] of Object.entries(props)) {
-      // Path identifiers bind to their own form data, not Ember Data's mutableId.
       // eslint-disable-next-line no-unused-vars
       const { type, fieldGroup, fieldValue, readOnly, ...options } = prop;
       const field = new FormField(name, type, readOnly ? { ...options, readOnly } : options);

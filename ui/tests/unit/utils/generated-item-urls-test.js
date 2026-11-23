@@ -71,7 +71,7 @@ module('Unit | Utility | generated item urls', function (hooks) {
     const pathInfo = pathInfoFor('userpass_mount_path', 'auth/my-mount/', 'user');
     assert.strictEqual(
       generatedItemHelpUrl(pathInfo, 'user'),
-      '/v1/auth/my-mount/users/example?help=true',
+      '/auth/my-mount/users/example?help=true',
       'help URL describes the user create endpoint'
     );
   });
