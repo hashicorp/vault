@@ -27,7 +27,6 @@
 - `ui/app/components/tools/random.hbs`
 - `ui/app/components/tools/hash.hbs`
 - `ui/app/components/identity/lookup-input.hbs`
-- `ui/app/components/form-field-from-model.hbs`
 - `ui/app/components/keymgmt/distribute.hbs`
 - `ui/app/components/transit-key-action/datakey.hbs`
 - `ui/app/components/transit-key-action/decrypt.hbs`
@@ -142,7 +141,6 @@
 
 - `ui/app/components/tools/random.hbs`
 - `ui/app/components/tools/hash.hbs`
-- `ui/app/components/form-field-from-model.hbs`
 - `ui/app/components/mount-accessor-select.hbs`
 
 **Fix:** A plain `<input>` is rendered with an empty `id=""`, making it impossible for a `<label for="">` to associate with it. The input's `id` must be a non-empty unique value that matches a `for` attribute on its `<label>`. Use Ember's `{{unique-id}}` helper or `this.elementId` to generate a stable ID and set it on both the `<label for=...>` and the `<input id=...>`.

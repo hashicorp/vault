@@ -70,7 +70,7 @@ export default class CreateDestinationForm<T extends object> extends Form<T> {
         }
       });
 
-      // to preserve the original Ember Data payload structure, remove fields that are not editable
+      // to preserve the original payload structure, remove fields that are not editable
       // since editing is disabled in the form the value will not change so this is mostly to satisfy existing test conditions
       readonlyParams.forEach((readonlyParam) => {
         delete payload[readonlyParam as keyof T];

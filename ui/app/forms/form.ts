@@ -76,7 +76,7 @@ export default class Form<T extends object> {
     if (validations) {
       this.validations = validations;
     }
-    // to ease migration from Ember Data Models, return a proxy that forwards get/set to the data object for form field props
+    // return a proxy that forwards get/set to the data object for form field props
     // this allows for form field properties to be accessed directly on the class rather than form.data.someField
     const proxyTarget = (target: this, prop: string) => {
       try {

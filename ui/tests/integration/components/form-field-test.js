@@ -87,7 +87,7 @@ module('Integration | Component | form field', function (hooks) {
     setupOnerror((error) => {
       assert.strictEqual(
         error.message,
-        'Assertion Failed: Form is attempting to modify an ID. Ember-data does not allow this.',
+        'Assertion Failed: Form is attempting to modify an ID. Ids cannot be edited.',
         'throws assertion error when component attempts to modify an ID'
       );
     });
@@ -101,7 +101,7 @@ module('Integration | Component | form field', function (hooks) {
     setupOnerror((error) => {
       assert.strictEqual(
         error.message,
-        'Assertion Failed: Form is attempting to modify an ID. Ember-data does not allow this.',
+        'Assertion Failed: Form is attempting to modify an ID. Ids cannot be edited.',
         'throws assertion error when component attempts to modify an ID'
       );
     });

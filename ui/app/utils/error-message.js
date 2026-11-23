@@ -4,10 +4,8 @@
  */
 
 /**
- * deprecated in favor of api-error-message for use with the api service
- * this util will be removed once Ember Data is fully removed
- * new requests should be made with api service
- * if Ember Data is still needed during the migration then this util may be used
+ * deprecated in favor of this.api.parseError for use with errors from the api service
+ * new requests should be made with the api service
  */
 
 // accepts an error and returns error.errors joined with a comma, error.message or a fallback message

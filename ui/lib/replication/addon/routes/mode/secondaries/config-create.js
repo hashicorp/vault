@@ -7,7 +7,7 @@ import { service } from '@ember/service';
 import PathFilterConfigForm from 'vault/forms/path-filter-config';
 import Base from '../../replication-base';
 
-/** Uses a fresh form for absent filters, without reserving an Ember Data record ID. */
+/** Uses a fresh form for absent filters. */
 export default class ConfigCreateRoute extends Base {
   @service flashMessages;
 

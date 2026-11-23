@@ -42,8 +42,8 @@ import { get } from '@ember/object';
  * {{/each}}
  * <FormField @attr={{hash name="toDo" options=(hash label="To do task" helpText="helpful text" editType="boolean")}} @model={{hash toDo=true}} />
  *
- * @param {Object} attr - usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional
- * @param {Model} model - Ember Data model that `attr` is defined on
+ * @param {Object} attr - a form field definition, and all members of `attr.options` are optional
+ * @param {Object} model - the form (or resource object) that `attr` is defined on
  * @param {boolean} [disabled=false] - whether the field is disabled
  * @param {boolean} [showHelpText=true] - whether to show the tooltip with help text from OpenAPI
  * @param {string} [mode] - used when editType is 'kv'
@@ -78,10 +78,7 @@ export default class FormFieldComponent extends Component {
     super(...arguments);
     const { attr, model } = this.args;
     const valuePath = attr.options?.fieldValue || attr.name;
-    assert(
-      'Form is attempting to modify an ID. Ember-data does not allow this.',
-      valuePath.toLowerCase() !== 'id'
-    );
+    assert('Form is attempting to modify an ID. Ids cannot be edited.', valuePath.toLowerCase() !== 'id');
     assert('@name is required', presence(attr.name));
     assert('@model (or resource object being updated) is required', presence(model));
     const modelValue = get(model, valuePath);

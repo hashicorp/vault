@@ -32,7 +32,7 @@ const withTooltipDescriptions = ({ formFields, formFieldGroups }: FormMetadata) 
   };
 };
 
-// Applies the attribute transforms the generated Ember Data model used, so payload types are unchanged.
+// Coerces each value to the type its field declares, so payload types match what the API expects.
 const serializeValue = (type: string | undefined, value: unknown) => {
   switch (type) {
     case 'number': {
@@ -92,7 +92,7 @@ export default class GeneratedItemForm extends Form<GeneratedItemData> {
     );
   }
 
-  // Omits the identifier and any blank value the user did not change, as the Ember Data serializer did.
+  // Omits the identifier and any blank value the user did not change.
   toJSON() {
     const payload: GeneratedItemData = {};
     this.formFields.forEach(({ name, type, options }) => {

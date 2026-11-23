@@ -17,8 +17,7 @@ const data = {
   max_versions: 15,
   oldest_version: 0,
   updated_time: '2023-07-21T03:11:58.095971Z',
-  // the API returns custom_metadata: null if empty but because the attr is an 'object' ember data transforms it to an empty object.
-  // this is important because we rely on the empty object as a truthy value in template conditionals
+  // the API returns custom_metadata: null if empty
   custom_metadata: null,
   versions: {
     1: {

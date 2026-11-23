@@ -232,7 +232,7 @@ module('Unit | Resource | replication-attributes', function () {
     assert.strictEqual(attrs.mode, 'secondary', 'update keeps the other values');
   });
 
-  test('it coerces values like the Ember Data transforms did', function (assert) {
+  test('it coerces values to the expected types', function (assert) {
     const attrs = new ReplicationAttributesResource({
       known_secondaries: null,
       last_wal: '455',

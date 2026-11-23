@@ -26,7 +26,7 @@ module('Unit | Route | transit list', function (hooks) {
     });
   });
 
-  test('existing keys are listed without the removed Ember Data adapter', async function (assert) {
+  test('existing keys are listed from the API service', async function (assert) {
     const { secrets } = await this.route.model({ page: 1 });
     assert.true(
       this.list.calledWithExactly('transit-manual', SecretsApiTransitListKeysListEnum.TRUE),

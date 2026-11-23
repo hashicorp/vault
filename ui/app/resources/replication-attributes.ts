@@ -24,7 +24,7 @@ export interface ReplicationData {
   merkle_sync_progress?: { sync_total_keys?: number; sync_progress?: number };
 }
 
-// Values are coerced like the Ember Data transforms did, and only when the API returned the key.
+// Values are coerced to the expected types, and only when the API returned the key.
 const asString = (value: unknown) => (value === undefined || value === null ? value : String(value));
 const asNumber = (value: unknown) => {
   if (value === undefined || value === null || value === '') return value === undefined ? undefined : null;

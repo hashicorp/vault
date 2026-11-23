@@ -37,8 +37,7 @@ export default class OidcClientForm extends Form<OidcClientFormData> {
       }),
     ]),
     new FormFieldGroup('More options', [
-      // SearchSelect within the FormField component works in conjunction with Ember Data Models
-      // we can still use the component since it supports passing in an array of objects as options for the select
+      // SearchSelect supports passing in an array of objects as options for the select
       // yield out the field so keys can be fetched in the route and passed directly to SearchSelect
       new FormField('key', undefined, {
         label: 'Signing key',
