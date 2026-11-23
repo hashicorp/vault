@@ -4,7 +4,6 @@
  */
 
 import { set } from '@ember/object';
-import Ember from 'ember';
 import { resolve } from 'rsvp';
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
@@ -39,7 +38,6 @@ import {
  * @type Class
  */
 export default Route.extend({
-  store: service(),
   router: service(),
   api: service(),
   capabilitiesService: service('capabilities'),
@@ -729,8 +727,8 @@ export default Route.extend({
         secretModel = new SecretForm(secretModel, { isNew: false });
       }
     } else {
-      capabilities = await this.capabilities(secret, modelType);
-      secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
+      // An unrecognized item type, such as `keymgmt/<unknown>`, has no model to load.
+      throw { httpStatus: 404, path: `${backend}/${secret}` };
     }
 
     return {
@@ -750,15 +748,7 @@ export default Route.extend({
     // mode will be 'show', 'edit', 'create'
     const mode = this.routeName.split('.').pop().replace('-root', '');
 
-    // Form-based models and plain data do not have Ember Data's setProperties method.
     const isFormModel = model.secret instanceof Form;
-    if (
-      !isFormModel &&
-      !(model.secret instanceof TransitKeyResource) &&
-      typeof model.secret.setProperties === 'function'
-    ) {
-      model.secret.setProperties({ backend });
-    }
 
     controller.setProperties({
       model: model.secret,
@@ -789,38 +779,6 @@ export default Route.extend({
 
     refreshModel() {
       this.refresh();
-    },
-
-    willTransition(transition) {
-      /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const { mode, model } = this.controller;
-
-      // If model is clean or deleted, continue
-      if (!model.hasDirtyAttributes || model.isDeleted) {
-        return true;
-      }
-
-      const changed = model.changedAttributes();
-      const changedKeys = Object.keys(changed);
-
-      // until we have time to move `backend` on a v1 model to a relationship,
-      // it's going to dirty the model state, so we need to look for it
-      // and explicity ignore it here
-      if (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') {
-        if (
-          Ember.testing ||
-          window.confirm(
-            'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
-          )
-        ) {
-          model && model.rollbackAttributes();
-          return true;
-        } else {
-          transition.abort();
-          return false;
-        }
-      }
-      return this._super(...arguments);
     },
   },
 });

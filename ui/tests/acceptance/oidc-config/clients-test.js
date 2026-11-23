@@ -38,7 +38,6 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
   hooks.beforeEach(function () {
     oidcConfigHandlers(this.server);
-    this.store = this.owner.lookup('service:store');
     this.api = this.owner.lookup('service:api');
     return login();
   });

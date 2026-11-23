@@ -15,7 +15,6 @@ module('Integration | Component | mount-accessor-select', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.server.get('/sys/auth', () => ({
       data: {
         'userpass/': { type: 'userpass', accessor: 'auth_userpass_1234' },

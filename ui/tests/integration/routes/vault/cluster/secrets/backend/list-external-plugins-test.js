@@ -20,7 +20,6 @@ module('Integration | Route | vault.cluster.secrets.backend.list external plugin
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.router = this.owner.lookup('service:router');
     this.stub = sinon.stub;
 

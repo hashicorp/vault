@@ -93,23 +93,6 @@ module('Integration | Component | page/error', function (hooks) {
       );
   });
 
-  test('it should use default message when error contains "Ember Data"', async function (assert) {
-    this.error = {
-      message:
-        'Ember Data Request GET /v1/sys/policies/acl returned a 403\nPayload (application/json)\n{\n  "errors": [\n    "1 error occurred:\\n\\t* permission denied\\n\\n"\n  ]\n}',
-      errors: ['1 error occurred:\n\t* permission denied\n\n'],
-      httpStatus: 403,
-      path: '/v1/sys/policies/acl',
-      errorURL: '/vault/policies/acl',
-    };
-    await this.renderComponent();
-
-    assert.dom(GENERAL.pageError.title(403)).hasText('ERROR 403 Not authorized');
-    assert
-      .dom(GENERAL.pageError.message)
-      .hasText('You are not authorized to access content at /v1/sys/policies/acl.');
-  });
-
   test('it updates when error arg changes', async function (assert) {
     this.error = { httpStatus: 403, path: '/v1/kubernetes/config' };
     await this.renderComponent();

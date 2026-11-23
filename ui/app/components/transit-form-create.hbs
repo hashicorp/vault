@@ -5,7 +5,7 @@
 
 <form data-test-transit-create-form onsubmit={{perform this.save}}>
   <div class="box is-fullwidth is-marginless">
-    <MessageError @model={{@form}} @errorMessage={{this.errorBanner}} />
+    <MessageError @errorMessage={{this.errorBanner}} />
     <NamespaceReminder @mode="create" @noun="transit key" />
 
     {{! formFields is rebuilt when the key type changes; keying by name keeps the TtlPicker and its state }}

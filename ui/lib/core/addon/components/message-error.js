@@ -7,13 +7,11 @@ import Component from '@glimmer/component';
 
 /**
  * @module MessageError
- * Renders form errors using the Hds::Alert component and extracts errors from
- * a model, passed errorMessage or array of errors and displays each in a separate banner.
+ * Renders form errors using the Hds::Alert component and displays each passed errorMessage or array of errors in a separate banner.
  *
  * @example
  * <MessageError @errorMessage="oh no there is a problem" />
  *
- * @param {object} [model=null] - An Ember data model that will be used to bind error states to the internal `errors` property.
  * @param {array} [errors=null] - An array of error strings to show.
  * @param {string} [errorMessage=null] - An Error string to display.
  * @param {array} [errorDetails=null] - Renders a list of errors when error is not from the API. Helpful for rendering a list of client-side validation errors.
@@ -21,7 +19,7 @@ import Component from '@glimmer/component';
 
 export default class MessageError extends Component {
   get displayErrors() {
-    const { errorMessage, errors, model } = this.args;
+    const { errorMessage, errors } = this.args;
     if (errorMessage) {
       return [errorMessage];
     }
@@ -30,19 +28,6 @@ export default class MessageError extends Component {
       return errors;
     }
 
-    if (model?.isError) {
-      const adapterError = model?.adapterError;
-      if (!adapterError) {
-        return null;
-      }
-      if (adapterError.errors?.length > 0) {
-        return adapterError.errors.map((e) => {
-          if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
-          return e;
-        });
-      }
-      return [adapterError.message];
-    }
     return null;
   }
 

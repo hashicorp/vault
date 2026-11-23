@@ -54,7 +54,6 @@ function getValidPage(pageParam) {
 }
 
 export default Route.extend({
-  store: service(),
   api: service(),
   capabilitiesService: service('capabilities'),
   templateName: 'vault/cluster/secrets/backend/list',
@@ -634,7 +633,6 @@ export default Route.extend({
         isGenericSecret: true,
         isFolder: keyIsFolder(id),
         keyWithoutParent: id ? id.replace(parentKey || '', '') : null,
-        secretPath: { isLoading: false },
       };
     });
 
@@ -664,7 +662,6 @@ export default Route.extend({
     const effectiveType = getEffectiveEngineType(backendModel.engineType);
     const modelType = this.getModelType(effectiveType, params.tab);
 
-    // API-backed resources bypass legacy model adapters and store pagination.
     let secrets;
     if (effectiveType === 'transit') {
       secrets = await this.fetchTransitKeys(backend, getValidPage(params.page), params.pageFilter);

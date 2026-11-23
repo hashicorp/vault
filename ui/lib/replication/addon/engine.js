@@ -22,7 +22,6 @@ const Eng = Engine.extend({
       'namespace',
       'replication-mode',
       'app-router',
-      'store',
       'version',
       // services needed for tools sidebar component
       'permissions',

@@ -26,7 +26,6 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
   hooks.beforeEach(async function () {
     this.backend = `kv-create-${uuidv4()}`;
-    this.store = this.owner.lookup('service:store');
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, 'app/first', 'foo', 'bar', 2);

@@ -16,8 +16,6 @@ import { IdentityApiOidcListKeysListEnum } from '@hashicorp/vault-client-typescr
 import OidcKeyForm from 'vault/forms/oidc/key';
 import { AUTH_METHOD_CREATED } from 'vault/utils/analytic-events';
 
-import type { ApiError } from '@ember-data/adapter/error';
-import type Store from '@ember-data/store';
 import type AuthMethodForm from 'vault/forms/auth/method';
 import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
@@ -50,8 +48,9 @@ interface Args {
 
 const AUTH_MOUNT_CATEGORY = MOUNT_CATEGORIES.AUTH;
 
+type ApiError = string | { [key: string]: unknown; title?: string; message?: string };
+
 export default class MountBackendForm extends Component<Args> {
-  @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly capabilities: CapabilitiesService;
   @service declare readonly api: ApiService;

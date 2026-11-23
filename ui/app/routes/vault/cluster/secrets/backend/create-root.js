@@ -4,7 +4,6 @@
  */
 
 import { hash } from 'rsvp';
-import { service } from '@ember/service';
 import EditBase from './secret-edit';
 import DatabaseConnectionForm, { CONNECTION_DEFAULTS } from 'vault/forms/database/connection';
 import DatabaseRoleForm, { ROLE_DEFAULTS } from 'vault/forms/database/role';
@@ -22,8 +21,6 @@ import SecretForm from 'vault/forms/secret';
 import { KeyManagementUpdateKeyRequestTypeEnum } from '@hashicorp/vault-client-typescript';
 
 export default EditBase.extend({
-  store: service(),
-
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const modelType = this.modelType(backend, null, { queryParams: transition.to.queryParams });
@@ -108,7 +105,8 @@ export default EditBase.extend({
       return new DatabaseRoleForm({ ...ROLE_DEFAULTS, backend, database: [] }, { isNew: true });
     }
     if (modelType !== 'secret') {
-      return this.store.createRecord(modelType, { backend });
+      // An unrecognized item type, such as `keymgmt/<unknown>`, has no form to create.
+      throw { httpStatus: 404, path: backend };
     }
     return new SecretForm(
       { backend, path: transition.to.queryParams.initialKey, secretData: {} },

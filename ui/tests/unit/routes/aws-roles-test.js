@@ -27,16 +27,6 @@ module('Unit | Route | aws roles', function (hooks) {
     assert.strictEqual(form.data.credential_type, 'iam_user');
   });
 
-  test('AWS role routes do not load legacy models before API-backed reads', async function (assert) {
-    const route = this.owner.lookup('route:vault.cluster.secrets.backend.secret-edit');
-    sinon.stub(route, 'paramsFor').returns({ backend: 'aws' });
-    route.routeName = 'vault.cluster.secrets.backend.show';
-    sinon.stub(route, 'modelFor').returns({ type: 'aws' });
-    const findRecord = sinon.spy(route.store, 'findRecord');
-    await route.beforeModel();
-    assert.false(findRecord.called, 'Does not load a legacy Ember Data model');
-  });
-
   test('role lists batch capabilities, filter names and keep role identities', async function (assert) {
     const route = this.owner.lookup('route:vault.cluster.secrets.backend.list');
     sinon.stub(route.api.secrets, 'awsListRoles').resolves({ keys: ['alpha', 'beta'] });

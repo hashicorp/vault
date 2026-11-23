@@ -126,7 +126,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
   hooks.beforeEach(async function () {
     const uid = uuidv4();
-    this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
     this.emptyBackend = `kv-empty-${uid}`;
     this.backend = `kv-nav-${uid}`;

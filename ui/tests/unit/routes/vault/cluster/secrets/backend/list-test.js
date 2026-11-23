@@ -36,7 +36,6 @@ module('Unit | Route | vault/cluster/secrets/backend/list', function (hooks) {
     assert.true(items[0].canRead, 'read permission is mapped to the list item');
     assert.true(items[0].canEdit, 'update permission is mapped to the list item');
     assert.false(items[0].canDelete, 'delete permission is mapped to the list item');
-    assert.false(items[0].secretPath.isLoading, 'the item does not show a capability loading state');
     assert.strictEqual(items.meta.total, 3, 'pagination metadata retains the total key count');
     assert.strictEqual(items.meta.filteredTotal, 1, 'pagination metadata retains the filtered key count');
   });

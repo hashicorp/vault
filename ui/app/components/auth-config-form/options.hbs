@@ -5,7 +5,7 @@
 
 <form {{on "submit" (perform this.onSubmit)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @model={{@form}} @errorMessage={{this.errorMessage}} />
+    <MessageError @errorMessage={{this.errorMessage}} />
     <NamespaceReminder @mode="save" @noun="Auth Method" />
 
     {{#each @form.tuneFields as |field|}}

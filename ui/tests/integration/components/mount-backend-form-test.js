@@ -25,7 +25,6 @@ module('Integration | Component | mount backend form', function (hooks) {
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
-    this.store = this.owner.lookup('service:store');
     this.api = this.owner.lookup('service:api');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.server.post('/sys/auth/foo', noopStub());

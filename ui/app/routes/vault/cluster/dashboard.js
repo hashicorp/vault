@@ -9,7 +9,6 @@ import { service } from '@ember/service';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export default class VaultClusterDashboardRoute extends Route {
-  @service store;
   @service namespace;
   @service version;
   @service api;

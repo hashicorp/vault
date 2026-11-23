@@ -96,7 +96,6 @@ module('Integration | Component | page/policies', function (hooks) {
 
     this.model = policiesMockModel;
     this.policyType = 'acl';
-    this.store = this.owner.lookup('service:store');
     this.wizardService = this.owner.lookup('service:wizard');
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.refreshSpy = sinon.spy();

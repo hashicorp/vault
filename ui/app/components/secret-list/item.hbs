@@ -42,32 +42,26 @@
         {{#if @item.isFolder}}
           <dd.Interactive @route="vault.cluster.secrets.backend.list" @model={{@item.id}}>Contents</dd.Interactive>
         {{else}}
-          {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
-            <dd.Generic class="has-text-center">
-              <LoadingDropdownOption />
-            </dd.Generic>
-          {{else}}
-            {{#if @item.canRead}}
-              <dd.Interactive
-                @route="vault.cluster.secrets.backend.show"
-                @model={{@item.id}}
-                @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
-              >Details</dd.Interactive>
-            {{/if}}
-            {{#if @item.canEdit}}
-              <dd.Interactive
-                @route="vault.cluster.secrets.backend.edit"
-                @model={{@item.id}}
-                @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
-              >Edit</dd.Interactive>
-            {{/if}}
-            {{#if @item.canDelete}}
-              <dd.Interactive
-                @color="critical"
-                data-test-confirm-action-trigger
-                {{on "click" (fn (mut this.showConfirmModal) true)}}
-              >Delete</dd.Interactive>
-            {{/if}}
+          {{#if @item.canRead}}
+            <dd.Interactive
+              @route="vault.cluster.secrets.backend.show"
+              @model={{@item.id}}
+              @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+            >Details</dd.Interactive>
+          {{/if}}
+          {{#if @item.canEdit}}
+            <dd.Interactive
+              @route="vault.cluster.secrets.backend.edit"
+              @model={{@item.id}}
+              @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+            >Edit</dd.Interactive>
+          {{/if}}
+          {{#if @item.canDelete}}
+            <dd.Interactive
+              @color="critical"
+              data-test-confirm-action-trigger
+              {{on "click" (fn (mut this.showConfirmModal) true)}}
+            >Delete</dd.Interactive>
           {{/if}}
         {{/if}}
       </Hds::Dropdown>

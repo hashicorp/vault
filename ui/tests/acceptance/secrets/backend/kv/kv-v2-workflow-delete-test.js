@@ -40,7 +40,6 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     this.backend = `kv-delete-${uuidv4()}`;
     this.secretPath = 'bad-secret';
     this.nestedSecretPath = 'app/nested/bad-secret';
