@@ -25,7 +25,6 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
 
   hooks.beforeEach(async function () {
     // test context setup
-    this.store = this.owner.lookup('service:store');
     this.router = this.owner.lookup('service:router');
     sinon.stub(this.router, 'transitionTo');
 

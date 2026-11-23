@@ -30,7 +30,6 @@ module('Acceptance | GCP | configuration', function (hooks) {
 
   hooks.beforeEach(function () {
     const flash = this.owner.lookup('service:flash-messages');
-    this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashDangerSpy = spy(flash, 'danger');
     this.flashInfoSpy = spy(flash, 'info');

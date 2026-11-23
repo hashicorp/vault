@@ -15,7 +15,6 @@ import type Router from 'vault/router';
 import type NamespaceService from 'vault/services/namespace';
 import type { NamespaceOption } from 'vault/services/namespace';
 import type AuthService from 'vault/services/auth';
-import type Store from '@ember-data/store';
 
 /**
  * @module NamespacePicker
@@ -32,7 +31,6 @@ export default class NamespacePicker extends Component {
   @service declare capabilities: CapabilitiesService;
   @service declare namespace: NamespaceService;
   @service declare router: Router;
-  @service declare store: Store;
 
   // Load 200 namespaces in the namespace picker at a time
   @tracked batchSize = 200;

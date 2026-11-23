@@ -19,7 +19,6 @@ module.exports = function (environment) {
         // e.g. 'with-controller': true
       },
       EXTEND_PROTOTYPES: {
-        Date: false, // Prevent Ember Data from overriding Date.parse.
         String: false, // Prevent user from using an Ember string method on string. ex: "foo".capitalize();
       },
     },

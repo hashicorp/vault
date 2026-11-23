@@ -41,10 +41,6 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.router = this.owner.lookup('service:router');
   });
 
-  hooks.afterEach(function () {
-    this.owner.unregister('service:store');
-  });
-
   test('it renders', async function (assert) {
     await render(hbs`<InfoTableRow
         @value={{this.value}}

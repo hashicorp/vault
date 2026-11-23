@@ -18,7 +18,6 @@ export default class SyncEngine extends Engine {
       'flash-messages',
       'flags',
       'app-router',
-      'store',
       'api',
       'capabilities',
       'version',

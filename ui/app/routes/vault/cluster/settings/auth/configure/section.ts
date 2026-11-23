@@ -9,8 +9,6 @@ import AuthMethodForm from 'vault/forms/auth/method';
 import OpenApiForm from 'vault/forms/open-api';
 
 import type ApiService from 'vault/services/api';
-import type PathHelpService from 'vault/services/path-help';
-import type Store from '@ember-data/store';
 import type { ClusterSettingsAuthConfigureRouteModel } from '../configure';
 import type { MountConfig } from 'vault/mount';
 import type { UserLockoutConfig, UserLockoutConfigResponse } from 'vault/auth/methods';
@@ -34,8 +32,6 @@ const lockoutConfigForForm = (saved: UserLockoutConfigResponse = {}): UserLockou
 
 export default class ClusterSettingsAuthConfigureRoute extends Route {
   @service declare readonly api: ApiService;
-  @service declare readonly pathHelp: PathHelpService;
-  @service declare readonly store: Store;
 
   get configRouteModel() {
     return this.modelFor('vault.cluster.settings.auth.configure') as ClusterSettingsAuthConfigureRouteModel;

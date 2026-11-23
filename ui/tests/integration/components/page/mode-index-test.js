@@ -22,7 +22,6 @@ module('Integration | Component | replication page/mode-index', function (hooks)
   setupEngine(hooks, 'replication');
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.onEnable = () => {};
     this.cluster = { replicationAttrs: {} };
     this.replicationMode = '';

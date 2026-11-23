@@ -9,13 +9,13 @@ import { action } from '@ember/object';
 import { keyParamsByType } from 'pki/utils/action-params';
 
 import PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
-import type { ModelValidations } from 'vault/vault/app-types';
+import type { FormValidations } from 'vault/vault/app-types';
 
 interface Args {
   form: PkiConfigGenerateForm;
   actionType: string;
   groups: Map<[key: string], Array<string>> | null;
-  modelValidations?: ModelValidations;
+  modelValidations?: FormValidations;
 }
 
 export default class PkiGenerateToggleGroupsComponent extends Component<Args> {

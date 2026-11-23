@@ -18,7 +18,6 @@ module('Integration | Component | mount-backend/type-form | plugin catalog enhan
   hooks.beforeEach(function () {
     this.setMountType = sinon.spy();
     this.version = this.owner.lookup('service:version');
-    this.store = this.owner.lookup('service:store');
   });
 
   test('it renders basic form elements', async function (assert) {

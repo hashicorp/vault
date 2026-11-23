@@ -5,10 +5,9 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 import PolicyForm from 'vault/forms/policy';
 
-export default Route.extend(UnsavedModelRoute, {
+export default Route.extend({
   router: service(),
   api: service(),
   version: service(),

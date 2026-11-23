@@ -14,7 +14,6 @@ module('Integration | Component | auth-method/configuration', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.createMethod = (path, type) => {
       this.method = new AuthMethodResource({ path, type, config: { listing_visibility: 'hidden' } }, this);
     };

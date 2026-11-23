@@ -32,7 +32,7 @@ module('Unit | Controller | vault/cluster/init', function (hooks) {
 
     this.initCluster = async (sealType, payload) => {
       const controller = this.owner.lookup('controller:vault.cluster.init');
-      controller.set('model', { sealType, reload: sinon.stub(), store: this.owner.lookup('service:store') });
+      controller.set('model', { sealType, reload: sinon.stub() });
       controller.send('initCluster', payload);
       await settled();
     };

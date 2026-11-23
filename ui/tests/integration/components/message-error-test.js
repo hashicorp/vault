@@ -16,7 +16,6 @@ module('Integration | Component | message-error', function (hooks) {
   hooks.beforeEach(function () {
     this.errorMessage = undefined;
     this.errors = undefined;
-    this.model = undefined;
     this.onDismiss = sinon.spy();
 
     this.renderComponent = () => {
@@ -24,7 +23,6 @@ module('Integration | Component | message-error', function (hooks) {
         <MessageError
         @errorMessage={{this.errorMessage}}
         @errors={{this.errors}}
-        @model={{this.model}}
         @onDismiss={{this.onDismiss}}
         />`);
     };
@@ -62,19 +60,6 @@ module('Integration | Component | message-error', function (hooks) {
     findAll(GENERAL.messageDescription).forEach((e, idx) => {
       assert.dom(e).hasText(this.errors[idx]);
     });
-  });
-
-  test('it handles model errors', async function (assert) {
-    this.model = {
-      isError: true,
-      adapterError: {
-        errors: [new Error('there was a problem')],
-      },
-    };
-    await this.renderComponent();
-
-    assert.dom(GENERAL.messageError).exists({ count: 1 });
-    assert.dom(GENERAL.messageDescription).hasText('there was a problem');
   });
 
   test('it formats CLI-style errors', async function (assert) {

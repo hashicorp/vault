@@ -20,11 +20,12 @@ interface Args {
 
 type ApplicationError = {
   errorURL?: string; // Added by application route error() method
-  httpStatus: number; // Added by application adapter handleRequest() method
-  path: string; // Added by application adapter handleRequest() method
+  httpStatus: number; // Set by the route or component that threw the error
+  path: string; // Set by the route or component that threw the error
 };
 
 type NotFoundRouteError = {
+  errors?: string[]; // Rendered as error details when a route sets them
   httpStatus: number;
   path: string;
 };
@@ -37,16 +38,7 @@ type ParsedApiServiceError = {
   status?: number;
 };
 
-// Can be removed when Ember Data is no more
-type EmberDataAdapterError = {
-  errors: string[];
-  errorURL?: string; // Added by the application route error() method
-  httpStatus: number;
-  message: string;
-  path: string;
-};
-
-type PageError = ApplicationError | NotFoundRouteError | ParsedApiServiceError | EmberDataAdapterError;
+type PageError = ApplicationError | NotFoundRouteError | ParsedApiServiceError;
 
 enum DefaultErrorMessages {
   NOT_FOUND = 'Sorry, we were unable to find any content at',
@@ -94,12 +86,11 @@ export default class PageErrorComponent extends Component<Args> {
   }
 
   // In most cases, we want to render the message returned by the API, when available.
-  // However, if it is a generic "permission denied" message or from an Ember Data adapter
-  // then the default messages provide more information and context.
-  // When Ember Data is removed, that part of the conditional can be removed.
+  // However, if it is a generic "permission denied" message then the default messages
+  // provide more information and context.
   get message(): string | DefaultErrorMessages {
     const message = this.error && 'message' in this.error ? this.error.message : undefined;
-    if (!message || message?.includes('permission denied') || message?.includes('Ember Data')) {
+    if (!message || message?.includes('permission denied')) {
       return this.statusDefaults.message;
     }
     return message;

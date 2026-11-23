@@ -487,7 +487,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     hooks.beforeEach(async function () {
       this.patchSecret = 'patch-secret';
       this.owner.lookup('service:version').type = 'enterprise';
-      this.store = this.owner.lookup('service:store');
       await writeSecret(this.backend, this.patchSecret, 'foo', 'bar');
       await writeSecret(this.backend, 'my-destroyed-secret', 'foo', 'bar');
       const token = await runCmd([
@@ -635,7 +634,6 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   // each test uses a different secret path
   hooks.beforeEach(async function () {
     const uid = uuidv4();
-    this.store = this.owner.lookup('service:store');
     this.backend = `kv-enterprise-edge-${uid}`;
     this.namespace = `ns-${uid}`;
     await login();

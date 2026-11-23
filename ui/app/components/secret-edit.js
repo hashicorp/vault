@@ -27,7 +27,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import KVObject from 'vault/lib/kv-object';
-import { or } from '@ember/object/computed';
 import { dump } from 'js-yaml';
 
 export default class SecretEdit extends Component {
@@ -67,8 +66,9 @@ export default class SecretEdit extends Component {
     return this.args.capabilities?.canRead ?? this.args.model?.canRead;
   }
 
-  @or('model.isLoading', 'model.isReloading', 'model.isSaving') requestInFlight;
-  @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
+  get buttonDisabled() {
+    return Boolean(this.args.model?.isFolder);
+  }
 
   get modelForData() {
     const { model } = this.args;

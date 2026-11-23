@@ -10,7 +10,6 @@ const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'totp'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',
-  pathHelp: service('path-help'),
   router: service(),
   api: service(),
 

@@ -42,8 +42,6 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-
     this.openApiResponse = this.server.create('open-api-explorer');
     this.server.get('sys/internal/specs/openapi', () => {
       return this.openApiResponse;

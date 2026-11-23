@@ -62,7 +62,6 @@ export default class App extends Application {
           'namespace',
           'replication-mode',
           { 'app-router': 'router' },
-          'store',
           'version',
           // services needed for tools sidebar component
           'permissions',
@@ -181,7 +180,6 @@ export default class App extends Application {
           'flash-messages',
           'flags',
           { 'app-router': 'router' },
-          'store',
           'api',
           'capabilities',
           'version',

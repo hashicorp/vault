@@ -125,18 +125,6 @@ export default Controller.extend(ListController, BackendCrumbMixin, {
           const { message } = await this.api.parseError(e);
           this.flashMessages.danger(message);
         }
-      } else {
-        // Handle Ember Data models
-        item
-          .destroyRecord()
-          .then(() => {
-            this.flashMessages.success(`${name} was successfully deleted.`);
-            this.send('reload');
-          })
-          .catch((e) => {
-            const error = e.errors ? e.errors.join('. ') : e.message;
-            this.flashMessages.danger(error);
-          });
       }
     },
   },

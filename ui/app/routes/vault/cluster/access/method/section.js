@@ -3,17 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import AdapterError from '@ember-data/adapter/error';
-import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 
 export default Route.extend({
   model(params) {
     const { section_name: section } = params;
     if (section !== 'configuration') {
-      const error = new AdapterError();
-      set(error, 'httpStatus', 404);
-      throw error;
+      throw { httpStatus: 404 };
     }
     return this.modelFor('vault.cluster.access.method');
   },
