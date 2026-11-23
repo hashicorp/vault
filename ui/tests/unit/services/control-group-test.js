@@ -4,6 +4,7 @@
  */
 
 import { set } from '@ember/object';
+import { equal } from '@ember/object/computed';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
@@ -11,7 +12,9 @@ import sinon from 'sinon';
 
 import { storageKey, CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
 
-const versionStub = Service.extend();
+const versionStub = Service.extend({
+  isCommunity: equal('type', 'community'),
+});
 
 function storage() {
   return {
@@ -53,69 +56,55 @@ module('Unit | Service | control group', function (hooks) {
 
   const isCommunity = (context) => set(context, 'version.type', 'community');
   const isEnt = (context) => set(context, 'version.type', 'enterprise');
-  const resolvesArgs = (assert, result, expectedArgs) => {
-    return result.then((...args) => {
-      return assert.deepEqual(args, expectedArgs, 'resolves with the passed args');
-    });
-  };
 
   [
     [
-      'it resolves isCommunity:true, wrapTTL: true, response: has wrap_info',
+      'it is not locked when isCommunity:true, wrapTTL: true, response: has wrap_info',
       isCommunity,
-      [[{ one: 'two', three: 'four' }], { wrap_info: { token: 'foo', accessor: 'bar' } }, true],
-      (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
+      [{ wrap_info: { token: 'foo', accessor: 'bar' } }, true],
+      false,
     ],
     [
-      'it resolves isCommunity:true, wrapTTL: false, response: has no wrap_info',
+      'it is not locked when isCommunity:true, wrapTTL: false, response: has no wrap_info',
       isCommunity,
-      [[{ one: 'two', three: 'four' }], { wrap_info: null }, false],
-      (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
+      [{ wrap_info: null }, false],
+      false,
     ],
     [
-      'it resolves isCommunity: false and wrapTTL:true response: has wrap_info',
-      isEnt,
-      [[{ one: 'two', three: 'four' }], { wrap_info: { token: 'foo', accessor: 'bar' } }, true],
-      (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
+      'it is not locked when isCommunity:true, wrapTTL: false, response: has wrap_info',
+      isCommunity,
+      [{ wrap_info: { token: 'foo', accessor: 'bar' } }, false],
+      false,
     ],
     [
-      'it resolves isCommunity: false and wrapTTL:false response: has no wrap_info',
+      'it is not locked when isCommunity: false and wrapTTL:true response: has wrap_info',
       isEnt,
-      [[{ one: 'two', three: 'four' }], { wrap_info: null }, false],
-      (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
+      [{ wrap_info: { token: 'foo', accessor: 'bar' } }, true],
+      false,
     ],
     [
-      'it rejects isCommunity: false, wrapTTL:false, response: has wrap_info',
+      'it is not locked when isCommunity: false and wrapTTL:false response: has no wrap_info',
       isEnt,
-      [
-        [{ one: 'two', three: 'four' }],
-        { foo: 'bar', wrap_info: { token: 'secret', accessor: 'lookup' } },
-        false,
-      ],
-      (assert, result) => {
-        // ensure failure if we ever don't reject
-        assert.expect(2);
-
-        return result.then(
-          () => {},
-          (err) => {
-            assert.strictEqual(err.token, 'secret');
-            assert.strictEqual(err.accessor, 'lookup');
-          }
-        );
-      },
+      [{ wrap_info: null }, false],
+      false,
     ],
-  ].forEach(function ([name, setup, args, expectation]) {
-    test(`checkForControlGroup: ${name}`, function (assert) {
-      const assertCount =
-        name === 'it rejects isCommunity: false, wrapTTL:false, response: has wrap_info' ? 2 : 1;
-      assert.expect(assertCount);
-      if (setup) {
-        setup(this);
-      }
+    [
+      'it is not locked when the response is a wrapping endpoint response',
+      isEnt,
+      [{ wrap_info: { token: 'foo', accessor: 'bar', creation_path: 'sys/wrapping/wrap' } }, false],
+      false,
+    ],
+    [
+      'it is locked when isCommunity: false, wrapTTL:false, response: has wrap_info',
+      isEnt,
+      [{ foo: 'bar', wrap_info: { token: 'secret', accessor: 'lookup' } }, false],
+      true,
+    ],
+  ].forEach(function ([name, setup, args, expected]) {
+    test(`isRequestedPathLocked: ${name}`, function (assert) {
+      setup(this);
       const service = this.owner.lookup('service:control-group');
-      const result = service.checkForControlGroup(...args);
-      return expectation(assert, result);
+      assert.strictEqual(service.isRequestedPathLocked(...args), expected);
     });
   });
 

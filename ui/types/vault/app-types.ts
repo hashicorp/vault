@@ -2,11 +2,9 @@
  * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
-import type EmberDataModel from 'ember-data/model'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 import type Owner from '@ember/owner';
 import type { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
-// Type that comes back from expandAttributeMeta
 export interface FormField {
   name: string;
   type: string;
@@ -17,14 +15,6 @@ interface AttributeOptions {
   label: string;
   mapToBoolean: string;
   isOppositeValue: boolean;
-}
-
-export interface FormFieldGroups {
-  [key: string]: Array<FormField>;
-}
-
-export interface FormFieldGroupOptions {
-  [key: string]: Array<string>;
 }
 
 export type Validator =
@@ -70,32 +60,11 @@ export interface ValidationMap {
     warnings: Array<string>;
   };
 }
-export interface ModelValidations {
+export interface FormValidations {
   isValid: boolean;
   state: ValidationMap;
   invalidFormMessage: string;
 }
-// TODO: [Ember Data] - ModelValidations can be renamed to FormValidations and this can be removed
-export type FormValidations = ModelValidations;
-
-export type Model = Omit<EmberDataModel, 'isNew'> & {
-  // override isNew which is a computed prop and ts will complain since it sees it as a function
-  isNew: boolean;
-};
-
-export type WithFormFieldsModel = Model & {
-  formFields: Array<FormField>;
-  formFieldGroups: FormFieldGroups;
-  allFields: Array<FormField>;
-};
-
-export type WithValidationsModel = Model & {
-  validate(): ModelValidations;
-};
-
-export type WithFormFieldsAndValidationsModel = WithFormFieldsModel & {
-  validate(): ModelValidations;
-};
 
 // capabilities
 export interface Capabilities {

@@ -4,8 +4,6 @@
  */
 
 import Service, { inject as service } from '@ember/service';
-import RSVP from 'rsvp';
-import ControlGroupError from 'vault/lib/control-group-error';
 import getStorage from 'vault/lib/token-storage';
 import parseURL from 'core/utils/parse-url';
 
@@ -98,15 +96,6 @@ export default Service.extend({
       return false;
     }
     return true;
-  },
-
-  checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
-    const isLocked = this.isRequestedPathLocked(response, wasWrapTTLRequested);
-    if (isLocked) {
-      const error = new ControlGroupError(response.wrap_info);
-      return RSVP.reject(error);
-    }
-    return RSVP.resolve(...callbackArgs);
   },
 
   handleError(error) {
