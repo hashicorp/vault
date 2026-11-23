@@ -35,3 +35,5 @@ func mfaLoginEnterprisePaths(i *IdentityStore) []*framework.Path {
 func (i *IdentityStore) initializeEntityMetadataDB() error {
 	return nil
 }
+
+func (i *IdentityStore) startEntityMetadataLoad(context.Context) {}

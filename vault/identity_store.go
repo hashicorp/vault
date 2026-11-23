@@ -80,8 +80,21 @@ func (i *IdentityStore) Cleanup(context.Context) {
 	i.oidcAuthCodeCache.c.Stop()
 }
 
+// stopEntityMetadataLoad cancels the context of the background job in charge of loading entity metadata
+// from storage into memory. This is called during seal to stop the load job from continuing.
+func (i *IdentityStore) stopEntityMetadataLoad() {
+	i.entityMetadataLoadLock.Lock()
+	defer i.entityMetadataLoadLock.Unlock()
+
+	if i.entityMetadataLoadCancel != nil {
+		i.entityMetadataLoadCancel()
+		i.entityMetadataLoadCancel = nil
+	}
+}
+
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
+		entityMetadataLoadComplete:      make(chan struct{}),
 		view:                            config.StorageView,
 		logger:                          logger,
 		router:                          core.router,
