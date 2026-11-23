@@ -42,12 +42,12 @@ export function generatedItemUrls(pathInfo: PathInfo, itemType: string): Generat
   };
 }
 
-/** OpenAPI help URL for the item type's create endpoint, which describes the form fields. */
+/** OpenAPI help path, relative to the API base path (`/v1`), for the item type's create endpoint, which describes the form fields. */
 export function generatedItemHelpUrl(pathInfo: PathInfo, itemType: string): string {
   const paths = itemType ? filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
   const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
   if (!createPath) {
     throw new Error(`No create endpoint found for ${itemType} in ${pathInfo.apiPath}`);
   }
-  return `/v1/${pathInfo.apiPath}${pathToHelpUrlSegment(createPath.path).slice(1)}?help=true`;
+  return `/${pathInfo.apiPath}${pathToHelpUrlSegment(createPath.path).slice(1)}?help=true`;
 }

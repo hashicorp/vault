@@ -6,6 +6,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/golang"
@@ -16,6 +17,12 @@ var checkGithubGoModReq = github.CheckGoModDiffReq{
 	DiffOpts: golang.DefaultDiffOpts(),
 	Paths:    []string{},
 }
+
+var (
+	checkGoModCommentOwner string
+	checkGoModCommentRepo  string
+	checkGoModCommentPR    int
+)
 
 func newGithubCheckGoModDiffCmd() *cobra.Command {
 	checkGoModCmd := &cobra.Command{
@@ -35,6 +42,10 @@ func newGithubCheckGoModDiffCmd() *cobra.Command {
 	checkGoModCmd.PersistentFlags().StringSliceVarP(&checkGithubGoModReq.Paths, "path", "p", []string{}, "The go.mod paths relative to the repository to use. e.g. -p go.mod -p api/go.mod")
 	checkGoModCmd.PersistentFlags().BoolVar(&checkGithubGoModReq.WorkspaceModules, "workspace-modules", false, "Compare the go.mod of every module in the local go.work instead of --path. The go.work must be in the repository root")
 	checkGoModCmd.PersistentFlags().StringVar(&checkGithubGoModReq.GoWork, "go-work", "", "Path to go.work for --workspace-modules. Defaults to the first go.work in the current directory or its parents")
+
+	checkGoModCmd.PersistentFlags().StringVar(&checkGoModCommentOwner, "comment-owner", "hashicorp", "The Github organization hosting the pull request to comment the drift on")
+	checkGoModCmd.PersistentFlags().StringVar(&checkGoModCommentRepo, "comment-repo", "vault-enterprise", "The Github repository hosting the pull request to comment the drift on")
+	checkGoModCmd.PersistentFlags().IntVar(&checkGoModCommentPR, "comment-pr", 0, "The pull request number to comment the drift on as markdown. A failure to comment does not fail the check")
 
 	err := checkGoModCmd.MarkPersistentFlagRequired("a-branch")
 	if err != nil {
@@ -104,6 +115,17 @@ func runCheckGithubGoModCmd(cmd *cobra.Command, args []string) error {
 			if text := tbl.Render(); text != "" {
 				fmt.Println(text)
 			}
+		}
+	}
+
+	// Commenting is best effort and must never change the result of the check.
+	if checkGoModCommentPR > 0 {
+		cerr := res.CommentOnPullRequest(
+			cmd.Context(), githubCmdState.GithubV3,
+			checkGoModCommentOwner, checkGoModCommentRepo, checkGoModCommentPR, err,
+		)
+		if cerr != nil {
+			slog.Default().WarnContext(cmd.Context(), "unable to comment go.mod diff on pull request", "error", cerr)
 		}
 	}
 
