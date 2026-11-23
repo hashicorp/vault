@@ -25,38 +25,9 @@ func newSystemViewWrapper(view logical.SystemView) logical.SystemView {
 
 type systemViewWrapper struct {
 	logical.SystemView
+	logical.ExtendedSystemView
 	pluginName     string
 	builtinFactory func() (interface{}, error)
-}
-
-var _ logical.ExtendedSystemView = (*systemViewWrapper)(nil)
-
-func (s *systemViewWrapper) TPMByID(ctx context.Context, id string) (*logical.TPM, error) {
-	panic("nope")
-}
-
-func (s *systemViewWrapper) GroupsForTPM(ctx context.Context, id string) ([]*logical.TPMGroup, error) {
-	panic("nope")
-}
-
-func (s *systemViewWrapper) RequestWellKnownRedirect(ctx context.Context, src, dest string) error {
-	panic("nope")
-}
-
-func (s *systemViewWrapper) DeregisterWellKnownRedirect(ctx context.Context, src string) bool {
-	panic("nope")
-}
-
-func (s *systemViewWrapper) Auditor() logical.Auditor {
-	panic("nope")
-}
-
-func (s *systemViewWrapper) ForwardGenericRequest(ctx context.Context, request *logical.Request) (*logical.Response, error) {
-	panic("nope")
-}
-
-func (s *systemViewWrapper) APILockShouldBlockRequest() (bool, error) {
-	panic("nope")
 }
 
 func (s *systemViewWrapper) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
