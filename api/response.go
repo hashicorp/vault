@@ -17,6 +17,12 @@ import (
 // Response is a raw response that wraps an HTTP response.
 type Response struct {
 	*http.Response
+
+	// requestAddress is the address the client was configured with, for
+	// display in error output. It is only set when that address differs
+	// from the request URL, such as for Unix domain sockets whose
+	// requests carry a synthetic http://localhost URL.
+	requestAddress string
 }
 
 // cacheAge reports how long an intermediate cache held this response. It is
@@ -75,9 +81,16 @@ func (r *Response) Error() error {
 	ns := r.Header.Get(NamespaceHeaderName)
 
 	// Build up the error object
+	requestURL := r.Request.URL.String()
+	if r.requestAddress != "" {
+		requestURL = r.requestAddress + r.Request.URL.EscapedPath()
+		if r.Request.URL.RawQuery != "" {
+			requestURL += "?" + r.Request.URL.RawQuery
+		}
+	}
 	respErr := &ResponseError{
 		HTTPMethod:    r.Request.Method,
-		URL:           r.Request.URL.String(),
+		URL:           requestURL,
 		StatusCode:    r.StatusCode,
 		NamespacePath: ns,
 	}
