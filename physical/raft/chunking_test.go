@@ -29,7 +29,9 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
 
-	b, dir := GetRaft(t, true, false)
+	b, dir := GetRaftWithConfig(t, true, false, map[string]string{
+		"log_store": "raft_boltdb",
+	})
 	defer os.RemoveAll(dir)
 
 	t.Log("applying configuration")

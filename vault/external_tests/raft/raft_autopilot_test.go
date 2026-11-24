@@ -252,7 +252,9 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
+		// BoltDB compaction forces followers to install the delayed snapshot.
 		PhysicalFactoryConfig: map[string]interface{}{
+			"log_store":     "raft_boltdb",
 			"trailing_logs": "10",
 		},
 		PerNodePhysicalFactoryConfig: map[int]map[string]interface{}{

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -23,7 +24,7 @@ type RaftBackendConfig struct {
 	Path                        string
 	NodeId                      string
 	ApplyDelay                  time.Duration
-	RaftWal                     bool
+	LogStore                    string
 	RaftLogVerifierEnabled      bool
 	RaftLogVerificationInterval time.Duration
 	SnapshotDelay               time.Duration
@@ -92,13 +93,25 @@ func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBac
 		c.ApplyDelay = delay
 	}
 
-	if walRaw, ok := conf["raft_wal"]; ok {
+	// Parse log_store, which selects between raft_wal and raft_boltdb.
+	// Default to raft_wal unless the legacy raft_wal setting is present.
+	c.LogStore = "raft_wal"
+	if logStoreRaw, ok := conf["log_store"]; ok {
+		logStoreRaw = strings.TrimSpace(logStoreRaw)
+		switch logStoreRaw {
+		case "raft_wal", "raft_boltdb":
+			c.LogStore = logStoreRaw
+		default:
+			return nil, fmt.Errorf("log_store must be either 'raft_wal' or 'raft_boltdb', got %q", logStoreRaw)
+		}
+	} else if walRaw, ok := conf["raft_wal"]; ok {
 		useRaftWal, err := strconv.ParseBool(walRaw)
 		if err != nil {
 			return nil, fmt.Errorf("raft_wal does not parse as a boolean: %w", err)
 		}
-
-		c.RaftWal = useRaftWal
+		if !useRaftWal {
+			c.LogStore = "raft_boltdb"
+		}
 	}
 
 	if rlveRaw, ok := conf["raft_log_verifier_enabled"]; ok {
