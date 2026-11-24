@@ -1,0 +1,80 @@
+{
+	"name": "Hashicorp - Vault",
+	"image": "hashicorp/vault",
+	"containerEnv": {
+		"VAULT_ADDR": "http://127.0.0.1:8200",
+		"VAULT_TOKEN": "root"
+	},
+	"postCreateCommand": "sh -c 'set -e; apk add --no-cache bash; V=0.2.0; case $(uname -m) in x86_64) A=amd64;; aarch64|arm64) A=arm64;; *) A=arm;; esac; cd /tmp && wget -q https://releases.hashicorp.com/vault-mcp-server/${V}/vault-mcp-server_${V}_linux_${A}.zip -O vault-mcp-server.zip && unzip -o vault-mcp-server.zip vault-mcp-server -d /usr/local/bin && chmod +x /usr/local/bin/vault-mcp-server && rm vault-mcp-server.zip'",
+	"postStartCommand": "sh -c 'vault server -dev -dev-root-token-id=root'",
+	"forwardPorts": [8200, 8201],
+	"portsAttributes": {
+		"8200": {
+			"label": "Vault UI",
+			"onAutoForward": "notify"
+		},
+		"8201": {
+			"label": "Vault API",
+			"onAutoForward": "notify"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"hashicorp.terraform",
+				"nhoizey.gremlins",
+				"hashicorp.hcl",
+				"anthropic.claude-code",
+				"redhat.vscode-yaml",
+				"johnpapa.vscode-peacock"
+			],
+			"mcp": {
+				"servers": {
+					"vault-mcp-server": {
+						"type": "stdio",
+						"command": "vault-mcp-server",
+						"args": ["stdio"],
+						"env": {
+							"VAULT_ADDR": "http://127.0.0.1:8200",
+							"VAULT_TOKEN": "root"
+						}
+					}
+				}
+			},
+			"settings": {
+				"workbench.colorCustomizations": {
+					"activityBar.activeBackground": "#ffda58",
+					"activityBar.activeBorder": "#15202b",
+					"activityBar.background": "#ffda58",
+					"activityBar.foreground": "#15202b",
+					"activityBar.inactiveForeground": "#15202b99",
+					"activityBarBadge.background": "#009f7c",
+					"activityBarBadge.foreground": "#e7e7e7",
+					"activityBarTop.activeBackground": "#ffda58",
+					"activityBarTop.activeBorder": "#15202b",
+					"activityBarTop.background": "#ffda58",
+					"activityBarTop.foreground": "#15202b",
+					"activityBarTop.inactiveForeground": "#15202b99",
+					"commandCenter.border": "#15202b99",
+					"commandCenter.foreground": "#15202b",
+					"sash.hoverBorder": "#ffda58",
+					"statusBar.background": "#ffcf25",
+					"statusBar.debuggingBackground": "#ffcf25",
+					"statusBar.debuggingForeground": "#15202b",
+					"statusBar.foreground": "#15202b",
+					"statusBar.inactiveBackground": "#ffcf25",
+					"statusBarItem.hoverBackground": "#f1bc00",
+					"statusBarItem.remoteBackground": "#009f7c",
+					"statusBarItem.remoteForeground": "#15202b",
+					"titleBar.activeBackground": "#ffcf25",
+					"titleBar.activeForeground": "#15202b",
+					"titleBar.inactiveBackground": "#ffcf2599",
+					"titleBar.inactiveForeground": "#15202b99"
+				},
+				"peacock.color": "#ffcf25"
+			}
+		}
+	}
+}
