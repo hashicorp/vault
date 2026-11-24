@@ -232,6 +232,16 @@ module('Acceptance | Identity group aliases list view', function (hooks) {
 module('Acceptance | Identity group aliases list view | read-only token', function (hooks) {
   setupApplicationTest(hooks);
 
+  hooks.beforeEach(function () {
+    // HDS table/dropdown observers can emit a benign "ResizeObserver loop" error that QUnit fails on.
+    this._originalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  });
+
   hooks.beforeEach(async function () {
     await login();
     const groupId = await runCmd(
@@ -251,6 +261,10 @@ module('Acceptance | Identity group aliases list view | read-only token', functi
     await login();
     await runCmd(`delete identity/group-alias/id/${this.aliasId}`);
     await runCmd('delete identity/group/name/read-only-external-group');
+  });
+
+  hooks.afterEach(function () {
+    window.ResizeObserver = this._originalResizeObserver;
   });
 
   test('it hides the create action on the aliases list view', async function (assert) {
