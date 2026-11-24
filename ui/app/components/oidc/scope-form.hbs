@@ -62,9 +62,10 @@
       <Hds::CodeBlock @value={{this.exampleTemplate}} @language="ruby" @hasCopyButton={{true}} />
       <p class="has-top-margin-m">
         The full list of template parameters can be found
-        <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
-          here.
-        </DocLink>
+        <Hds::Link::Inline
+          @href={{doc-link "/vault/docs/concepts/oidc-provider#scopes"}}
+          @isHrefExternal={{true}}
+        >here.</Hds::Link::Inline>
       </p>
     </M.Body>
     <M.Footer as |F|>

@@ -17,9 +17,7 @@
   </:breadcrumbs>
   <:description>
     Enforce a secondary layer of identity verification (such as TOTP, Okta, or Duo) during the login process.
-    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/login-mfa"}}>
-      Learn more
-    </Hds::Link::Inline>
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/login-mfa"}}>Learn more</Hds::Link::Inline>
   </:description>
 </Page::Header>
 
@@ -31,9 +29,7 @@
       <Hds::Link::Inline
         @isHrefExternal={{true}}
         @href={{doc-link (concat "/vault/api-docs/secret/identity/mfa/" this.type)}}
-      >
-        Learn more
-      </Hds::Link::Inline>
+      >Learn more</Hds::Link::Inline>
     </p>
     <Mfa::MethodForm @form={{this.method}} @validations={{this.methodErrors}} class="is-shadowless" />
     <Mfa::MfaLoginEnforcementHeader
@@ -69,7 +65,10 @@
     {{#if this.type}}
       <p class="has-top-margin-l">
         {{this.description}}
-        <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+        <Hds::Link::Inline
+          @href={{doc-link (concat "/vault/api-docs/secret/identity/mfa/" this.type)}}
+          @isHrefExternal={{true}}
+        >Learn more.</Hds::Link::Inline>
       </p>
       {{! in a future release cards may be displayed to choose from either template or custom config for TOTP }}
       {{! if template is selected a user could choose a predefined config for common authenticators and the values would be populated on the model }}

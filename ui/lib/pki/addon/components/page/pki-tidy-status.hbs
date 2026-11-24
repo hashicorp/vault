@@ -127,9 +127,10 @@
       <p class="has-text-grey has-bottom-padding-s">
         Tidying cleans up the storage backend and/or CRL by removing certificates that have expired and are past a certain
         buffer period beyond their expiration time.
-        <DocLink @path="/vault/docs/secrets/pki/considerations#automate-crl-building-and-tidying">
-          Documentation.
-        </DocLink>
+        <Hds::Link::Inline
+          @href={{doc-link "/vault/docs/secrets/pki/considerations#automate-crl-building-and-tidying"}}
+          @isHrefExternal={{true}}
+        >Documentation.</Hds::Link::Inline>
       </p>
       <div class="has-text-grey">
         <ol class="has-left-margin-m has-bottom-margin-s" data-test-tidy-instructions>

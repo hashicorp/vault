@@ -48,8 +48,10 @@
       </h3>
       <p class="helper-text has-text-grey-light has-bottom-padding-s">
         This command retrieves the value from KV secrets engine at the given key name. See our
-        <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/docs/commands/kv"}}>
-          documentation</Hds::Link::Inline>
+        <Hds::Link::Inline
+          @isHrefExternal={{true}}
+          @href={{doc-link "/vault/docs/commands/kv"}}
+        >documentation</Hds::Link::Inline>
         for other CLI commands.
       </p>
       <Hds::CodeBlock
@@ -66,9 +68,7 @@
       <p class="helper-text has-text-grey-light has-bottom-padding-s">
         This command obtains data and metadata for the latest version of this secret. In this example, Vault is located at
         https://127.0.0.1:8200. For other API commands,
-        <DocLink @path="/vault/api-docs/secret/kv/kv-v2">
-          learn more.
-        </DocLink>
+        <Hds::Link::Inline @href={{doc-link "/vault/api-docs/secret/kv/kv-v2"}} @isHrefExternal={{true}}>learn more.</Hds::Link::Inline>
       </p>
       <Hds::CodeBlock
         data-test-code-block="api"

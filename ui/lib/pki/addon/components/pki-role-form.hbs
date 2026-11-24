@@ -110,9 +110,10 @@
                     <Icon @name="info" />
                     {{toggleGroup.footer.text}}
                     {{#if toggleGroup.footer.docLink}}
-                      <DocLink @path={{toggleGroup.footer.docLink}}>
-                        {{toggleGroup.footer.docText}}
-                      </DocLink>
+                      <Hds::Link::Inline
+                        @href={{doc-link toggleGroup.footer.docLink}}
+                        @isHrefExternal={{true}}
+                      >{{toggleGroup.footer.docText}}</Hds::Link::Inline>
                     {{/if}}
                   </p>
                 {{/if}}
