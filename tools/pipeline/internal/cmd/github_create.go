@@ -14,6 +14,9 @@ func newGithubCreateCmd() *cobra.Command {
 		Long:  "Github create commands",
 	}
 	createCmd.AddCommand(newCreateGithubBackportCmd())
+	createCmd.AddCommand(newCreateGithubChangelogPRCmd())
+	createCmd.AddCommand(newCreateGithubReleaseCmd())
+	createCmd.AddCommand(newCreateGithubTagCmd())
 
 	return createCmd
 }

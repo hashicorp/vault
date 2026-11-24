@@ -86,6 +86,18 @@ changed_files {
 
   // The "automation_github" graup tracks all Github actions automation.
   group "automation_github" {
+    ignore {
+      file = [
+        joinpath(".github", "workflows", "build-plugin-ent.yml"),
+        joinpath(".github", "workflows", "plugin-tag-and-release-ent.yml"),
+      ]
+    }
+
+    ignore {
+      base_dir         = [joinpath(".github", "workflows")]
+      base_name_prefix = ["build-vault-plugin-"]
+    }
+
     match {
       base_dir = [
         joinpath(".github", "workflows"),
@@ -212,6 +224,10 @@ changed_files {
 
   // The "config" group tracks build and pipeline configuration files.
   group "config" {
+    ignore {
+      contains = [joinpath(".release", "vault-plugin-")]
+    }
+
     match {
       base_name = [
         "Makefile",
@@ -293,11 +309,11 @@ changed_files {
   }
 
   // Group membership is additive, but ignores apply within each block. Keep
-  // documentation separate so the CE filename exclusions below cannot expose
-  // vendored context such as auth-cert.md.
+  // docs-cms and docs separate so the CE filename exclusions below cannot
+  // expose vendored context such as auth-cert.md.
   group "enterprise" {
     match {
-      base_dir = ["docs-cms"]
+      base_dir = ["docs-cms", "docs"]
     }
   }
 
@@ -378,10 +394,19 @@ changed_files {
         "Dockerfile-client-ent",
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
+        "Dockerfile-plugin-ent",
         "AGENTS.md",
         "opencode.json",
         ".mcp.json",
         "copilot-instructions.md",
+      ]
+    }
+
+    // Plugin release configuration and builds are released only from enterprise.
+    match {
+      contains = [
+        joinpath(".release", "vault-plugin-"),
+        joinpath("version", "vault-plugin-"),
       ]
     }
 
@@ -567,6 +592,18 @@ changed_files {
 
   // The "quality_actions" group tracks GitHub Actions linting.
   group "quality_actions" {
+    ignore {
+      file = [
+        joinpath(".github", "workflows", "build-plugin-ent.yml"),
+        joinpath(".github", "workflows", "plugin-tag-and-release-ent.yml"),
+      ]
+    }
+
+    ignore {
+      base_dir         = [joinpath(".github", "workflows")]
+      base_name_prefix = ["build-vault-plugin-"]
+    }
+
     match {
       base_dir = [
         joinpath(".github", "workflows"),
@@ -580,6 +617,400 @@ changed_files {
     }
   }
 
+
+  // ----------------------------------------------------------------------------
+  // Plugins
+  // ----------------------------------------------------------------------------
+
+  // The "plugin_build" group tracks the shared plugin build and release
+  // workflows and Dockerfile. Each "plugin_<name>" group below tracks one
+  // plugin's release configuration and will expand to include its source
+  // directory when the source moves here. All plugin files are also in
+  // "enterprise" and are never backported to CE.
+  group "plugin_build" {
+    match {
+      file = [
+        joinpath(".github", "workflows", "build-plugin-ent.yml"),
+        joinpath(".github", "workflows", "plugin-tag-and-release-ent.yml"),
+        "Dockerfile-plugin-ent",
+      ]
+    }
+  }
+
+  group "plugin_auth_alicloud" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-alicloud"),
+        joinpath("version", "vault-plugin-auth-alicloud"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-alicloud-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_azure" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-azure"),
+        joinpath("version", "vault-plugin-auth-azure"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-azure-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_cf" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-cf"),
+        joinpath("version", "vault-plugin-auth-cf"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-cf-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_gcp" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-gcp"),
+        joinpath("version", "vault-plugin-auth-gcp"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-gcp-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_jwt" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-jwt"),
+        joinpath("version", "vault-plugin-auth-jwt"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-jwt-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_kerberos" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-kerberos"),
+        joinpath("version", "vault-plugin-auth-kerberos"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-kerberos-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_kubernetes" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-kubernetes"),
+        joinpath("version", "vault-plugin-auth-kubernetes"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-kubernetes-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_oci" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-oci"),
+        joinpath("version", "vault-plugin-auth-oci"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-oci-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_okta" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-auth-okta"),
+        joinpath("version", "vault-plugin-auth-okta"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-auth-okta-ent.yml")]
+    }
+  }
+
+  group "plugin_auth_saml" {
+    match {
+      base_dir = [joinpath("version", "vault-plugin-auth-saml")]
+    }
+  }
+
+  group "plugin_database_couchbase" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-database-couchbase"),
+        joinpath("version", "vault-plugin-database-couchbase"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-database-couchbase-ent.yml")]
+    }
+  }
+
+  group "plugin_database_elasticsearch" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-database-elasticsearch"),
+        joinpath("version", "vault-plugin-database-elasticsearch"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-database-elasticsearch-ent.yml")]
+    }
+  }
+
+  group "plugin_database_mongodbatlas" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-database-mongodbatlas"),
+        joinpath("version", "vault-plugin-database-mongodbatlas"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-database-mongodbatlas-ent.yml")]
+    }
+  }
+
+  group "plugin_database_oracle" {
+    match {
+      base_dir = [joinpath("version", "vault-plugin-database-oracle")]
+    }
+  }
+
+  group "plugin_database_redis" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-database-redis"),
+        joinpath("version", "vault-plugin-database-redis"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-database-redis-ent.yml")]
+    }
+  }
+
+  group "plugin_database_redis_elasticache" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-database-redis-elasticache"),
+        joinpath("version", "vault-plugin-database-redis-elasticache"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-database-redis-elasticache-ent.yml")]
+    }
+  }
+
+  group "plugin_database_snowflake" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-database-snowflake"),
+        joinpath("version", "vault-plugin-database-snowflake"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-database-snowflake-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_ad" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-ad"),
+        joinpath("version", "vault-plugin-secrets-ad"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-ad-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_alicloud" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-alicloud"),
+        joinpath("version", "vault-plugin-secrets-alicloud"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-alicloud-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_azure" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-azure"),
+        joinpath("version", "vault-plugin-secrets-azure"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-azure-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_gcp" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-gcp"),
+        joinpath("version", "vault-plugin-secrets-gcp"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-gcp-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_gcpkms" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-gcpkms"),
+        joinpath("version", "vault-plugin-secrets-gcpkms"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-gcpkms-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_keymgmt" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-keymgmt"),
+        joinpath("version", "vault-plugin-secrets-keymgmt"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-keymgmt-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_kmip" {
+    match {
+      base_dir = [joinpath("version", "vault-plugin-secrets-kmip")]
+    }
+  }
+
+  group "plugin_secrets_kubernetes" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-kubernetes"),
+        joinpath("version", "vault-plugin-secrets-kubernetes"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-kubernetes-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_kv" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-kv"),
+        joinpath("version", "vault-plugin-secrets-kv"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-kv-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_mongodbatlas" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-mongodbatlas"),
+        joinpath("version", "vault-plugin-secrets-mongodbatlas"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-mongodbatlas-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_openldap" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-openldap"),
+        joinpath("version", "vault-plugin-secrets-openldap"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-openldap-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_os" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-os"),
+        joinpath("version", "vault-plugin-secrets-os"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-os-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_terraform" {
+    match {
+      base_dir = [
+        joinpath(".release", "vault-plugin-secrets-terraform"),
+        joinpath("version", "vault-plugin-secrets-terraform"),
+      ]
+    }
+
+    match {
+      file = [joinpath(".github", "workflows", "build-vault-plugin-secrets-terraform-ent.yml")]
+    }
+  }
+
+  group "plugin_secrets_transform" {
+    match {
+      base_dir = [joinpath("version", "vault-plugin-secrets-transform")]
+    }
+  }
 
   // ----------------------------------------------------------------------------
   // Releases

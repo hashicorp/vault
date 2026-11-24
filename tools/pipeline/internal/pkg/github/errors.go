@@ -4,10 +4,22 @@
 package github
 
 import (
+	"errors"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	gh "github.com/google/go-github/v83/github"
 )
+
+// isNotFound determines if an error is a GitHub REST API 404 response.
+func isNotFound(err error) bool {
+	var response *gh.ErrorResponse
+	return errors.As(err, &response) &&
+		response.Response != nil &&
+		response.Response.StatusCode == http.StatusNotFound
+}
 
 // isRetryableError determines if an error is retryable (5xx server errors and rate-limit 429).
 func isRetryableError(err error) bool {
