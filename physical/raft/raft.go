@@ -895,14 +895,22 @@ func makeLogVerifyReportFn(logger log.Logger) verifier.ReportFn {
 	}
 }
 
+// CollectMetrics emits per-node Raft storage telemetry. The
+// raft_storage.log_store gauge is 1 and is labeled with this node's peer ID
+// and actual opened backend (raft_wal or raft_boltdb).
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	var stats map[string]string
 	var logStoreStats *bolt.Stats
+	var logStoreType string
 
 	b.l.RLock()
-	if boltStore, ok := b.stableStore.(*raftboltdb.BoltStore); ok {
-		bss := boltStore.Stats()
+	switch store := b.stableStore.(type) {
+	case *raftboltdb.BoltStore:
+		bss := store.Stats()
 		logStoreStats = &bss
+		logStoreType = "raft_boltdb"
+	case *raftwal.WAL:
+		logStoreType = "raft_wal"
 	}
 
 	if b.raft != nil {
@@ -922,6 +930,14 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 			Name:  "peer_id",
 			Value: b.localID,
 		},
+	}
+
+	if logStoreType != "" {
+		logStoreLabels := append(labels, metrics.Label{
+			Name:  "log_store",
+			Value: logStoreType,
+		})
+		sink.SetGaugeWithLabels([]string{"raft_storage", "log_store"}, 1, logStoreLabels)
 	}
 
 	if stats != nil {
