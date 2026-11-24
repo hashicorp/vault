@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"maps"
+	"net/http"
 	"strconv"
 	"strings"
 	"testing"
@@ -1207,6 +1208,65 @@ func TestSignVerify_CachingDisabled(t *testing.T) {
 			}
 
 			require.True(t, valid.(bool))
+		})
+	}
+}
+
+// TestTransit_SignWithInvalidKeyVersion_UserError ensures that validation
+// errors on the signing path (such as a negative key_version) are surfaced
+// as errutil.UserError / logical.ErrInvalidRequest so that the HTTP layer
+// maps them to a 400 response instead of a 500. See
+// https://github.com/hashicorp/vault/issues/20713.
+func TestTransit_SignWithInvalidKeyVersion_UserError(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	keyReq := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test-key",
+		Data: map[string]interface{}{
+			"type": "ed25519",
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), keyReq)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NoError(t, resp.Error())
+
+	message := base64.StdEncoding.EncodeToString([]byte("test"))
+
+	tests := []struct {
+		name       string
+		keyVersion int
+	}{
+		{name: "negative-key-version", keyVersion: -1},
+		{name: "key-version-too-high", keyVersion: 1000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			signReq := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      "sign/test-key",
+				Data: map[string]interface{}{
+					"key_version": tt.keyVersion,
+					"input":       message,
+				},
+			}
+
+			resp, err := b.HandleRequest(context.Background(), signReq)
+
+			// The error returned must be logical.ErrInvalidRequest (derived
+			// from an errutil.UserError), not the raw validation error,
+			// otherwise the HTTP layer will respond with a 500 instead of
+			// a 400.
+			require.ErrorIs(t, err, logical.ErrInvalidRequest)
+			require.NotNil(t, resp)
+			require.True(t, resp.IsError())
+
+			statusCode, _ := logical.RespondErrorCommon(signReq, resp, err)
+			require.Equal(t, http.StatusBadRequest, statusCode)
 		})
 	}
 }
