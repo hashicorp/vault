@@ -526,12 +526,12 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			return nil, fmt.Errorf("failed to check if raft.db already exists: %w", err)
 		}
 
-		if backendConfig.RaftWal && raftDbExists {
-			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
-			backendConfig.RaftWal = false
+		if backendConfig.LogStore == "raft_wal" && raftDbExists {
+			logger.Warn("existing raft.db detected; using BoltDB instead of raft-wal.")
+			backendConfig.LogStore = "raft_boltdb"
 		}
 
-		if backendConfig.RaftWal {
+		if backendConfig.LogStore == "raft_wal" {
 			raftWalPath := filepath.Join(raftBasePath, raftWalDir)
 			if err := EnsurePath(raftWalPath, true); err != nil {
 				return nil, err

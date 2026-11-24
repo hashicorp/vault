@@ -48,11 +48,11 @@ func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string
 	}{
 		{
 			name:   "use wal",
-			useWAL: "true",
+			useWAL: "raft_wal",
 		},
 		{
 			name:   "use boltdb",
-			useWAL: "false",
+			useWAL: "raft_boltdb",
 		},
 	}
 
@@ -71,11 +71,11 @@ func testBothRaftBackendsBenchmark(b *testing.B, f func(raftWALValue string)) {
 	}{
 		{
 			name:   "use wal",
-			useWAL: "true",
+			useWAL: "raft_wal",
 		},
 		{
 			name:   "use boltdb",
-			useWAL: "false",
+			useWAL: "raft_boltdb",
 		},
 	}
 
@@ -217,11 +217,11 @@ func TestRaft_Backend(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
-		require.Equal(t, useRaftWal == "true", b.UsesRaftWAL(), "WAL detection must match the opened backend")
+		require.Equal(t, useRaftWal == "raft_wal", b.UsesRaftWAL(), "WAL detection must match the opened backend")
 		physical.ExerciseBackend(t, b)
 	})
 }
@@ -237,7 +237,7 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 	conf := map[string]string{
 		"path":          tmpDir,
 		"trailing_logs": "100",
-		"raft_wal":      "true",
+		"log_store":     "raft_wal",
 	}
 
 	// raftBaseDir will end up looking like $tmpDir/raft
@@ -286,7 +286,7 @@ func TestRaft_VerifierEnabled(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs":             "100",
-			"raft_wal":                  useRaftWal,
+			"log_store":                 useRaftWal,
 			"raft_log_verifier_enabled": "true",
 		}
 
@@ -307,7 +307,7 @@ func TestRaft_Backend_LargeKey(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -342,7 +342,7 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -376,7 +376,7 @@ func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -439,7 +439,7 @@ func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -484,7 +484,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -525,7 +525,7 @@ func TestRaft_Backend_ListPrefix(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -538,7 +538,7 @@ func TestRaft_TransactionalBackend(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -561,7 +561,7 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -588,7 +588,7 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		config := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		// Create 3 raft nodes
@@ -640,7 +640,7 @@ func TestRaft_Recovery(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		// Create 4 raft nodes
@@ -753,7 +753,7 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -783,7 +783,7 @@ func TestRaft_Removed(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, raftWALValue string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      raftWALValue,
+			"log_store":     raftWALValue,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -903,7 +903,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, dir := GetRaftWithConfig(t, true, true, conf)
@@ -987,7 +987,7 @@ func BenchmarkDB_Puts(b *testing.B) {
 	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(b, true, false, conf)
@@ -1024,7 +1024,7 @@ func BenchmarkDB_Snapshot(b *testing.B) {
 	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(b, true, false, conf)
