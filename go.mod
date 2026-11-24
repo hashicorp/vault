@@ -68,7 +68,7 @@ require (
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go-v2 v1.43.6
+	github.com/aws/aws-sdk-go-v2 v1.47.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.37
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.36
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.51
@@ -77,7 +77,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/iam v1.54.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.2
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.6
-	github.com/aws/smithy-go v1.27.8
+	github.com/aws/smithy-go v1.28.7
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/cockroach-go/v2 v2.4.0
@@ -165,7 +165,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1
 	github.com/hashicorp/vault-plugin-database-redis v0.9.1
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.1
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.11.1-0.20261101003828-0a472cd572f7
 	github.com/hashicorp/vault-plugin-database-snowflake v0.17.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.23.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.1
@@ -313,12 +313,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.37 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.6.4 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.28 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.37 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.37 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.8 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.8 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.38 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.35.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.53.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/elasticache v1.52.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/elasticache v1.64.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.30 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.12.7 // indirect
