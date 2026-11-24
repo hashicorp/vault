@@ -19,8 +19,8 @@ import (
 // shows examples for commands it supports, whether we ask for help or mistype a
 // command. Operator help should list key-status, rotate, and unseal and show an
 // example for each, but nothing for the operator subcommands we leave out. Help
-// for a subcommand we leave out should explain that it isn't available, and
-// help for unseal should be its real help.
+// for a subcommand we leave out should explain that it isn't available in the
+// binary we ran, and help for unseal should be its real help.
 func TestRunCustom_ClientHelpListings(t *testing.T) {
 	t.Parallel()
 
@@ -48,6 +48,7 @@ func TestRunCustom_ClientHelpListings(t *testing.T) {
 		// A typo under an unavailable group falls back to operator help.
 		{"operator_partial_help", "vault-client", []string{"operator", "raft", "snapshotx", "--help"}, "operator", true, ""},
 		{"operator_raft_help", "vault-client", []string{"operator", "raft", "--help"}, "unavailable", true, "operator raft"},
+		{"renamed_operator_raft_help", "vault", []string{"operator", "raft", "--help"}, "unavailable", true, "operator raft"},
 		{"operator_autopilot_help", "vault-client", []string{"operator", "raft", "autopilot", "--help"}, "unavailable", true, "operator raft autopilot"},
 		{"help_operator_raft", "vault-client", []string{"--help", "operator", "raft"}, "unavailable", true, "operator raft"},
 		{"operator_seal", "vault-client", []string{"operator", "seal"}, "unavailable", false, "operator seal"},
@@ -128,8 +129,8 @@ func TestRunCustom_ClientHelpListings(t *testing.T) {
 				require.Contains(t, out, "full Vault Server image", "operator help should point users to the full server image")
 				require.NotContains(t, out, "not available in vault-client", "operator help isn't an unavailable command")
 			case "unavailable":
-				require.Contains(t, out, fmt.Sprintf("%q is not available in vault-client", tc.shim),
-					"we should explain that %s isn't available", tc.shim)
+				require.Contains(t, out, fmt.Sprintf("%q is not available in %s v", tc.shim, tc.binaryName),
+					"we should explain that %s isn't available in the binary we ran", tc.shim)
 				require.Contains(t, out, "This command requires the full Vault Server image.",
 					"we should point users to the full server image")
 				require.NotContains(t, out, "Usage:", "we shouldn't fall back to help")
