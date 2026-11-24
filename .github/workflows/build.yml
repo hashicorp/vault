@@ -302,6 +302,7 @@ jobs:
           # See: https://docs.github.com/en/actions/reference/security/secure-use#good-practices-for-mitigating-script-injection-attacks
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # Check the deltas between all relevant go.mod files between the PR HEAD ref and the
           # Enterprise equivalent base ref. We disable 'strict-require' because enterprise and CE
@@ -329,6 +330,7 @@ jobs:
               --strict-replace=false \
               --strict-require=false \
               --workspace-modules \
+              --comment-pr "$PR_NUMBER" \
                 --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
       - if: always()
         name: Upload build metric to Instana
