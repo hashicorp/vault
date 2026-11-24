@@ -89,6 +89,7 @@ changed_files {
     ignore {
       file = [
         joinpath(".github", "workflows", "build-plugin-ent.yml"),
+        joinpath(".github", "workflows", "plugin-promote-ent.yml"),
         joinpath(".github", "workflows", "plugin-tag-and-release-ent.yml"),
       ]
     }
@@ -595,6 +596,7 @@ changed_files {
     ignore {
       file = [
         joinpath(".github", "workflows", "build-plugin-ent.yml"),
+        joinpath(".github", "workflows", "plugin-promote-ent.yml"),
         joinpath(".github", "workflows", "plugin-tag-and-release-ent.yml"),
       ]
     }
@@ -631,6 +633,7 @@ changed_files {
     match {
       file = [
         joinpath(".github", "workflows", "build-plugin-ent.yml"),
+        joinpath(".github", "workflows", "plugin-promote-ent.yml"),
         joinpath(".github", "workflows", "plugin-tag-and-release-ent.yml"),
         "Dockerfile-plugin-ent",
       ]
