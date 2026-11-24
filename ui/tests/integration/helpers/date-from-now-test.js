@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { subMinutes } from 'date-fns';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { dateFromNow } from 'core/helpers/date-from-now';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';

@@ -28,51 +28,23 @@
       >
         Sign Intermediate
       </ToolbarLink>
-      <BasicDropdown
-        @class="popup-menu"
-        @horizontalPosition="auto-right"
-        @verticalPosition="below"
-        @renderInPlace={{true}}
-        as |D|
-      >
-        <D.Trigger
-          data-test-popup-menu-trigger
-          class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-          @htmlTag="button"
-          data-test-issuer-download
+      <Hds::Dropdown as |D|>
+        <D.ToggleButton @text="Download" @color="secondary" data-test-popup-menu-trigger data-test-issuer-download />
+        <D.Interactive
+          @icon="download"
+          {{on "click" (fn this.downloadIssuer "pem" D.close)}}
+          data-test-issuer-download-type="pem"
         >
-          Download
-          <Chevron @direction="down" @isButton={{true}} />
-        </D.Trigger>
-        <D.Content @defaultClass="popup-menu-content">
-          <nav class="box menu" aria-label="snapshots actions">
-            <ul class="menu-list">
-              <li>
-                <DownloadButton
-                  class="link"
-                  @filename={{this.newRoot.issuer_id}}
-                  @extension="pem"
-                  @fetchData={{fn this.fetchDataForDownload "pem"}}
-                  data-test-issuer-download-type="pem"
-                  @text="PEM format"
-                  @hideIcon={{true}}
-                />
-              </li>
-              <li>
-                <DownloadButton
-                  class="link"
-                  @filename={{this.newRoot.issuer_id}}
-                  @extension="der"
-                  @fetchData={{fn this.fetchDataForDownload "der"}}
-                  data-test-issuer-download-type="der"
-                  @text="DER format"
-                  @hideIcon={{true}}
-                />
-              </li>
-            </ul>
-          </nav>
-        </D.Content>
-      </BasicDropdown>
+          PEM format
+        </D.Interactive>
+        <D.Interactive
+          @icon="download"
+          {{on "click" (fn this.downloadIssuer "der" D.close)}}
+          data-test-issuer-download-type="der"
+        >
+          DER format
+        </D.Interactive>
+      </Hds::Dropdown>
       <ToolbarLink @route="issuers.issuer.edit" @model={{this.newRoot.issuer_id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
@@ -103,20 +75,27 @@
     </Hds::Alert>
   </div>
 {{else}}
-  <div class="box is-bottomless is-marginless is-flex-start">
+  <Hds::Form::RadioCard::Group
+    @name="root-generation-options"
+    @alignment="left"
+    class="has-top-margin-xs has-bottom-margin-m"
+    as |G|
+  >
     {{#each this.generateOptions as |option|}}
-      <RadioCard
-        class="has-fixed-width"
-        @title={{option.label}}
-        @description={{option.description}}
-        @icon={{option.icon}}
+      <G.RadioCard
+        @checked={{eq this.displayedForm option.key}}
         @value={{option.key}}
-        @groupValue={{this.displayedForm}}
-        @onChange={{fn (mut this.displayedForm) option.key}}
+        @maxWidth="368px"
+        {{on "change" (fn (mut this.displayedForm) option.key)}}
         data-test-radio={{option.key}}
-      />
+        as |R|
+      >
+        <R.Icon @name={{option.icon}} />
+        <R.Label>{{option.label}}</R.Label>
+        <R.Description>{{option.description}}</R.Description>
+      </G.RadioCard>
     {{/each}}
-  </div>
+  </Hds::Form::RadioCard::Group>
 {{/if}}
 
 {{#if (eq this.displayedForm "use-old-settings")}}
@@ -163,7 +142,7 @@
         {{/if}}
       </div>
 
-      <hr class="has-background-gray-100" />
+      <Hds::Separator />
       <Hds::ButtonSet>
         <Hds::Button @text="Done" type="submit" data-test-submit />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />

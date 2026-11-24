@@ -1,0 +1,9 @@
+```release-note:security
+core: Update github.com/go-jose/go-jose to fix security vulnerability CVE-2026-34986 and GHSA-78h2-9frx-2jm8.
+```
+```release-note:security
+api/auth: Update github.com/go-jose/go-jose to fix security vulnerability CVE-2026-34986 and GHSA-78h2-9frx-2jm8.
+```
+```release-note:security
+sdk: Update github.com/go-jose/go-jose to fix security vulnerability CVE-2026-34986 and GHSA-78h2-9frx-2jm8.
+```

@@ -47,6 +47,14 @@ type Secret struct {
 	// MountType, if non-empty, provides some information about what kind
 	// of mount this secret came from.
 	MountType string `json:"mount_type,omitempty"`
+
+	// Age reports how long this response was held by an intermediate cache
+	// before reaching the client. It is zero for a response served directly by
+	// Vault. The lifetime a lease has left is its LeaseDuration less its Age.
+	//
+	// It is never serialized, because it describes the delivery of a response
+	// rather than the secret that response carries.
+	Age time.Duration `json:"-"`
 }
 
 // TokenID returns the standardized token ID (token) for the given secret.

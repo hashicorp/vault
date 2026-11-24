@@ -5,9 +5,11 @@ package logical
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestContextDisableReplicationStatusEndpointsValue(t *testing.T) {
@@ -140,4 +142,26 @@ func TestCreateContextOriginalRequestPath(t *testing.T) {
 	assert.NotNil(t, value)
 	assert.IsType(t, string(""), value)
 	assert.Equal(t, "", value.(string))
+}
+
+// TestRequest_ValidatingOAuthFields_JSONRoundTrip verifies that the two
+// ValidatingOAuthResourceServerConfigId and
+// ValidatingOAuthResourceServerConfigNamespaceId fields (added for
+// VAULT-48732 to let downstream handlers identify which OAuth Resource
+// Server Configuration Profile and namespace authenticated a request) are
+// correctly serialised to JSON and restored on unmarshal.
+func TestRequest_ValidatingOAuthFields_JSONRoundTrip(t *testing.T) {
+	req := &Request{
+		ValidatingOAuthResourceServerConfigId:          "config-id-abc",
+		ValidatingOAuthResourceServerConfigNamespaceId: "namespace-id-xyz",
+	}
+
+	b, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var decoded Request
+	require.NoError(t, json.Unmarshal(b, &decoded))
+
+	require.Equal(t, req.ValidatingOAuthResourceServerConfigId, decoded.ValidatingOAuthResourceServerConfigId)
+	require.Equal(t, req.ValidatingOAuthResourceServerConfigNamespaceId, decoded.ValidatingOAuthResourceServerConfigNamespaceId)
 }

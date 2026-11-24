@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -8,17 +8,21 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
+	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -125,34 +129,8 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	entry.NamespaceID = ns.ID
 	entry.namespace = ns
 
-	if entry.Type == "file" {
-		if prefix, ok := entry.Options[audit.OptionPrefix]; ok && prefix != "" && !c.allowAuditLogPrefixing {
-			return errors.New("audit prefixing is not enabled in configuration, audit prefixing may not be configured for file sinks")
-		}
-
-		if c.pluginDirectory != "" {
-			// Validate that the audit log file is not in the plugin directory
-			auditDir := filepath.Dir(entry.Options["file_path"])
-			auditDir, err = filepath.Abs(auditDir)
-			if err != nil {
-				return fmt.Errorf("error getting absolute path of audit dir for audit validation: %w", err)
-			}
-			pluginDir, err := filepath.Abs(c.pluginDirectory)
-			if err != nil {
-				return fmt.Errorf("error getting absolute path of plugin dir for audit validation: %w", err)
-			}
-			// Walk the audit path up checking that none of them are the plugin dir
-			for len(auditDir) > 1 || auditDir[0] != filepath.Separator {
-				rp, err := filepath.Rel(pluginDir, auditDir)
-				if err != nil {
-					return fmt.Errorf("error checking relative path for audit validation: %w", err)
-				}
-				if rp == "." {
-					return errors.New("audit file target may not be in the plugin directory")
-				}
-				auditDir = filepath.Dir(auditDir)
-			}
-		}
+	if err := c.validateAuditPrefix(entry.Options); err != nil {
+		return err
 	}
 
 	c.auditLock.Lock()
@@ -487,6 +465,13 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	var successCount int
 
 	for _, entry := range c.audit.Entries {
+		backendOptions := entry.Options
+		if err := c.validateAuditPrefix(entry.Options); err != nil {
+			c.logger.Warn("ignoring invalid prefix for persisted audit device", "path", entry.Path, "error", err)
+			backendOptions = maps.Clone(entry.Options)
+			delete(backendOptions, audit.OptionPrefix)
+		}
+
 		// Create a barrier view using the UUID
 		viewPath := entry.ViewPath()
 		view := NewBarrierView(c.barrier, viewPath)
@@ -500,7 +485,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		})
 
 		// Initialize the backend
-		backend, err := c.newAuditBackend(entry, view, entry.Options)
+		backend, err := c.newAuditBackend(entry, view, backendOptions)
 		if err != nil {
 			c.logger.Error("failed to create audit entry", "path", entry.Path, "error", err)
 			continue
@@ -522,10 +507,212 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	}
 
 	if len(c.audit.Entries) > 0 && successCount == 0 {
+		// All configured devices failed to initialize. Mark the node as unfit
+		// for promotion and unblock the heartbeat so it can advertise "non-voter".
+		c.auditConfigFailed.Store(true)
 		return errLoadAuditFailed
 	}
 
+	// When at least one device successfully initialized, clear flag.
+	c.auditConfigFailed.Store(false)
+
 	c.AddLogger(brokerLogger)
+	return nil
+}
+
+// validateAuditFileDestination rejects file audit devices that would write
+// inside the plugin directory.
+func (c *Core) validateAuditFileDestination(entry *MountEntry, options map[string]string) error {
+	if entry.Type != audit.TypeFile || c.pluginDirectory == "" {
+		return nil
+	}
+
+	auditPath := options["file_path"]
+	if auditPath == "" {
+		auditPath = options["path"]
+	}
+	// The file sink trims the path before opening it.
+	auditPath = strings.TrimSpace(auditPath)
+
+	// The file sink follows a symlinked audit file, so validate its target.
+	if info, err := os.Lstat(auditPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		auditPath, err = filepath.EvalSymlinks(auditPath)
+		if err != nil {
+			return fmt.Errorf("error resolving audit file path for audit validation: %w", err)
+		}
+	}
+
+	auditDir := filepath.Dir(auditPath)
+	auditDir, err := filepath.Abs(auditDir)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path of audit dir for audit validation: %w", err)
+	}
+	pluginDir, err := filepath.Abs(c.pluginDirectory)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path of plugin dir for audit validation: %w", err)
+	}
+	// Walk the audit path up checking that none of them are the plugin dir
+	for {
+		rp, err := filepath.Rel(pluginDir, auditDir)
+		if err != nil {
+			return fmt.Errorf("error checking relative path for audit validation: %w", err)
+		}
+		if rp == "." {
+			return errors.New("audit file target may not be in the plugin directory")
+		}
+		parent := filepath.Dir(auditDir)
+		if parent == auditDir { // reached filesystem root (works on all OSes)
+			break
+		}
+		auditDir = parent
+	}
+
+	pluginInfo, err := os.Stat(pluginDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("error checking plugin dir for audit validation: %w", err)
+	}
+	// Stat each unresolved parent so symlinks, "..", and case-insensitive names
+	// resolve the same way they will when the audit file is opened.
+	parents := []string{filepath.Dir(auditPath)}
+	for i := 1; i < len(auditPath); i++ {
+		if os.IsPathSeparator(auditPath[i]) {
+			parents = append(parents, auditPath[:i])
+		}
+	}
+	for _, parent := range parents {
+		if info, err := os.Stat(parent); err == nil && os.SameFile(pluginInfo, info) {
+			return errors.New("audit file target may not be in the plugin directory")
+		}
+	}
+	return nil
+}
+
+// newAuditBackendWithFormatter creates a backend with the supplied formatter
+// for preflight validation.
+func (c *Core) newAuditBackendWithFormatter(entry *MountEntry, view logical.Storage, conf map[string]string, formatter audit.HeaderFormatter) (audit.Backend, error) {
+	if audit.HasInvalidOptions(entry.Options) {
+		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
+	}
+	if err := c.validateAuditFileDestination(entry, conf); err != nil {
+		return nil, err
+	}
+	f, ok := c.auditBackends[entry.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown backend type: %q: %w", entry.Type, audit.ErrInvalidParameter)
+	}
+	saltConfig := &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+		Location: salt.DefaultLocation,
+	}
+	be, err := f(&audit.BackendConfig{
+		SaltView:   view,
+		SaltConfig: saltConfig,
+		Config:     conf,
+		MountPath:  entry.Path,
+		Logger:     c.baseLogger.Named("audit"),
+	}, formatter)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
+	}
+	if be == nil {
+		return nil, fmt.Errorf("nil backend returned from %q factory function: %w", entry.Type, audit.ErrInternal)
+	}
+	return be, nil
+}
+
+// preflightHeaderFormatter is used to validate file audit backends before they
+// are fully initialized.
+type preflightHeaderFormatter struct{}
+
+func (preflightHeaderFormatter) ApplyConfig(_ context.Context, _ map[string][]string, _ audit.Salter) (map[string][]string, error) {
+	return map[string][]string{}, nil
+}
+
+// validateAuditDevices checks configured file audit devices before setupAudits.
+func (c *Core) validateAuditDevices(ctx context.Context) error {
+	var entries []*MountEntry
+	for _, storagePath := range []string{coreAuditConfigPath, coreLocalAuditConfigPath} {
+		raw, err := c.barrier.Get(ctx, storagePath)
+		if err != nil {
+			return err
+		}
+		if raw == nil {
+			continue
+		}
+		tbl := &MountTable{}
+		if err := jsonutil.DecodeJSON(raw.Value, tbl); err != nil {
+			return err
+		}
+		entries = append(entries, tbl.Entries...)
+	}
+
+	if len(entries) == 0 {
+		c.auditConfigFailed.Store(false)
+		return nil
+	}
+
+	var fileBackendCount int
+	var successCount int
+
+	// Make a preflight check for each file audit backend.
+	formatter := &preflightHeaderFormatter{}
+	for _, entry := range entries {
+		if entry.Type != audit.TypeFile {
+			continue
+		}
+		fileBackendCount++
+
+		// Validate the file audit device by attempting to create a backend and
+		// closing it immediately.
+		view := NewBarrierView(c.barrier, entry.ViewPath())
+		backend, err := c.newAuditBackendWithFormatter(entry, view, entry.Options, formatter)
+		if err != nil {
+			c.logger.Error("audit device not accessible at startup", "mount", entry.Path, "type", entry.Type, "error", err)
+			continue
+		}
+
+		// Backend created successfully; close it to validate the device.
+		closer, ok := backend.(io.Closer)
+		if !ok {
+			c.logger.Error("file audit backend does not support cleanup after startup validation", "mount", entry.Path)
+			continue
+		}
+		if err := closer.Close(); err != nil {
+			c.logger.Error("failed to close file audit backend after startup validation", "mount", entry.Path, "error", err)
+			continue
+		}
+		successCount++
+	}
+
+	// If there are file audit backends configured but none of them could be
+	// successfully validated.
+	if fileBackendCount > 0 && successCount == 0 {
+		c.auditConfigFailed.Store(true)
+		return errLoadAuditFailed
+	}
+
+	c.auditConfigFailed.Store(false)
+	return nil
+}
+
+func (c *Core) validateAuditPrefix(options map[string]string) error {
+	prefix, ok := options[audit.OptionPrefix]
+	if !ok || prefix == "" {
+		return nil
+	}
+	if !c.allowAuditLogPrefixing {
+		return errors.New("audit prefixing is not enabled in configuration")
+	}
+	if strings.IndexFunc(prefix, func(r rune) bool {
+		// make sure prefix does not include a control character, or line/paragraph separators
+		return unicode.IsControl(r) || unicode.In(r, unicode.Zl, unicode.Zp)
+	}) >= 0 {
+		return errors.New("audit prefix may not contain control characters or line separators")
+	}
 	return nil
 }
 
@@ -539,13 +726,17 @@ func (c *Core) teardownAudits() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		for _, entry := range c.audit.Entries {
-			c.removeAuditReloadFunc(entry)
-			removeAuditPathChecker(c, entry)
-			err := c.auditBroker.Deregister(ctx, entry.Path)
-			if err != nil {
-				c.logger.Error("unable to deregister audit during teardown", "path", entry.Path, "type", entry.Type, "error", err)
+		if c.auditBroker != nil {
+			for _, entry := range c.audit.Entries {
+				c.removeAuditReloadFunc(entry)
+				removeAuditPathChecker(c, entry)
+				err := c.auditBroker.Deregister(ctx, entry.Path)
+				if err != nil {
+					c.logger.Error("unable to deregister audit during teardown", "path", entry.Path, "type", entry.Type, "error", err)
+				}
 			}
+		} else {
+			c.logger.Error("audit broker not initialized during teardown")
 		}
 	}
 
@@ -577,6 +768,9 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
 	if audit.HasInvalidOptions(entry.Options) {
 		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
+	}
+	if err := c.validateAuditFileDestination(entry, conf); err != nil {
+		return nil, err
 	}
 
 	f, ok := c.auditBackends[entry.Type]

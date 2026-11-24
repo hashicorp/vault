@@ -3,8 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+<PkiPageHeader @backend={{this.model.engine}} @breadcrumbs={{this.breadcrumbs}} @configRoute="configuration.create" />
+
 <Page::PkiConfigureCreate
-  @breadcrumbs={{this.breadcrumbs}}
   @capabilities={{this.model.capabilities}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
 />

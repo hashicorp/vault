@@ -1,0 +1,3 @@
+```release-note:feature
+**PKI PKCS#12 and JKS Support**: Adds support for PKCS#12 (PFX) and Java keytool (JKS) certificate bundles to relevant PKI endpoints. Bundles are returned as base64-encoded, password-protected files.
+```

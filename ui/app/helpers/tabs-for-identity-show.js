@@ -17,6 +17,7 @@ export const TABS = {
 
 export function tabsForIdentityShow([modelType, groupType]) {
   let key = modelType;
+
   if (groupType) {
     key = `${key}-${groupType}`;
   }

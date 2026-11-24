@@ -4,12 +4,13 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | pki page header test', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,16 +18,11 @@ module('Integration | Component | pki page header test', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'pki_f3400dee',
-        path: 'pki-test/',
-        type: 'pki',
-      },
+    this.model = new SecretsEngineResource({
+      accessor: 'pki_f3400dee',
+      path: 'pki-test/',
+      type: 'pki',
     });
-    this.model = this.store.peekRecord('secret-engine', 'pki-test');
     this.mount = this.model.path.slice(0, -1);
   });
 
@@ -50,8 +46,5 @@ module('Integration | Component | pki page header test', function (hooks) {
       .dom('[data-test-secret-list-tab="Certificates"]')
       .hasText('Certificates', 'Certificates tab renders');
     assert.dom('[data-test-secret-list-tab="Tidy"]').hasText('Tidy', 'Tidy tab renders');
-    assert
-      .dom('[data-test-secret-list-tab="Configuration"]')
-      .hasText('Configuration', 'Configuration tab renders');
   });
 });

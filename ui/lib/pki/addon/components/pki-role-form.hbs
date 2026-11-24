@@ -21,28 +21,34 @@
                   @helpText={{(if this.showHelpText field.options.helpText)}}
                   @subText={{field.options.subText}}
                 />
-                <Toggle
-                  @name={{concat field.name "-toggle"}}
-                  @checked={{this.showDefaultIssuer}}
-                  @onChange={{this.toggleShowDefaultIssuer}}
+                <Hds::Form::Toggle::Field
+                  checked={{this.showDefaultIssuer}}
+                  {{on "change" this.toggleShowDefaultIssuer}}
+                  data-test-toggle-input={{concat field.name "-toggle"}}
+                  as |F|
                 >
-                  <span class="has-text-grey">Use default issuer</span>
-                </Toggle>
+                  <F.Label data-test-toggle-label={{concat field.name "-toggle"}}>Use default issuer</F.Label>
+                </Hds::Form::Toggle::Field>
               </div>
               {{#unless this.showDefaultIssuer}}
                 <div class="has-top-margin-xs has-bottom-margin-l">
-                  <div class="select is-fullwidth">
-                    <Select
-                      @name={{field.name}}
-                      @options={{this.issuers}}
-                      @valueAttribute={{"issuerDisplayName"}}
-                      @labelAttribute={{"issuerDisplayName"}}
-                      @isFullwidth={{true}}
-                      @selectedValue={{@form.data.issuer_ref}}
-                      @onChange={{action (mut @form.data.issuer_ref)}}
-                      aria-labelledby={{field.name}}
-                    />
-                  </div>
+                  <Hds::Form::Select::Base
+                    @width="100%"
+                    id="select-{{field.name}}"
+                    name={{field.name}}
+                    {{on "change" (pipe (pick "target.value") (fn (mut @form.data.issuer_ref)))}}
+                    data-test-select={{field.name}}
+                    as |S|
+                  >
+                    <S.Options>
+                      {{#each this.issuers as |issuer|}}
+                        <option
+                          value={{issuer.issuerDisplayName}}
+                          selected={{eq @form.data.issuer_ref issuer.issuerDisplayName}}
+                        >{{issuer.issuerDisplayName}}</option>
+                      {{/each}}
+                    </S.Options>
+                  </Hds::Form::Select::Base>
                 </div>
               {{/unless}}
             {{else if (this.showField field.name)}}
@@ -104,9 +110,10 @@
                     <Icon @name="info" />
                     {{toggleGroup.footer.text}}
                     {{#if toggleGroup.footer.docLink}}
-                      <DocLink @path={{toggleGroup.footer.docLink}}>
-                        {{toggleGroup.footer.docText}}
-                      </DocLink>
+                      <Hds::Link::Inline
+                        @href={{doc-link toggleGroup.footer.docLink}}
+                        @isHrefExternal={{true}}
+                      >{{toggleGroup.footer.docText}}</Hds::Link::Inline>
                     {{/if}}
                   </p>
                 {{/if}}

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -207,8 +207,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Config(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -472,8 +471,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 }
 
 func TestBackend_StaticRole_ReadCreds(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -652,8 +650,7 @@ func TestBackend_StaticRole_ReadCreds(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Updates(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -951,8 +948,7 @@ func TestBackend_StaticRole_Updates_RotationSchedule(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Role_name_check(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}

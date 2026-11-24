@@ -93,10 +93,13 @@ vault secrets enable "transit"
 if vault version | grep -q "+ent"; then
     vault secrets enable "keymgmt"
     vault secrets enable "kmip"
+    vault secrets enable "pki-external-ca"
     vault secrets enable "transform"
+    vault secrets enable "spiffe"
     vault auth enable "saml"
     vault auth enable "scep"
     vault auth enable "spiffe"
+    vault auth enable "tpm"
 fi
 
 # Output OpenAPI, optionally formatted

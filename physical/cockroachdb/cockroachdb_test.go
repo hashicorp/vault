@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cockroachdb
@@ -179,6 +179,9 @@ func TestValidateDBTable(t *testing.T) {
 		"left paren":                    {"ab(def", true},
 		"right paren":                   {"ab)def", true},
 		"dash":                          {"ab-def", true},
+		"space":                         {"ab def", true},
+		"semicolon":                     {"ab;def", true},
+		"slash":                         {"ab/def", true},
 		"digit":                         {"a123ef", false},
 		"dollar end":                    {"abcde$", false},
 		"dollar middle":                 {"ab$def", false},
@@ -194,7 +197,15 @@ func TestValidateDBTable(t *testing.T) {
 		"double quote suffix":           {`abcde"`, true},
 		"underscore with all runes":     {"_bcd123__a__$", false},
 		"all runes":                     {"abcd123__a__$", false},
+		"mixed case":                    {"AbCdef", false},
+		"sql keyword":                   {"select", true},
+		"sql keyword mixed case":        {"Select", true},
+		"qualified, bad table only":     {"vault.kvstore;drop", true},
+		"qualified, bad database only":  {"kvstore;drop.vault", true},
+		"qualified, keyword table":      {"vault.select", true},
+		"qualified, valid":              {"vault.kvstore", false},
 		"default table name":            {defaultTableName, false},
+		"default HA table name":         {defaultHATableName, false},
 	}
 
 	for name, test := range tests {

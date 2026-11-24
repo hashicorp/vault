@@ -1,0 +1,3 @@
+```release-note:feature
+**Secrets Sync UI**: Added Workload Identity Federation (WIF) support in the UI for AWS, Azure, and GCP sync destinations
+```

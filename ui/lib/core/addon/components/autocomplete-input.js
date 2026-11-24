@@ -1,10 +1,12 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { guidFor } from '@ember/object/internals';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module AutocompleteInput
@@ -23,33 +25,41 @@ import { action } from '@ember/object';
  */
 
 export default class AutocompleteInputComponent extends Component {
-  dropdownAPI;
+  @tracked showOptions = false;
+  rootElement;
   inputElement;
+  inputId = `autocomplete-input-${guidFor(this)}`;
 
   @action
   setElement(element) {
+    this.rootElement = element;
     this.inputElement = element.querySelector('.input');
   }
-  @action
-  setDropdownAPI(dropdownAPI) {
-    this.dropdownAPI = dropdownAPI;
-  }
+
   @action
   onInput(event) {
     const { options = [], optionsTrigger } = this.args;
     if (optionsTrigger && options.length) {
-      const method = event.data === optionsTrigger ? 'open' : 'close';
-      this.dropdownAPI.actions[method]();
+      this.showOptions = event.data === optionsTrigger;
     }
     this.args.onChange(event.target.value);
   }
+
+  @action
+  onFocusOut(event) {
+    // Enable close on outside click
+    if (!this.rootElement?.contains(event.relatedTarget)) {
+      this.showOptions = false;
+    }
+  }
+
   @action
   selectOption(value) {
     // if trigger character is at start of value it needs to be trimmed
     const appendValue = value.startsWith(this.args.optionsTrigger) ? value.slice(1) : value;
     const newValue = this.args.value + appendValue;
     this.args.onChange(newValue);
-    this.dropdownAPI.actions.close();
+    this.showOptions = false;
     this.inputElement.focus();
   }
 }

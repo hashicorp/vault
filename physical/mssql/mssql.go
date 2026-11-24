@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package mssql
@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -40,6 +40,12 @@ func isInvalidIdentifier(name string) bool {
 		return true
 	}
 	return false
+}
+
+// Quote identifiers independently of validation to keep SQL construction safe
+// if the allowed character set changes.
+func quoteIdentifier(name string) string {
+	return "[" + strings.ReplaceAll(name, "]", "]]") + "]"
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
@@ -140,21 +146,23 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	db.SetMaxOpenConns(maxParInt)
 
-	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+database, database); err != nil {
+	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+quoteIdentifier(database), database); err != nil {
 		return nil, fmt.Errorf("failed to create mssql database: %w", err)
 	}
 
-	dbTable := database + "." + schema + "." + table
-	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME=? AND TABLE_SCHEMA=?) CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
+	dbTable := quoteIdentifier(database) + "." + quoteIdentifier(schema) + "." + quoteIdentifier(table)
+	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + quoteIdentifier(database) + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME=? AND TABLE_SCHEMA=?) CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
 
 		var num int
-		err = db.QueryRow("SELECT 1 FROM "+database+".sys.schemas WHERE name = ?", schema).Scan(&num)
+		err = db.QueryRow("SELECT 1 FROM "+quoteIdentifier(database)+".sys.schemas WHERE name = ?", schema).Scan(&num)
 
 		switch {
 		case err == sql.ErrNoRows:
-			if _, err := db.Exec("USE " + database + "; EXEC ('CREATE SCHEMA " + schema + "')"); err != nil {
+			// The legacy "mssql" driver counts only ordinal ? placeholders; with @p1,
+			// database/sql rejects the argument ("expected 0 arguments, got 1").
+			if _, err := db.Exec("USE "+quoteIdentifier(database)+"; EXEC (?)", "CREATE SCHEMA "+quoteIdentifier(schema)); err != nil {
 				return nil, fmt.Errorf("failed to create mssql schema: %w", err)
 			}
 

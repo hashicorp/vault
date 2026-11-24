@@ -1,28 +1,30 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { hash, resolve } from 'rsvp';
 import Base from '../../replication-base';
 
-export default Base.extend({
-  modelPath: 'model.config',
-
-  model(params) {
+/** Treats an absent filter as the unfiltered state, while surfacing other read errors. */
+export default class ConfigShowRoute extends Base {
+  async model(params) {
     const id = params.secondary_id;
-    return hash({
+    let config;
+    try {
+      const { data } = await this.api.sys.systemReadReplicationPerformancePrimaryPathsFilterId(id);
+      config = { ...data, id };
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status !== 404) {
+        throw error;
+      }
+      config = { id };
+    }
+    return {
       cluster: this.modelFor('application'),
-      config: this.store.findRecord('path-filter-config', id).catch((e) => {
-        if (e.httpStatus === 404) {
-          // return an empty obj to let them nav to create
-          return resolve({ id });
-        } else {
-          throw e;
-        }
-      }),
-    });
-  },
+      config,
+    };
+  }
   redirect(model) {
     const cluster = model.cluster;
     const replicationMode = this.paramsFor('mode').replication_mode;
@@ -33,5 +35,5 @@ export default Base.extend({
     ) {
       return this.router.transitionTo('vault.cluster.replication.mode', cluster.name, replicationMode);
     }
-  },
-});
+  }
+}

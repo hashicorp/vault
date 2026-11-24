@@ -11,33 +11,43 @@ on:
   pull_request:
     branches:
       - 'main'
-      - '!oss-merge-main*'
+      - 'release/**'
+      - 'ce/**'
+  schedule:
+    - cron: '05 02 * * *'
+      timezone: "America/New_York"
 
 jobs:
   scan:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ondemand","os=linux","type=c6a.4xlarge"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64","xlarge"]') }}
     # The first check ensures this doesn't run on community-contributed PRs, who won't have the
     # permissions to run this job.
     if: |
       ! github.event.pull_request.head.repo.fork &&
       github.actor != 'dependabot[bot]' &&
       github.actor != 'hc-github-team-secure-vault-core'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    env:
+      GOWORK: "off"
     steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Set up Go
-      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
-        cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
-        go-version-file: .go-version
+        cache: "false" # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
+        go-version: 'stable'
 
     - name: Set up Python
-      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: 3.x
 
     - name: Set up Security Scanner
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: hashicorp/security-scanner
         token: ${{ secrets.PRODSEC_SCANNER_READ_ONLY }}
@@ -56,12 +66,7 @@ jobs:
         repository: "$PWD"
         plugins: "codeql semgrep"
 
-    - name: Read SARIF
-      shell: bash
-      run: |
-        cat ${{ steps.scan.outputs.sarif-file-path }}
-
-    - name: Upload SARIF 
+    - name: Upload SARIF
       uses: github/codeql-action/upload-sarif@3096afedf9873361b2b2f65e1445b13272c83eb8  # TSCCR: could not find entry for github/codeql-action/upload-sarif
       with:
         sarif_file: ${{ steps.scan.outputs.sarif-file-path }}

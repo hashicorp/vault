@@ -13,6 +13,7 @@
     "@hashicorp/design-system-components": "*",
     "ember-auto-import": "*",
     "ember-cli-typescript": "*",
+    "@codemirror/view": "*",
     "@types/ember": "latest",
     "@types/ember__array": "latest",
     "@types/ember__component": "latest",

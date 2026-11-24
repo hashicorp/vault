@@ -32,6 +32,7 @@ type policyVerifyArgs struct {
 	input      []byte
 	options    keysutil.SigningOptions
 	sig        string
+	keyVersion int
 }
 
 type commonSignVerifyApiArgs struct {
@@ -398,17 +399,15 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if p == nil {
 		return logical.ErrorResponse("signing key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
-	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs); err != nil {
+	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs, apiArgs.keyVersion); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []batchRequestSignItem
+	successfulRequests := 0
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
@@ -458,6 +457,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			response[i].Signature = sig.Signature
 			response[i].PublicKey = sig.PublicKey
 			response[i].KeyVersion = keyVersion
+			successfulRequests++
 		}
 	}
 
@@ -490,6 +490,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit sign request count", "error", err.Error())
+	}
+
 	return resp, nil
 }
 
@@ -504,11 +508,12 @@ func (b *backend) getPolicySignArgs(ctx context.Context, p *keysutil.Policy, arg
 		return policySignArgs{}, fmt.Errorf("unable to decode input: %s", err)
 	}
 
-	if p.Type.HashSignatureInput() && !args.prehashed {
-		hf := keysutil.HashFuncMap[args.hashAlgorithm]()
+	if p.KeyVersionType(args.keyVersion).HashSignatureInput() && !args.prehashed {
+		hf := keysutil.HashFuncMap[args.hashAlgorithm]
 		if hf != nil {
-			hf.Write(input)
-			input = hf.Sum(nil)
+			h := hf()
+			h.Write(input)
+			input = h.Sum(nil)
 		}
 	}
 
@@ -535,13 +540,13 @@ func (b *backend) getPolicySignArgs(ctx context.Context, p *keysutil.Policy, arg
 	return psa, nil
 }
 
-func validateCommonSignVerifyApiArgs(p *keysutil.Policy, apiArgs commonSignVerifyApiArgs) error {
+func validateCommonSignVerifyApiArgs(p *keysutil.Policy, apiArgs commonSignVerifyApiArgs, ver int) error {
 	if !p.Type.SigningSupported() {
 		return fmt.Errorf("key type %v does not support signing", p.Type)
 	}
 
 	// Perform Vault version specific checks (CE vs ENT)
-	return validateSignApiArgsVersionSpecific(p, apiArgs)
+	return validateSignApiArgsVersionSpecific(p, apiArgs, ver)
 }
 
 func getSignApiArgs(d *framework.FieldData) (signApiArgs, error) {
@@ -683,17 +688,11 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		return logical.ErrorResponse("signature verification key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
-
-	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
 
 	response := make([]batchResponseVerifyItem, len(batchInputItems))
 
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		pva, err := b.getPolicyVerifyArgs(ctx, p, apiArgs, item)
 		if err != nil {
@@ -716,6 +715,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 		} else {
 			response[i].Valid = valid
+			successfulRequests++
 		}
 	}
 
@@ -741,6 +741,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		resp.Data = map[string]interface{}{
 			"valid": response[0].Valid,
 		}
+	}
+
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit sign verify request count", "error", err.Error())
 	}
 
 	return resp, nil
@@ -810,11 +814,21 @@ func (b *backend) getPolicyVerifyArgs(ctx context.Context, p *keysutil.Policy, a
 		return policyVerifyArgs{}, fmt.Errorf("failed to parse signature as a string: %s", err)
 	}
 
-	if p.Type.HashSignatureInput() && !apiArgs.prehashed {
-		hf := keysutil.HashFuncMap[apiArgs.hashAlgorithm]()
+	sigVer, err := getVersion(sig)
+	if err != nil {
+		return policyVerifyArgs{}, fmt.Errorf("failed to parse version from signature: %s", err)
+	}
+
+	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs, sigVer); err != nil {
+		return policyVerifyArgs{}, err
+	}
+
+	if p.KeyVersionType(sigVer).HashSignatureInput() && !apiArgs.prehashed {
+		hf := keysutil.HashFuncMap[apiArgs.hashAlgorithm]
 		if hf != nil {
-			hf.Write(input)
-			input = hf.Sum(nil)
+			h := hf()
+			h.Write(input)
+			input = h.Sum(nil)
 		}
 	}
 
@@ -833,6 +847,7 @@ func (b *backend) getPolicyVerifyArgs(ctx context.Context, p *keysutil.Policy, a
 			SaltLength:    apiArgs.saltLength,
 			SigAlgorithm:  apiArgs.sigAlgorithm,
 		},
+		keyVersion: sigVer,
 	}
 
 	if err := b.populateEntPolicyVerifyOptions(ctx, p, apiArgs, item, &vsa); err != nil {

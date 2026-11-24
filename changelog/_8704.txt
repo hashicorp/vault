@@ -1,0 +1,6 @@
+```release-note:bug
+audit/file: The logic preventing setting of executable bits on audit devices
+was enforced at unseal instead of just at new audit device creation, causing
+an error at unseal if an existing audit device had exec permissions.  The
+logic now warns and clears exec bits to prevent unseal errors.
+```

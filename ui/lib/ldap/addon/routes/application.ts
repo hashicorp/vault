@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -22,6 +22,7 @@ export default class LdapApplicationRoute extends Route {
     let config: LdapConfigureRequest | undefined;
     let promptConfig = false;
     let configError: unknown;
+    let isMountTypeUnknown = false;
     // check if engine is configured
     // child routes will handle prompting for configuration if needed
     try {
@@ -36,12 +37,17 @@ export default class LdapApplicationRoute extends Route {
         // ignore if the user does not have permission or other failures so as to not block the other operations
         // this error is thrown in the configuration route so we can display the error in the view
         configError = response;
+        // Without permission to read the config, the UI can't tell whether the mount is self-managed.
+        isMountTypeUnknown = status === 403;
       }
     }
     return {
       secretsEngine,
       config,
       configError,
+      isMountTypeUnknown,
+      // known only when the config could be read
+      isSelfManaged: config?.self_managed === true,
       promptConfig,
     };
   }

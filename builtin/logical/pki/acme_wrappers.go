@@ -30,6 +30,13 @@ type acmeContext struct {
 	eabPolicy     EabPolicy
 	ciepsPolicy   string
 	runtimeOpts   acmeWrapperOpts
+	// rejectUnverifiedSANs is true only when the directory policy is "sign-verbatim"
+	// (the default). In that case URI SANs, email SANs, and Other SANs in the CSR are
+	// rejected outright because ACME challenges never verify those SAN types and there
+	// is no role to constrain them. It is false for named roles (the role's own
+	// AllowedURISANs / AllowedOtherSANs constraints apply instead) and for
+	// "sign-verbatim-unsafe" (the operator has explicitly opted in).
+	rejectUnverifiedSANs bool
 }
 
 func (c acmeContext) getAcmeState() *acmeState {
@@ -135,7 +142,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 			return nil, err
 		}
 
-		role, issuer, err := getAcmeRoleAndIssuer(sc, data, config)
+		role, issuer, rejectUnverifiedSANs, err := getAcmeRoleAndIssuer(sc, data, config)
 		if err != nil {
 			return nil, err
 		}
@@ -161,15 +168,16 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 		}
 
 		acmeCtx := &acmeContext{
-			IssuerRoleContext: issuing.NewIssuerRoleContext(ctx, issuer, role),
-			baseUrl:           acmeBaseUrl,
-			clusterUrl:        clusterBase,
-			sc:                sc,
-			acmeState:         b.acmeState,
-			acmeDirectory:     acmeDirectory,
-			eabPolicy:         eabPolicy,
-			ciepsPolicy:       ciepsPolicy,
-			runtimeOpts:       runtimeOpts,
+			IssuerRoleContext:    issuing.NewIssuerRoleContext(ctx, issuer, role),
+			baseUrl:              acmeBaseUrl,
+			clusterUrl:           clusterBase,
+			sc:                   sc,
+			acmeState:            b.acmeState,
+			acmeDirectory:        acmeDirectory,
+			eabPolicy:            eabPolicy,
+			ciepsPolicy:          ciepsPolicy,
+			runtimeOpts:          runtimeOpts,
+			rejectUnverifiedSANs: rejectUnverifiedSANs,
 		}
 
 		return op(acmeCtx, r, data)
@@ -359,36 +367,53 @@ func getAcmeDirectory(r *logical.Request) (string, error) {
 	return strings.TrimLeft(acmePath[0:lastIndex]+"/acme/", "/"), nil
 }
 
-func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*issuing.RoleEntry, *issuing.IssuerEntry, error) {
+// getAcmeRoleAndIssuer resolves the role and issuer for the given ACME request
+// and returns them along with rejectUnverifiedSANs, which is true only for the
+// "sign-verbatim" policy. In that case the CSR must not contain URI, email, or
+// Other SANs because ACME challenges never verify them and there is no role to
+// constrain them. For named roles the role's own AllowedURISANs /
+// AllowedOtherSANs constraints apply; for "sign-verbatim-unsafe" the operator
+// has explicitly opted in, so rejection is skipped in both cases.
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*issuing.RoleEntry, *issuing.IssuerEntry, bool, error) {
 	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
 	requestedRole := getRequestedAcmeRoleFromPath(data)
 	issuerToLoad := requestedIssuer
 
 	var role *issuing.RoleEntry
 	var err error
+	rejectUnverifiedSANs := false
 
 	if len(requestedRole) == 0 { // Default Directory
 		policyType, extraInfo, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 		switch policyType {
 		case Forbid:
-			return nil, nil, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
-		case SignVerbatim, ExternalPolicy:
+			return nil, nil, false, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
+		case SignVerbatim:
+			role = issuing.SignVerbatimRoleWithOpts(
+				issuing.WithIssuer(requestedIssuer),
+				issuing.WithNoStore(false))
+			rejectUnverifiedSANs = true
+		case ExternalPolicy:
+			role = issuing.SignVerbatimRoleWithOpts(
+				issuing.WithIssuer(requestedIssuer),
+				issuing.WithNoStore(false))
+		case SignVerbatimUnsafe:
 			role = issuing.SignVerbatimRoleWithOpts(
 				issuing.WithIssuer(requestedIssuer),
 				issuing.WithNoStore(false))
 		case Role:
 			role, err = getAndValidateAcmeRole(sc, extraInfo)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, false, err
 			}
 		}
 	} else { // Requested Role
 		role, err = getAndValidateAcmeRole(sc, requestedRole)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 
 		// Check the Requested Role is Allowed
@@ -404,7 +429,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 			}
 
 			if !foundRole {
-				return nil, nil, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
+				return nil, nil, false, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
 			}
 		}
 	}
@@ -417,7 +442,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 
 	issuer, err := getAcmeIssuer(sc, issuerToLoad)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 
 	allowAnyIssuer := len(config.AllowedIssuers) == 1 && config.AllowedIssuers[0] == "*"
@@ -426,7 +451,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 		for index, name := range config.AllowedIssuers {
 			candidateId, err := sc.resolveIssuerReference(name)
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to resolve reference for allowed_issuer entry %d: %w", index, err)
+				return nil, nil, false, fmt.Errorf("failed to resolve reference for allowed_issuer entry %d: %w", index, err)
 			}
 
 			if candidateId == issuer.ID {
@@ -436,7 +461,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 		}
 
 		if !foundIssuer {
-			return nil, nil, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
+			return nil, nil, false, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
 		}
 	}
 
@@ -451,7 +476,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 		role.EmailProtectionFlag = false
 	}
 
-	return role, issuer, nil
+	return role, issuer, rejectUnverifiedSANs, nil
 }
 
 func getAndValidateAcmeRole(sc *storageContext, requestedRole string) (*issuing.RoleEntry, error) {

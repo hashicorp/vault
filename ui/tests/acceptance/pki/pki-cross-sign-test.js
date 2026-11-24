@@ -51,7 +51,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     // Sinon spy for clipboard
     const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
     // configure parent and intermediate mounts to make them cross-signable
-    await visit(`/vault/secrets-engines/${this.intMountPath}/pki/configuration/create`);
+    await visit(`/vault/secrets-engines/${this.intMountPath}/pki/configuration`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('common_name'), 'Short-Lived Int R1');
@@ -64,7 +64,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await click('[data-test-pki-sign-intermediate-save]');
     await click(PKI_CROSS_SIGN.copyButton('CA Chain'));
     const pemBundle = clipboardSpy.secondCall.args[0].replace(/,/, '\n');
-    await visit(`vault/secrets-engines/${this.intMountPath}/pki/configuration/create`);
+    await visit(`vault/secrets-engines/${this.intMountPath}/pki/configuration`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
     await click(GENERAL.textToggle);
     await fillIn(GENERAL.maskedInput, pemBundle);

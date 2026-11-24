@@ -12,6 +12,8 @@ import type { NormalizedAuthData, NormalizeAuthResponseKeys } from 'vault/auth/f
 import type { AuthResponseAuthKey, AuthResponseDataKey } from 'vault/auth/methods';
 
 interface AuthData {
+  authMethodType: string;
+  authMountPath: string;
   userRootNamespace: string;
   token: string;
   policies: string[];

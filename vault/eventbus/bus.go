@@ -8,20 +8,22 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -33,12 +35,28 @@ const (
 	// based on what each subscriber is interested in.
 	eventTypeAll            = "*"
 	defaultTimeout          = 60 * time.Second
+	defaultSubscriberBuffer = 16
+	maxSubscriberBuffer     = 1000
 	eventMetadataVaultIndex = "vault_index"
+
+	// EnvVaultEventNotificationsBoundedQueueSize is the environment variable to configure bounded event queues.
+	// Set to a positive integer to enable buffered subscriber channels of that size.
+	// Slow consumers will be dropped when their queue is full instead of blocking event processing.
+	// Set to 0 or leave unset for unbuffered channels (default, backward compatible).
+	// Values above 1000 will be capped at 1000 to prevent excessive memory usage.
+	//
+	// Recommended starting value: 16
+	// This provides enough buffer to handle reasonable event bursts while keeping memory usage low
+	// (~1.6-3KB per subscriber). Increase this value (e.g., 64-128) if you have high event rates
+	// and subscribers that need more time to process events. Decrease it (e.g., 8) if you want
+	// faster detection of slow subscribers or have memory constraints.
+	EnvVaultEventNotificationsBoundedQueueSize = "VAULT_EVENT_NOTIFICATIONS_BOUNDED_QUEUE_SIZE"
 )
 
 var (
-	ErrNotStarted = errors.New("event broker has not been started")
-	subscriptions atomic.Int64 // keeps track of event subscription count in all event buses
+	ErrNotStarted   = errors.New("event broker has not been started")
+	ErrSlowConsumer = errors.New("event subscriber is too slow")
+	subscriptions   atomic.Int64 // keeps track of event subscription count in all event buses
 
 	// these metadata fields will have the plugin mount path prepended to them
 	metadataPrependPathFields = []string{
@@ -57,13 +75,15 @@ type EventBus struct {
 	timeout                    time.Duration
 	filters                    *Filters
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
-	walGetter                  StorageWALGetter
+	storageInfoGetter          StorageInfoGetter
+	subscriberBufferSize       int // cached buffer size from VAULT_BOUNDED_EVENT_QUEUE env var (0 = unbuffered)
 }
 
-// StorageWALGetter is an interface used to fetch the current storage index
-// from core without importing core
-type StorageWALGetter interface {
+// StorageInfoGetter is an interface used to access some storage-related core
+// functions without importing the core package
+type StorageInfoGetter interface {
 	GetCurrentWALHeader() string
+	IsReplicated(secondaryID, namespaceName, mountPathRelative string) bool
 }
 
 type pluginEventBus struct {
@@ -74,9 +94,10 @@ type pluginEventBus struct {
 
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
-	ctx    context.Context
-	ch     chan *eventlogger.Event
-	logger hclog.Logger
+	ctx        context.Context
+	ch         chan *eventlogger.Event
+	logger     hclog.Logger
+	bufferSize int // cached buffer size (0 = unbuffered, >0 = buffered)
 
 	// used to close the connection
 	closeOnce      sync.Once
@@ -123,7 +144,7 @@ func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo
 // getIndexForEvent returns the storage index (wal header) for events with
 // metadata.modified=true.
 func (bus *EventBus) getIndexForEvent(event *logical.EventReceived) (string, error) {
-	if event.Event == nil || event.Event.Metadata == nil || bus.walGetter == nil {
+	if event.Event == nil || event.Event.Metadata == nil || bus.storageInfoGetter == nil {
 		return "", nil
 	}
 	eventMetadataModified := event.Event.Metadata.GetFields()[logical.EventMetadataModified]
@@ -133,7 +154,7 @@ func (bus *EventBus) getIndexForEvent(event *logical.EventReceived) (string, err
 			return "", fmt.Errorf("failed to parse event metadata modified: %w", err)
 		}
 		if isModified {
-			return bus.walGetter.GetCurrentWALHeader(), nil
+			return bus.storageInfoGetter.GetCurrentWALHeader(), nil
 		}
 	}
 	return "", nil
@@ -205,7 +226,7 @@ func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.Even
 	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, false, data)
 }
 
-func NewEventBus(localNodeID string, logger hclog.Logger, c StorageWALGetter) (*EventBus, error) {
+func NewEventBus(localNodeID string, logger hclog.Logger, c StorageInfoGetter) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -240,7 +261,8 @@ func NewEventBus(localNodeID string, logger hclog.Logger, c StorageWALGetter) (*
 		timeout:                    defaultTimeout,
 		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
 		filters:                    NewFilters(localNodeID),
-		walGetter:                  c,
+		storageInfoGetter:          c,
+		subscriberBufferSize:       getSubscriberBufferSize(),
 	}, nil
 }
 
@@ -257,7 +279,7 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 }
 
 // subscribeInternal creates the pipeline and connects it to the event bus to receive events. If the
-// clusterNode is specified, then the namespacePathPatterns, pattern, and bexprFilter are ignored,
+// clusterNode is specified, then the namespacePathPatterns and pattern are ignored,
 // and instead this subscription will be tied to the given cluster node's filter.
 func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string, clusterNode *string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
@@ -278,7 +300,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 
 	var filterNode *eventlogger.Filter
 	if clusterNode != nil {
-		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode))
+		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode), bexprFilter, bus.storageInfoGetter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -287,7 +309,10 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 		if err != nil {
 			return nil, nil, err
 		}
-		bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern)
+		// use filterNodeID as the "subscription id" when storing a subscriber
+		// pattern
+		bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern, filterNodeID)
+		bus.filters.addClusterWidePattern(namespacePathPatterns, pattern)
 	}
 	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
 	if err != nil {
@@ -300,9 +325,12 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
+	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, bus.subscriberBufferSize, func() {
 		if clusterNode == nil {
-			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
+			// use filterNodeID as the "subscription id" when removing a
+			// subscriber pattern
+			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern, filterNodeID)
+			bus.filters.makeClusterWideFilters()
 		}
 	})
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
@@ -338,9 +366,10 @@ func (bus *EventBus) SetSendTimeout(timeout time.Duration) {
 	bus.timeout = timeout
 }
 
-// GlobalMatch returns true if the given namespace and event type match the current global filter.
-func (bus *EventBus) GlobalMatch(ns *namespace.Namespace, eventType logical.EventType) bool {
-	return bus.filters.globalMatch(ns, eventType)
+// ClusterWideMatch returns true if the given namespace and event type match the
+// current cluster-wide filter.
+func (bus *EventBus) ClusterWideMatch(ns *namespace.Namespace, eventType logical.EventType) bool {
+	return bus.filters.clusterWideMatch(ns, eventType)
 }
 
 // ApplyClusterNodeFilterChanges applies the given filter changes to the cluster node's filters.
@@ -348,14 +377,37 @@ func (bus *EventBus) ApplyClusterNodeFilterChanges(c string, changes []FilterCha
 	bus.filters.applyChanges(clusterNodeID(c), changes)
 }
 
-// ApplyGlobalFilterChanges applies the given filter changes to the global filters.
-func (bus *EventBus) ApplyGlobalFilterChanges(changes []FilterChange) {
-	bus.filters.applyChanges(globalCluster, changes)
+// ApplyClusterWideFilterChanges applies the given filter changes to the
+// cluster-wide filters.
+func (bus *EventBus) ApplyClusterWideFilterChanges(changes []FilterChange) {
+	bus.filters.applyChanges(clusterWide, changes)
 }
 
-// ClearGlobalFilter removes all entries from the current global filter.
-func (bus *EventBus) ClearGlobalFilter() {
-	bus.filters.clearGlobalPatterns()
+// MakeClusterWideFilters populates the cluster-wide filter based on the current
+// filters for all cluster nodes.
+func (bus *EventBus) MakeClusterWideFilters() {
+	bus.filters.makeClusterWideFilters()
+}
+
+// GetClusterWideFilterAdditions returns the current cluster-wide filter
+// represented purely as additive changes. It is used by a secondary cluster's
+// active node to resync its full set of event subscription filters to the
+// primary.
+func (bus *EventBus) GetClusterWideFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(clusterWide)
+}
+
+// GetLocalFilterAdditions returns the current local filter represented
+// purely as additive changes. It is used by a performance standby node to
+// resync its full set of event subscription filters to the active node.
+func (bus *EventBus) GetLocalFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(bus.filters.self)
+}
+
+// ClearClusterWideFilter removes all entries from the current cluster-wide
+// filter.
+func (bus *EventBus) ClearClusterWideFilter() {
+	bus.filters.clearClusterWidePatterns()
 }
 
 // ClearClusterNodeFilter removes all entries from the given cluster node's filter.
@@ -363,18 +415,19 @@ func (bus *EventBus) ClearClusterNodeFilter(id string) {
 	bus.filters.clearClusterNodePatterns(clusterNodeID(id))
 }
 
-// NotifyOnGlobalFilterChanges returns a channel that receives changes to the global filter.
-func (bus *EventBus) NotifyOnGlobalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc, error) {
-	return bus.filters.watch(ctx, globalCluster)
+// NotifyOnClusterWideFilterChanges returns a channel that receives changes to
+// the cluster-wide filter.
+func (bus *EventBus) NotifyOnClusterWideFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc) {
+	return bus.filters.watch(ctx, clusterWide)
 }
 
 // NotifyOnLocalFilterChanges returns a channel that receives changes to the filter for the current cluster node.
-func (bus *EventBus) NotifyOnLocalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc, error) {
+func (bus *EventBus) NotifyOnLocalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc) {
 	return bus.NotifyOnClusterNodeFilterChanges(ctx, string(bus.filters.self))
 }
 
 // NotifyOnClusterNodeFilterChanges returns a channel that receives changes to the filter for the given cluster node.
-func (bus *EventBus) NotifyOnClusterNodeFilterChanges(ctx context.Context, clusterNode string) (<-chan []FilterChange, context.CancelFunc, error) {
+func (bus *EventBus) NotifyOnClusterNodeFilterChanges(ctx context.Context, clusterNode string) (<-chan []FilterChange, context.CancelFunc) {
 	return bus.filters.watch(ctx, clusterNodeID(clusterNode))
 }
 
@@ -383,9 +436,10 @@ func (bus *EventBus) NewAllEventsSubscription(ctx context.Context) (<-chan *even
 	return bus.subscribeInternal(ctx, nil, "*", "", nil)
 }
 
-// NewGlobalSubscription creates a new subscription to all events that match the global filter.
-func (bus *EventBus) NewGlobalSubscription(ctx context.Context) (<-chan *eventlogger.Event, context.CancelFunc, error) {
-	g := globalCluster
+// NewClusterWideSubscription creates a new subscription to all events that
+// match the cluster-wide filter.
+func (bus *EventBus) NewClusterWideSubscription(ctx context.Context) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	g := clusterWide
 	return bus.subscribeInternal(ctx, nil, "", "", &g)
 }
 
@@ -394,18 +448,42 @@ func (bus *EventBus) NewClusterNodeSubscription(ctx context.Context, clusterNode
 	return bus.subscribeInternal(ctx, nil, "", "", &clusterNode)
 }
 
+// NewClusterNodeSubscriptionNonLocal creates a new subscription to all events
+// that match the given cluster node's filter, excluding local mount events.
+func (bus *EventBus) NewClusterNodeSubscriptionNonLocal(ctx context.Context, clusterNode string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, nil, "", "source_plugin_is_local == false", &clusterNode)
+}
+
 // creates a new filter node that is tied to the filter for a given cluster node
-func newClusterNodeFilterNode(filters *Filters, c clusterNodeID) (*eventlogger.Filter, error) {
+func newClusterNodeFilterNode(filters *Filters, c clusterNodeID, bexprFilter string, coreInfo StorageInfoGetter) (*eventlogger.Filter, error) {
+	var evaluator *bexpr.Evaluator
+	if bexprFilter != "" {
+		var err error
+		evaluator, err = bexpr.CreateEvaluator(bexprFilter)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &eventlogger.Filter{
 		Predicate: func(e *eventlogger.Event) (bool, error) {
 			eventRecv := e.Payload.(*logical.EventReceived)
 			eventNs := strings.Trim(eventRecv.Namespace, "/")
-			if filters.clusterNodeMatch(c, &namespace.Namespace{
+			if !filters.clusterNodeMatch(c, &namespace.Namespace{
 				Path: eventNs,
 			}, logical.EventType(eventRecv.EventType)) {
-				return true, nil
+				return false, nil
 			}
-			return false, nil
+			if pluginInfo := eventRecv.GetPluginInfo(); pluginInfo != nil {
+				if !coreInfo.IsReplicated(string(c), eventRecv.Namespace, pluginInfo.MountPath) {
+					return false, nil
+				}
+			}
+
+			// apply go-bexpr filter
+			if evaluator != nil {
+				return evaluator.Evaluate(eventRecv.BexprDatum())
+			}
+			return true, nil
 		},
 	}, nil
 }
@@ -451,11 +529,31 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 	}, nil
 }
 
-func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker, removeFilter func()) *asyncChanNode {
+// getSubscriberBufferSize reads the VAULT_EVENT_NOTIFICATIONS_BOUNDED_QUEUE_SIZE environment variable
+// and returns the buffer size for subscriber channels. Returns 0 for unbuffered (default).
+// Values above maxSubscriberBuffer (1000) are capped to prevent excessive memory usage.
+func getSubscriberBufferSize() int {
+	if v := os.Getenv(EnvVaultEventNotificationsBoundedQueueSize); v != "" {
+		size, err := strconv.Atoi(v)
+		if err != nil || size < 0 {
+			// If parsing fails or negative, default to 0 (unbuffered)
+			return 0
+		}
+		// Cap at maximum to prevent excessive memory usage
+		if size > maxSubscriberBuffer {
+			return maxSubscriberBuffer
+		}
+		return size
+	}
+	return 0
+}
+
+func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker, bufferSize int, removeFilter func()) *asyncChanNode {
 	return &asyncChanNode{
 		ctx:            ctx,
-		ch:             make(chan *eventlogger.Event),
+		ch:             make(chan *eventlogger.Event, bufferSize),
 		logger:         logger,
+		bufferSize:     bufferSize,
 		removeFilter:   removeFilter,
 		removePipeline: broker.RemovePipelineAndNodes,
 	}
@@ -480,8 +578,41 @@ func (node *asyncChanNode) Close(ctx context.Context) {
 	})
 }
 
+// getEventID safely extracts the event ID from an eventlogger.Event, returning "unknown" if extraction fails.
+func getEventID(e *eventlogger.Event) string {
+	if e == nil || e.Payload == nil {
+		return "unknown"
+	}
+	eventReceived, ok := e.Payload.(*logical.EventReceived)
+	if !ok || eventReceived == nil || eventReceived.Event == nil {
+		return "unknown"
+	}
+	return eventReceived.Event.Id
+}
+
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	// sends to the channel async in another goroutine
+	if node.bufferSize > 0 {
+		// Bounded queues: synchronous send with immediate slow consumer detection
+		select {
+		case node.ch <- e:
+			return e, nil
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				node.logger.Info("Subscriber took too long to process event, closing", "id", getEventID(e))
+				node.Close(ctx)
+				return nil, ErrSlowConsumer
+			}
+			return e, nil
+		case <-node.ctx.Done():
+			return e, nil
+		default:
+			node.logger.Info("Subscriber queue is full, closing", "id", getEventID(e))
+			node.Close(ctx)
+			return nil, ErrSlowConsumer
+		}
+	}
+
+	// Standard behavior: async send with goroutine per event
 	go func() {
 		var timeout bool
 		select {
@@ -492,7 +623,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 			timeout = errors.Is(node.ctx.Err(), context.DeadlineExceeded)
 		}
 		if timeout {
-			node.logger.Info("Subscriber took too long to process event, closing", "ID", e.Payload.(*logical.EventReceived).Event.Id)
+			node.logger.Info("Subscriber took too long to process event, closing", "id", getEventID(e))
 			node.Close(ctx)
 		}
 	}()
@@ -509,4 +640,14 @@ func (node *asyncChanNode) Type() eventlogger.NodeType {
 
 func addSubscriptions(delta int64) {
 	metrics.SetGauge([]string{"events", "subscriptions"}, float32(subscriptions.Add(delta)))
+}
+
+// ActiveSubscriptionCount returns the number of active event subscriptions across all event buses.
+func ActiveSubscriptionCount() int64 {
+	return subscriptions.Load()
+}
+
+// IsBoundedQueueEnabled reports whether bounded subscriber queues are configured for this event bus.
+func (bus *EventBus) IsBoundedQueueEnabled() bool {
+	return bus.subscriberBufferSize > 0
 }

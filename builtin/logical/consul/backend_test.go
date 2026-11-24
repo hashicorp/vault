@@ -17,8 +17,10 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_Config_Access(t *testing.T) {
@@ -44,8 +46,10 @@ func TestBackend_Config_Access(t *testing.T) {
 }
 
 func testBackendConfigAccess(t *testing.T, version string, autoBootstrap bool) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -72,12 +76,28 @@ func testBackendConfigAccess(t *testing.T, version string, autoBootstrap bool) {
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	confReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), confReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	expected := map[string]interface{}{
 		"address": connData["address"].(string),
@@ -122,7 +142,9 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 }
 
 func testBackendRenewRevoke(t *testing.T, version string) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
+	config.ObservationRecorder = or
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
 	if err != nil {
@@ -147,6 +169,14 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Path = "roles/test"
 	req.Data = map[string]interface{}{
@@ -157,6 +187,14 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
@@ -164,6 +202,14 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 	if resp == nil {
 		t.Fatal("resp nil")
 	}
@@ -207,12 +253,28 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if resp == nil {
 		t.Fatal("got nil response from renew")
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Operation = logical.RevokeOperation
 	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	_, err = client.KV().Put(&consulapi.KVPair{
 		Key:   "foo",
@@ -224,8 +286,10 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 }
 
 func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -249,6 +313,14 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Path = "roles/test"
 	req.Data = map[string]interface{}{
@@ -265,6 +337,14 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	read := &logical.Request{
 		Storage:   config.StorageView,
@@ -273,6 +353,14 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 		Data:      connData,
 	}
 	roleResp, err := b.HandleRequest(context.Background(), read)
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	expectExtract := roleResp.Data["consul_policies"]
 	respExtract := roleResp.Data[policiesParam]
@@ -288,6 +376,14 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 	if resp == nil {
 		t.Fatal("resp nil")
 	}
@@ -326,6 +422,14 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 	if resp == nil {
 		t.Fatal("got nil response from renew")
 	}
@@ -335,6 +439,14 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	// Build a management client and verify that the token does not exist anymore
 	consulmgmtConfig := consulapi.DefaultNonPooledConfig()
@@ -355,8 +467,10 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 }
 
 func TestBackend_LocalToken(t *testing.T) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -380,6 +494,14 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Path = "roles/test"
 	req.Data = map[string]interface{}{
@@ -391,6 +513,14 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Path = "roles/test_local"
 	req.Data = map[string]interface{}{
@@ -402,6 +532,14 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 2, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
@@ -409,6 +547,14 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 2, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 	if resp == nil {
 		t.Fatal("resp nil")
 	}
@@ -449,6 +595,14 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 2, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 2, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 	if resp == nil {
 		t.Fatal("resp nil")
 	}
@@ -496,8 +650,10 @@ func TestBackend_Management(t *testing.T) {
 }
 
 func testBackendManagement(t *testing.T, version string) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -541,8 +697,10 @@ func TestBackend_Basic(t *testing.T) {
 }
 
 func testBackendBasic(t *testing.T, version string) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -567,7 +725,10 @@ func testBackendBasic(t *testing.T, version string) {
 }
 
 func TestBackend_crud(t *testing.T) {
-	b, _ := Factory(context.Background(), logical.TestBackendConfig())
+	or := observations.NewTestObservationRecorder()
+	config := logical.TestBackendConfig()
+	config.ObservationRecorder = or
+	b, _ := Factory(context.Background(), config)
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
@@ -582,7 +743,10 @@ func TestBackend_crud(t *testing.T) {
 }
 
 func TestBackend_role_lease(t *testing.T) {
-	b, _ := Factory(context.Background(), logical.TestBackendConfig())
+	or := observations.NewTestObservationRecorder()
+	config := logical.TestBackendConfig()
+	config.ObservationRecorder = or
+	b, _ := Factory(context.Background(), config)
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
@@ -740,8 +904,10 @@ func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 }
 
 func TestBackend_Roles(t *testing.T) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -765,6 +931,14 @@ func TestBackend_Roles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	// Create the consul_roles role
 	req.Path = "roles/test-consul-roles"
@@ -776,6 +950,14 @@ func TestBackend_Roles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test-consul-roles"
@@ -783,6 +965,14 @@ func TestBackend_Roles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 	if resp == nil {
 		t.Fatal("resp nil")
 	}
@@ -821,6 +1011,14 @@ func TestBackend_Roles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 	if resp == nil {
 		t.Fatal("got nil response from renew")
 	}
@@ -830,6 +1028,14 @@ func TestBackend_Roles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	// Build a management client and verify that the token does not exist anymore
 	consulmgmtConfig := consulapi.DefaultNonPooledConfig()
@@ -882,8 +1088,10 @@ func TestBackend_Enterprise_Partition(t *testing.T) {
 }
 
 func testBackendEntDiffNamespaceRevocation(t *testing.T) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -1013,8 +1221,10 @@ func testBackendEntDiffNamespaceRevocation(t *testing.T) {
 }
 
 func testBackendEntDiffPartitionRevocation(t *testing.T) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -1144,8 +1354,10 @@ func testBackendEntDiffPartitionRevocation(t *testing.T) {
 }
 
 func testBackendEntNamespace(t *testing.T) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -1261,8 +1473,10 @@ func testBackendEntNamespace(t *testing.T) {
 }
 
 func testBackendEntPartition(t *testing.T) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -1378,8 +1592,10 @@ func testBackendEntPartition(t *testing.T) {
 }
 
 func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
+	or := observations.NewTestObservationRecorder()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = or
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -1403,6 +1619,14 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 	cases := map[string]struct {
 		RoleName string
@@ -1528,6 +1752,13 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 	for description, tc := range cases {
 		t.Logf("Testing: %s", description)
 
+		or = observations.NewTestObservationRecorder()
+		config.ObservationRecorder = or
+		b, err := Factory(context.Background(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		req.Operation = logical.UpdateOperation
 		req.Path = fmt.Sprintf("roles/%s", tc.RoleName)
 		req.Data = tc.RoleData
@@ -1535,6 +1766,14 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 		req.Operation = logical.ReadOperation
 		req.Path = fmt.Sprintf("creds/%s", tc.RoleName)
@@ -1542,6 +1781,14 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 		if resp == nil {
 			t.Fatal("resp nil")
 		}
@@ -1580,6 +1827,14 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 		if resp == nil {
 			t.Fatal("got nil response from renew")
 		}
@@ -1589,6 +1844,14 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessRead))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulConfigAccessWrite))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRenew))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulCredentialRevoke))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleDelete))
+		require.Equal(t, 0, or.NumObservationsByType(ObservationTypeConsulRoleRead))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulRoleWrite))
+		require.Equal(t, 1, or.NumObservationsByType(ObservationTypeConsulTokenRead))
 
 		// Build a management client and verify that the token does not exist anymore
 		consulmgmtConfig := consulapi.DefaultNonPooledConfig()

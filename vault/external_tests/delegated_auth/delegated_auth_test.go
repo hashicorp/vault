@@ -139,8 +139,6 @@ func TestDelegatedAuth(t *testing.T) {
 	}
 
 	cluster := minimal.NewTestSoloCluster(t, coreConfig)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	client := testhelpers.WaitForActiveNode(t, cluster).Client
 

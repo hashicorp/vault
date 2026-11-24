@@ -4,11 +4,10 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | sidebar-user-menu', function (hooks) {
@@ -16,14 +15,6 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
 
   hooks.beforeEach(function () {
     this.auth = this.owner.lookup('service:auth');
-    setRunOptions({
-      // TODO: fix this component
-      rules: {
-        'nested-interactive': { enabled: false },
-        // TODO: fix ConfirmAction rendered in toolbar not a list item
-        list: { enabled: false },
-      },
-    });
   });
 
   test('it should render trigger and open menu', async function (assert) {
@@ -44,8 +35,8 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     await click(GENERAL.button('user-menu-trigger'));
 
     assert.dom('[data-test-user-menu-item="title"]').hasText('Token', 'Auth data display name renders');
-    assert.dom('li').exists({ count: 3 }, 'Correct number of menu items render');
     assert.dom(GENERAL.copyButton).exists('Copy token action renders');
+    assert.dom(GENERAL.menuItem('preferences')).hasText('Preferences', 'Preferences link renders');
     assert.dom('[data-test-user-menu-item="logout"]').hasText('Log out', 'Log out action renders');
   });
 

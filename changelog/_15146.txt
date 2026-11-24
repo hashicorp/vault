@@ -1,0 +1,3 @@
+```release-note:bug
+secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+```

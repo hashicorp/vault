@@ -13,8 +13,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/locking"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -156,6 +156,11 @@ func (a *access) QuotaID() string {
 // checks them against any applicable quota rules.
 type Manager struct {
 	entManager
+
+	// operatorNamespacePath is the canonicalized path of the operator namespace.
+	// Requests targeting this namespace are unconditionally exempt from rate limit
+	// quotas, regardless of the exempt paths configured via /sys/quotas/config.
+	operatorNamespacePath string
 
 	// db holds the in memory instances of all active quota rules indexed by
 	// some of the quota properties.
@@ -845,10 +850,17 @@ func (m *Manager) RateLimitResponseHeadersEnabled() bool {
 
 // RateLimitPathExempt returns a boolean dictating if a given path is exempt from
 // any rate limit quota. If not rate limit path manager is defined, false is
-// returned.
+// returned. Requests targeting the operator namespace are always exempt.
 func (m *Manager) RateLimitPathExempt(path string, namespacePath string) bool {
 	m.quotaConfigLock.RLock()
 	defer m.quotaConfigLock.RUnlock()
+
+	// Requests targeting the operator namespace are unconditionally exempt from
+	// rate limit quotas. This exemption is enforced server-side and cannot be
+	// removed by customers via /sys/quotas/config.
+	if m.operatorNamespacePath != "" && strings.EqualFold(namespace.Canonicalize(namespacePath), m.operatorNamespacePath) {
+		return true
+	}
 
 	if m.rateLimitPathManager == nil {
 		return false
@@ -1150,9 +1162,10 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 }
 
 type ManagerFlags struct {
-	IsPerfStandby bool
-	IsDRSecondary bool
-	IsNewInstall  bool
+	IsPerfStandby         bool
+	IsDRSecondary         bool
+	IsNewInstall          bool
+	OperatorNamespacePath string
 }
 
 // Setup loads the quota configuration and all the quota rules into the
@@ -1174,6 +1187,7 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, flags *Man
 	m.isPerfStandby = flags.IsPerfStandby
 	m.isDRSecondary = flags.IsDRSecondary
 	m.isNewInstall = flags.IsNewInstall
+	m.operatorNamespacePath = namespace.Canonicalize(flags.OperatorNamespacePath)
 
 	// Load the quota configuration from storage and load it into the quota
 	// manager.

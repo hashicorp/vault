@@ -5,14 +5,17 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -130,8 +133,27 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 				OperationSuffix: "by-id",
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathGroupIDList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of  entity ids`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `Entity details keyed by the entity id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-id-list"][0]),
@@ -262,15 +284,43 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		group = new(identity.Group)
 		newGroup = true
 	}
-
+	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok {
+		for _, entityID := range memberEntityIDs.([]string) {
+			if IsEphemeralEntityID(entityID) {
+				return logical.ErrorResponse(errEphemeralEntityID(entityID).Error()), nil
+			}
+		}
+	}
+	var modifiedFields []string
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		group.Policies = strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
+		rawPolicies := policiesRaw.([]string)
+		for _, policy := range rawPolicies {
+			if isReservedRootPolicy(policy) {
+				return logical.ErrorResponse("policies cannot contain root"), nil
+			}
+		}
+
+		validatedPolicies := make([]string, 0, len(rawPolicies))
+		for _, policy := range rawPolicies {
+			canonicalPolicy, err := policyutil.ValidatePolicyName(policy)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("invalid policy name %q: %s", policy, err)), nil
+			}
+			validatedPolicies = append(validatedPolicies, canonicalPolicy)
+		}
+		dedupedPolicies := strutil.RemoveDuplicatesStable(validatedPolicies, false)
+		if !equivalentStringSets(dedupedPolicies, group.Policies) {
+			modifiedFields = append(modifiedFields, "policies")
+		}
+		group.Policies = dedupedPolicies
 	}
 
-	if strutil.StrListContainsCaseInsensitive(group.Policies, "root") {
-		return logical.ErrorResponse("policies cannot contain root"), nil
+	for _, policy := range group.Policies {
+		if isReservedRootPolicy(policy) {
+			return logical.ErrorResponse("policies cannot contain root"), nil
+		}
 	}
 
 	groupTypeRaw, ok := d.GetOk("type")
@@ -310,13 +360,16 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		case groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
+		if group.Name != groupName {
+			modifiedFields = append(modifiedFields, "name")
+		}
 		group.Name = groupName
 	}
 
-	_, ok = d.Schema["scim_client_id"]
+	originalSCIMID := group.ScimClientID
+	scimClientID, ok := d.GetOk("scim_client_id")
 	if ok {
-		entitSCIMClientID := d.Get("scim_client_id").(string)
-		group.ScimClientID = entitSCIMClientID
+		group.ScimClientID = scimClientID.(string)
 	}
 
 	metadata, ok, err := d.GetOkErr("metadata")
@@ -324,6 +377,10 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
 	}
 	if ok {
+		metadataMap := metadata.(map[string]string)
+		if !strutil.EqualStringMaps(group.Metadata, metadataMap) {
+			modifiedFields = append(modifiedFields, "metadata")
+		}
 		group.Metadata = metadata.(map[string]string)
 	}
 
@@ -331,6 +388,9 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	if ok {
 		if group.Type == groupTypeExternal {
 			return logical.ErrorResponse("member entities can't be set manually for external groups"), nil
+		}
+		if !equivalentStringSets(group.MemberEntityIDs, memberEntityIDsRaw.([]string)) {
+			modifiedFields = append(modifiedFields, "member_entity_ids")
 		}
 		group.MemberEntityIDs = memberEntityIDsRaw.([]string)
 	}
@@ -342,8 +402,24 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return logical.ErrorResponse("member groups can't be set for external groups"), nil
 		}
 		memberGroupIDs = memberGroupIDsRaw.([]string)
+		modifiedFields = append(modifiedFields, "member_group_ids")
 	}
 
+	if err := i.checkCohortGroupUpdate(ctx, group, modifiedFields, memberGroupIDs); err != nil {
+		// Return rejections as error responses so clients see the plain message
+		// instead of core's multierror wrapping.
+		var rejection logical.HTTPCodedError
+		if errors.As(err, &rejection) {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		return nil, err
+	}
+
+	// Build the list of fields being modified by this request.
+
+	if err := i.scimResourceCheck(ctx, group, originalSCIMID, newGroup, modifiedFields); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 	err = i.sanitizeAndUpsertGroup(ctx, group, nil, memberGroupIDs)
 	if err != nil {
 		if errStr := err.Error(); strings.HasPrefix(errStr, errCycleDetectedPrefix) {
@@ -364,6 +440,15 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	return &logical.Response{
 		Data: respData,
 	}, nil
+}
+
+// equivalentStringSets reports whether a and b contain the same strings,
+// treating nil and empty as equal since stored groups don't distinguish them.
+func equivalentStringSets(a, b []string) bool {
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	return strutil.EquivalentSlices(a, b)
 }
 
 func (i *IdentityStore) pathGroupIDRead() framework.OperationFunc {
@@ -414,7 +499,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		return nil, err
 	}
 	if ns.ID != group.NamespaceID {
-		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+		return nil, nil
 	}
 
 	respData := map[string]interface{}{}
@@ -429,6 +514,15 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["modify_index"] = group.ModifyIndex
 	respData["type"] = group.Type
 	respData["namespace_id"] = group.NamespaceID
+
+	respData["scim_client_id"] = group.ScimClientID
+	if owner := group.GetAgentRegistryCohort(); owner != nil {
+		respData["agent_registry_cohort"] = map[string]interface{}{
+			"provider_type": owner.ProviderType,
+			"provider_name": owner.ProviderName,
+			"cohort_name":   owner.CohortName,
+		}
+	}
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {
@@ -522,7 +616,22 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 		return nil, err
 	}
 	if group.NamespaceID != ns.ID {
-		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+		return nil, nil
+	}
+
+	scimID := scimClientIDFromContext(ctx)
+	if scimID != group.ScimClientID {
+		return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM"), logical.ErrPermissionDenied
+	}
+
+	if err := i.checkCohortGroupDelete(ctx, group); err != nil {
+		// Return rejections as error responses so clients see the plain message
+		// instead of core's multierror wrapping.
+		var rejection logical.HTTPCodedError
+		if errors.As(err, &rejection) {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		return nil, err
 	}
 
 	// Delete group alias from memdb

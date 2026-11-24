@@ -4,13 +4,13 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import PkiRoleForm from 'vault/forms/secrets/pki/role';
 
 module('Integration | Component | pki-role-form', function (hooks) {
@@ -42,14 +42,6 @@ module('Integration | Component | pki-role-form', function (hooks) {
       use_csr_common_name: true,
       use_csr_sans: true,
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-        'nested-interactive': { enabled: false },
-      },
-    });
 
     this.renderComponent = () => {
       this.form = new PkiRoleForm(this.role, { isNew: !this.role });
@@ -132,6 +124,20 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert.true(this.onSave.calledWith(name), 'onSave called with role name after successful save');
   });
 
+  test('it renders the issuer select labelled by the issuer ref label', async function (assert) {
+    this.role = { name: 'test-role', issuer_ref: 'issuer-0' };
+    await this.renderComponent();
+
+    const select = GENERAL.selectByAttr('issuer_ref');
+    assert.dom(select).hasClass('hds-form-select', 'renders the HDS select');
+    assert.dom(select).hasValue('issuer-0', 'preselects the issuer from the form');
+    assert.dom('label[for="select-issuer_ref"]').hasText('Issuer ref', 'label is associated with the select');
+    assert.dom(`${select} option`).exists({ count: 2 }, 'renders an option per issuer');
+
+    await fillIn(select, 'issuer-1');
+    assert.strictEqual(this.form.data.issuer_ref, 'issuer-1', 'updates the form with the selected issuer');
+  });
+
   test('it should edit a role', async function (assert) {
     assert.expect(7);
 
@@ -180,5 +186,23 @@ module('Integration | Component | pki-role-form', function (hooks) {
       'Correct endpoint is called to save role'
     );
     assert.true(this.onSave.calledWith('test-role'), 'onSave called with role name after successful save');
+  });
+
+  test('it blocks a Not valid after TTL longer than Vault supports', async function (assert) {
+    assert.expect(4);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
+    await fillIn(GENERAL.ttl.input('TTL'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL_PICKER.error).hasText('TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.true(this.writeStub.notCalled, 'the role is not saved');
+
+    await fillIn(GENERAL.ttl.input('TTL'), '106751');
+    await click(GENERAL.submitButton);
+    assert.true(this.writeStub.calledOnce, 'the role saves once the TTL is valid');
+    assert.strictEqual(this.writeStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
   });
 });

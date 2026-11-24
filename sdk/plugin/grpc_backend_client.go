@@ -48,7 +48,7 @@ type backendGRPCPluginClient struct {
 	doneCtx context.Context
 }
 
-func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	if b.metadataMode {
 		return nil
 	}
@@ -58,7 +58,15 @@ func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.Ini
 	defer close(quitCh)
 	defer cancel()
 
-	reply, err := b.client.Initialize(ctx, &pb.InitializeArgs{}, largeMsgGRPCCallOpts...)
+	args := &pb.InitializeArgs{}
+	if req != nil {
+		args.MountPoint = req.MountPoint
+		args.MountType = req.MountType
+		args.MountAccessor = req.MountAccessor
+		args.BackendUuid = req.BackendUUID
+		args.MountRunningVersion = req.MountRunningVersion
+	}
+	reply, err := b.client.Initialize(ctx, args, largeMsgGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return ErrPluginShutdown
@@ -112,6 +120,13 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 	}
 	if reply.Err != nil {
 		return resp, pb.ProtoErrToErr(reply.Err)
+	}
+
+	if reply.WalIndex != nil {
+		req.SetResponseState(&logical.WALState{
+			LocalIndex:      reply.WalIndex.LocalIndex,
+			ReplicatedIndex: reply.WalIndex.ReplicatedIndex,
+		})
 	}
 
 	return resp, nil

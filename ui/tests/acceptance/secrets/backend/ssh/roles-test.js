@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -23,7 +23,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import showPage from 'vault/tests/pages/secrets/backend/ssh/show';
 import generatePage from 'vault/tests/pages/secrets/backend/ssh/generate-otp';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
@@ -46,25 +46,24 @@ module('Acceptance | ssh | roles', function (hooks) {
       name: 'carole',
       credsRoute: 'vault.cluster.secrets.backend.sign',
       async fillInCreate() {
-        await click(GENERAL.inputByAttr('allowUserCertificates'));
+        await click(GENERAL.inputByAttr('allow_user_certificates'));
         await click(GENERAL.button('Options'));
         // it's recommended to keep allow_empty_principals false, check for testing so we don't have to input an extra field when signing a key
-        await click(GENERAL.inputByAttr('allowEmptyPrincipals'));
+        await click(GENERAL.inputByAttr('allow_empty_principals'));
       },
       async fillInGenerate() {
-        await fillIn(GENERAL.inputByAttr('publicKey'), PUB_KEY);
-        await click('[data-test-toggle-button]');
+        await fillIn(GENERAL.inputByAttr('public_key'), PUB_KEY);
+        await click(GENERAL.button('More options'));
 
         await click(GENERAL.ttl.toggle('TTL'));
         await fillIn(GENERAL.selectByAttr('ttl-unit'), 'm');
 
-        document.querySelector(GENERAL.ttl.input('TTL')).value = 30;
+        await fillIn(GENERAL.ttl.input('TTL'), '30');
       },
       assertBeforeGenerate(assert) {
-        assert.dom('[data-test-form-field-from-model]').exists('renders the FormFieldFromModel');
+        assert.dom(GENERAL.ttl.input('TTL')).exists('renders the TTL field');
         const value = document.querySelector('[data-test-ttl-value="TTL"]').value;
-        // confirms that the actions are correctly being passed down to the FormFieldFromModel component
-        assert.strictEqual(value, '30', 'renders action updateTtl');
+        assert.strictEqual(value, '30', 'TTL value is set correctly');
       },
       assertAfterGenerate(assert, sshPath) {
         assert.strictEqual(
@@ -83,9 +82,9 @@ module('Acceptance | ssh | roles', function (hooks) {
       name: 'otprole',
       credsRoute: 'vault.cluster.secrets.backend.credentials',
       async fillInCreate() {
-        await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
+        await fillIn(GENERAL.inputByAttr('default_user'), 'admin');
         await click(GENERAL.button('Options'));
-        await fillIn(GENERAL.inputByAttr('cidrList'), '1.2.3.4/32');
+        await fillIn(GENERAL.inputByAttr('cidr_list'), '1.2.3.4/32');
       },
       async fillInGenerate() {
         await fillIn(GENERAL.inputByAttr('username'), 'admin');
@@ -105,6 +104,39 @@ module('Acceptance | ssh | roles', function (hooks) {
     },
   ];
 
+  test('it filters roles by name without zero-address configuration', async function (assert) {
+    const sshPath = `ssh-${this.uid}`;
+    const filterInput = '[data-test-component="navigate-input"]';
+    await runCmd(mountEngineCmd('ssh', sshPath));
+
+    try {
+      for (const name of ['1', 'other-role']) {
+        await runCmd(`write ${sshPath}/roles/${name} key_type=otp default_user=admin cidr_list=127.0.0.1/32`);
+      }
+      await visit(`/vault/secrets-engines/${sshPath}/list`);
+      assert.dom(SES.secretLink('1')).exists('The numeric role name appears before filtering');
+      assert.dom(SES.secretLink('other-role')).exists('The other role appears before filtering');
+
+      await fillIn(filterInput, '1');
+      assert.dom(SES.secretLink('1')).exists('An exact name match remains visible');
+      assert.dom(SES.secretLink('other-role')).doesNotExist('Nonmatching roles are hidden');
+
+      await fillIn(filterInput, 'OTHER');
+      assert.dom(SES.secretLink('other-role')).exists('Partial matching is case-insensitive');
+      assert.dom(SES.secretLink('1')).doesNotExist('The previous match is no longer visible');
+
+      await fillIn(filterInput, 'missing-role');
+      assert.dom(SES.secretLink()).doesNotExist('No roles appear for an unmatched filter');
+      assert.dom(GENERAL.emptyStateTitle).includesText('There are no roles matching "missing-role".');
+
+      await fillIn(filterInput, '');
+      assert.dom(SES.secretLink('1')).exists('Clearing the filter restores the numeric role');
+      assert.dom(SES.secretLink('other-role')).exists('Clearing the filter restores the other role');
+    } finally {
+      await runCmd(`delete sys/mounts/${sshPath}`);
+    }
+  });
+
   test('it creates roles, generates keys and deletes roles', async function (assert) {
     assert.expect(28);
     const sshPath = `ssh-${this.uid}`;
@@ -121,10 +153,12 @@ module('Acceptance | ssh | roles', function (hooks) {
     for (const role of ROLES) {
       // create a role
       await click(SES.createSecretLink);
-      assert.dom(SES.secretHeader).includesText('SSH Role', `${role.type}: renders the create page`);
+      assert
+        .dom(GENERAL.hdsPageHeaderTitle)
+        .includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn(GENERAL.inputByAttr('name'), role.name);
-      await fillIn(GENERAL.inputByAttr('keyType'), role.type);
+      await fillIn(GENERAL.inputByAttr('key_type'), role.type);
       await role.fillInCreate();
       await settled();
 
@@ -177,11 +211,10 @@ module('Acceptance | ssh | roles', function (hooks) {
   module('Acceptance | ssh | otp role', function () {
     const createOTPRole = async (name) => {
       await fillIn(GENERAL.inputByAttr('name'), name);
-      await fillIn(GENERAL.inputByAttr('keyType'), name);
+      await fillIn(GENERAL.inputByAttr('key_type'), 'otp');
       await click(GENERAL.button('Options'));
-      await fillIn(GENERAL.inputByAttr('keyType'), 'otp');
-      await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
-      await fillIn(GENERAL.inputByAttr('cidrList'), '0.0.0.0/0');
+      await fillIn(GENERAL.inputByAttr('default_user'), 'admin');
+      await fillIn(GENERAL.inputByAttr('cidr_list'), '0.0.0.0/0');
       await click(SES.ssh.createRole);
     };
     test('it deletes a role from list view', async function (assert) {

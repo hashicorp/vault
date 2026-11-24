@@ -11,10 +11,10 @@ import Component from '@ember/component';
  *
  * @example
  * ```js
- * <KnownSecondariesCard @cluster={{clusterModel}} @replicationAttrs={{replicationAttrs}} />
+ * <KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />
  * ```
- * @param {object} cluster=null - The cluster model.
- * @param {object} replicationAttrs=null - The attributes passed directly from the cluster model. These are passed down to the KnownSecondariesTable.
+ * @param {object} cluster=null - The cluster resource.
+ * @param {object} replicationAttrs=null - The replication attributes passed directly from the cluster resource. These are passed down to the KnownSecondariesTable.
  */
 
 export default Component.extend({

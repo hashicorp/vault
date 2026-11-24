@@ -10,7 +10,7 @@ import { ldapBreadcrumbs, libraryRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type LdapLibraryModel from 'vault/models/ldap/library';
+import type { LdapLibrary } from 'vault/secrets/ldap';
 import type LdapLibrariesSubdirectoryController from 'ldap/controllers/libraries/subdirectory';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { LdapApplicationModel } from '../application';
@@ -18,7 +18,7 @@ import type { LdapApplicationModel } from '../application';
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
   path_to_library: string;
-  libraries: Array<LdapLibraryModel>;
+  libraries: Array<LdapLibrary>;
 }
 
 type RouteController = LdapLibrariesSubdirectoryController;
@@ -55,7 +55,8 @@ export default class LdapLibrariesSubdirectoryRoute extends LdapLibrariesRoute {
     const currentLevelPath = resolvedModel.path_to_library;
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: resolvedModel.secretsEngine.id, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
       ...ldapBreadcrumbs(currentLevelPath, routeParams, libraryRoutes, true),

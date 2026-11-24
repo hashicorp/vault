@@ -35,7 +35,7 @@ type defaultConfig struct {
 // loadConfig reads the configuration from the given path. If path is
 // empty, then the default path will be used, or the environment variable
 // if set.
-func loadConfig(path string) (config *defaultConfig, duplicate bool, err error) {
+func loadConfig(path string) (*defaultConfig, error) {
 	if path == "" {
 		path = defaultConfigPath
 	}
@@ -44,37 +44,35 @@ func loadConfig(path string) (config *defaultConfig, duplicate bool, err error) 
 	}
 
 	// NOTE: requires HOME env var to be set
-	path, err = homedir.Expand(path)
+	path, err := homedir.Expand(path)
 	if err != nil {
-		return nil, false, fmt.Errorf("error expanding config path %q: %w", path, err)
+		return nil, fmt.Errorf("error expanding config path %q: %w", path, err)
 	}
 
 	contents, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, false, err
+		return nil, err
 	}
 
-	conf, duplicate, err := parseConfig(string(contents))
+	conf, err := parseConfig(string(contents))
 	if err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it", path, err)
+		return nil, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it", path, err)
 	}
 
-	return conf, duplicate, nil
+	return conf, nil
 }
 
 // parseConfig parses the given configuration as a string.
-func parseConfig(contents string) (config *defaultConfig, duplicate bool, err error) {
-	// TODO (HCL_DUP_KEYS_DEPRECATION): on removal stage change this to a simple hcl.Parse, effectively treating
-	// duplicate keys as an error. Also get rid of all of these "duplicate" named return values
-	root, duplicate, err := parseAndCheckForDuplicateHclAttributes(contents)
+func parseConfig(contents string) (*defaultConfig, error) {
+	root, err := hcl.Parse(contents)
 	if err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
 
 	// Top-level item should be the object list
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, duplicate, fmt.Errorf("failed to parse config; does not contain a root object")
+		return nil, fmt.Errorf("failed to parse config; does not contain a root object")
 	}
 
 	valid := map[string]struct{}{
@@ -90,12 +88,12 @@ func parseConfig(contents string) (config *defaultConfig, duplicate bool, err er
 	}
 
 	if validationErrors != nil {
-		return nil, duplicate, validationErrors
+		return nil, validationErrors
 	}
 
 	var c defaultConfig
 	if err := hcl.DecodeObject(&c, list); err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
-	return &c, duplicate, nil
+	return &c, nil
 }

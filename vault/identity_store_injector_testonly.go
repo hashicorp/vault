@@ -16,8 +16,8 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -729,7 +729,7 @@ func (i *IdentityStore) ListEntitiesFromStorage(ctx context.Context) ([]*identit
 	broker := make(chan string)
 	quit := make(chan bool)
 
-	errs := make(chan error, (len(existing)))
+	errs := make(chan error, len(existing))
 	result := make(chan *storagepacker.Bucket, len(existing))
 
 	wg := &sync.WaitGroup{}

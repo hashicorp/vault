@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -58,7 +58,6 @@ module('Acceptance | database workflow', function (hooks) {
   hooks.beforeEach(async function () {
     databaseHandlers(this.server);
     this.backend = `db-workflow-${uuidv4()}`;
-    this.store = this.owner.lookup('service:store');
     await login();
     await runCmd(mountEngineCmd('database', this.backend), false);
   });
@@ -220,6 +219,32 @@ module('Acceptance | database workflow', function (hooks) {
         'Takes you to details page for connection'
       );
     });
+
+    test('delete', async function (assert) {
+      const name = `connect-${this.backend}`;
+      this.server.db.databaseConnections.insert({
+        name,
+        backend: this.backend,
+        plugin_name: 'mysql-database-plugin',
+      });
+      await visit(`/vault/secrets-engines/${this.backend}/show/${name}`);
+      await click('[data-test-database-connection-delete]');
+      await fillIn(GENERAL.confirmModalInput, name);
+      await click(GENERAL.confirmButton);
+
+      assert.strictEqual(
+        this.server.db.databaseConnections.where({ name }).length,
+        0,
+        'connection is deleted'
+      );
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.backend}/list`,
+        'Redirects to connection list page'
+      );
+      // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
+      await visit('/vault/secrets-engines');
+    });
   });
   module('dynamic roles', function (hooks) {
     hooks.beforeEach(async function () {
@@ -335,7 +360,7 @@ module('Acceptance | database workflow', function (hooks) {
         .hasText('generated-password', 'Password is generated');
       assert
         .dom(GENERAL.infoRowValue('Lease Duration'))
-        .hasText('3600', 'shows lease duration from response');
+        .hasText('1 hour', 'shows lease duration from response');
       assert
         .dom(GENERAL.infoRowValue('Lease ID'))
         .hasText(`database/creds/${roleName}/abcd`, 'shows lease ID from response');
@@ -349,7 +374,7 @@ module('Acceptance | database workflow', function (hooks) {
         await visit(`/vault/secrets-engines/${this.backend}/create`);
         await fillOutConnection(this.connection);
         if (toggleRotateOff) {
-          await click(GENERAL.toggleInput('toggle-skip_static_role_rotation_import'));
+          await click(GENERAL.toggleInput('toggle-skip_static_role_import_rotation'));
         }
         await click(GENERAL.submitButton);
         await visit(`/vault/secrets-engines/${this.backend}/show/${this.connection}`);

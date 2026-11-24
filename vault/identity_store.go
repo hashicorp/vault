@@ -6,34 +6,37 @@ package vault
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
-	groupBucketsPrefix        = "packer/group/buckets/"
-	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
-	scimBucketsPrefix         = "packer/scim/buckets/"
+	groupBucketsPrefix          = "packer/group/buckets/"
+	localAliasesBucketsPrefix   = "packer/local-aliases/buckets/"
+	tpmBucketsPrefix            = "packer/tpm/buckets/"
+	tpmgroupBucketsPrefix       = "packer/tpmgroup/buckets/"
+	entityMetadataBucketsPrefix = "packer/entitymetadata/buckets/"
 )
 
 var (
@@ -52,6 +55,16 @@ func (i *IdentityStore) GetDisableLowerCasedNames() bool {
 	return i.disableLowerCasedNames
 }
 
+// SetDisableLowerCasedNames sets that value to true for external tests to access. It is false by default
+func (i *IdentityStore) SetDisableLowerCasedNames() {
+	i.lock.Lock()
+	i.disableLowerCasedNames = true
+	i.lock.Unlock()
+}
+
+// resetDB callers must hold the write lock on i.lock before calling, to ensure
+// that no other goroutine is reading from or writing to the database while it
+// gets reset.
 func (i *IdentityStore) resetDB() error {
 	var err error
 
@@ -63,24 +76,44 @@ func (i *IdentityStore) resetDB() error {
 	return nil
 }
 
+func (i *IdentityStore) Cleanup(context.Context) {
+	i.oidcAuthCodeCache.c.Stop()
+}
+
+// stopEntityMetadataLoad cancels the context of the background job in charge of loading entity metadata
+// from storage into memory. This is called during seal to stop the load job from continuing.
+func (i *IdentityStore) stopEntityMetadataLoad() {
+	i.entityMetadataLoadLock.Lock()
+	defer i.entityMetadataLoadLock.Unlock()
+
+	if i.entityMetadataLoadCancel != nil {
+		i.entityMetadataLoadCancel()
+		i.entityMetadataLoadCancel = nil
+	}
+}
+
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
-		view:                   config.StorageView,
-		logger:                 logger,
-		router:                 core.router,
-		redirectAddr:           core.redirectAddr,
-		localNode:              core,
-		namespacer:             core,
-		metrics:                core.MetricSink(),
-		totpPersister:          core,
-		groupUpdater:           core,
-		tokenStorer:            core,
-		entityCreator:          core,
-		mountLister:            core,
-		mfaBackend:             core.loginMFABackend,
-		aliasLocks:             locksutil.CreateLocks(),
-		renameDuplicates:       core.FeatureActivationFlags,
-		activationErrorHandler: core,
+		entityMetadataLoadComplete:      make(chan struct{}),
+		view:                            config.StorageView,
+		logger:                          logger,
+		router:                          core.router,
+		redirectAddr:                    core.redirectAddr,
+		localNode:                       core,
+		namespacer:                      core,
+		metrics:                         core.MetricSink(),
+		totpPersister:                   core,
+		groupUpdater:                    core,
+		tokenStorer:                     core,
+		entityCreator:                   core,
+		mountLister:                     core,
+		syntheticAliasAccessorValidator: core,
+		billingCounter:                  core,
+		cohortChecker:                   core,
+		mfaBackend:                      core.loginMFABackend,
+		aliasLocks:                      locksutil.CreateLocks(),
+		activationManager:               core.FeatureActivationFlags,
+		activationErrorHandler:          core,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -88,6 +121,10 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	err := iStore.resetDB()
 	if err != nil {
 		return nil, err
+	}
+
+	if err := iStore.initializeEntityMetadataDB(); err != nil {
+		return nil, fmt.Errorf("failed to initialize entity metadata database: %w", err)
 	}
 
 	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
@@ -114,11 +151,34 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
-	iStore.scimConfigPacker, err = storagepacker.NewStoragePacker(iStore.view, scimPackerLogger, scimBucketsPrefix)
+	tpmsPackerLogger := iStore.logger.Named("storagepacker").Named("tpms")
+	core.AddLogger(tpmsPackerLogger)
+	iStore.tpmPacker, err = storagepacker.NewStoragePacker(iStore.view, tpmsPackerLogger, tpmBucketsPrefix)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create scim packer: %w", err)
+		return nil, fmt.Errorf("failed to create tpm packer: %w", err)
 	}
 
+	tpmgroupsPackerLogger := iStore.logger.Named("storagepacker").Named("tpmgroups")
+	core.AddLogger(tpmgroupsPackerLogger)
+	iStore.tpmgroupPacker, err = storagepacker.NewStoragePacker(iStore.view, tpmgroupsPackerLogger, tpmgroupBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tpmgroup packer: %w", err)
+	}
+
+	entityMetadataPackerLogger := iStore.logger.Named("storagepacker").Named("entity_metadata")
+	core.AddLogger(entityMetadataPackerLogger)
+	iStore.entityMetadataPacker, err = storagepacker.NewStoragePacker(iStore.view, entityMetadataPackerLogger, entityMetadataBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create entity_metadata packer: %w", err)
+	}
+	unauthenticatedPaths := []string{
+		"oidc/.well-known/*",
+		"oidc/+/.well-known/*",
+		"oidc/provider/+/.well-known/*",
+		"oidc/provider/+/token",
+	}
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreLoginMFAEntUnauthedPaths()...)
+	unauthenticatedPaths = append(unauthenticatedPaths, identityStoreSCIMUnauthedPaths()...)
 	iStore.Backend = &framework.Backend{
 		BackendType:    logical.TypeLogical,
 		Paths:          iStore.paths(),
@@ -126,12 +186,12 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		InitializeFunc: iStore.initialize,
 		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
-			Unauthenticated: append([]string{
-				"oidc/.well-known/*",
-				"oidc/+/.well-known/*",
-				"oidc/provider/+/.well-known/*",
-				"oidc/provider/+/token",
-			}),
+			// Root paths require the token have sudo capability.
+			Root: []string{
+				// Entity merge is destructive and can operate on every entity, so requires a higher privilege as a result
+				"entity/merge*",
+			},
+			Unauthenticated: unauthenticatedPaths,
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
 			},
@@ -144,8 +204,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
-	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)
-	iStore.oidcAuthCodeCache = newOIDCCache(5*time.Minute, 5*time.Minute)
+	iStore.oidcCache = newOIDCCache(ctx, ttlcache.NoTTL, core.synctest)
+	iStore.oidcAuthCodeCache = newOIDCCache(ctx, 5*time.Minute, core.synctest)
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -173,6 +233,10 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaDuoPaths(i),
 		mfaPingIDPaths(i),
 		mfaLoginEnforcementPaths(i),
+		mfaLoginEnterprisePaths(i),
+		scimPaths(i),
+		tpmPaths(i),
+		tpmgroupPaths(i),
 	)
 }
 
@@ -208,6 +272,23 @@ func mfaCommonPaths(i *IdentityStore) []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodListGlobal,
 					Summary:  "List MFA method configurations for all MFA methods",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of mfa method configurations keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `MFA method configurations details keyed by the id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 		},
@@ -591,6 +672,23 @@ func mfaLoginEnforcementPaths(i *IdentityStore) []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFALoginEnforcementList,
 					Summary:  "List login enforcements",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of login enforcement keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `Login enforcement details keyed by the id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 		},
@@ -661,6 +759,12 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	case strings.HasPrefix(key, localAliasesBucketsPrefix):
 		// key is for a local alias bucket in storage.
 		i.invalidateLocalAliasesBucket(ctx, key)
+	case strings.HasPrefix(key, scimClientStoragePrefix):
+		i.invalidateSCIMClient(ctx, key)
+	case strings.HasPrefix(key, tpmBucketsPrefix):
+		i.invalidateTPMBucket(ctx, key)
+	case strings.HasPrefix(key, tpmgroupBucketsPrefix):
+		i.invalidateTPMGroupBucket(ctx, key)
 	}
 }
 
@@ -772,6 +876,11 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 				}
 			}
 
+			if err := i.detachMovedAliasesFromStaleEntitiesInTxn(txn, bucketEntity, memDBEntities); err != nil {
+				i.logger.Error("failed to detach moved aliases from stale entities", "entity_id", bucketEntity.ID, "error", err)
+				return
+			}
+
 			_, err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false, false)
 			if err != nil {
 				i.logger.Error("failed to update entity in MemDB", "entity_id", bucketEntity.ID, "error", err)
@@ -821,6 +930,41 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 	}
 
 	txn.Commit()
+}
+
+func (i *IdentityStore) detachMovedAliasesFromStaleEntitiesInTxn(txn *memdb.Txn, entity *identity.Entity, memDBEntities []*identity.Entity) error {
+	for _, incomingAlias := range entity.Aliases {
+		indexedAlias, err := i.MemDBAliasByIDInTxn(txn, incomingAlias.ID, false, false)
+		if err != nil {
+			return err
+		}
+		if indexedAlias == nil || indexedAlias.CanonicalID == entity.ID {
+			continue
+		}
+
+		sourceEntity, err := i.MemDBEntityByIDInTxn(txn, indexedAlias.CanonicalID, true)
+		if err != nil {
+			return err
+		}
+		if sourceEntity != nil {
+			sourceEntity.DeleteAliasByID(incomingAlias.ID)
+			if err := i.MemDBUpsertEntityInTxn(txn, sourceEntity); err != nil {
+				return err
+			}
+			for index, cachedEntity := range memDBEntities {
+				if cachedEntity.ID == sourceEntity.ID {
+					memDBEntities[index] = sourceEntity
+					break
+				}
+			}
+		}
+
+		if err := i.MemDBDeleteAliasByIDInTxn(txn, incomingAlias.ID, false); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (i *IdentityStore) invalidateGroupBucket(ctx context.Context, key string) {
@@ -947,8 +1091,8 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	//
 	// The logic iterates over every local alias stored at the invalidated key.
 	// For each local alias read from the storage entry, the set of local
-	// aliases read from MemDB is searched for the same local alias. If it can't
-	// be found, it means that it needs to be inserted into MemDB. However, if
+	// aliases read from MemDB is searched for the same local alias. If it can't be
+	// found, it means that it needs to be inserted into MemDB. However, if
 	// it's found, it must be compared with the local alias from the storage. If
 	// they don't match, it means that the local alias in MemDB needs to be
 	// updated. If they did match, it means that this particular local alias did
@@ -999,6 +1143,41 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	// themselves.
 	entityLocalAliasesToRemove := map[*identity.Entity][]*identity.Alias{}
 
+	// entityCache holds a single cloned copy of each entity that this
+	// invalidation modifies, keyed by entity ID. We clone an entity only once we
+	// have determined that one of its local aliases changed or was removed (see
+	// below), so entities with no changes are never cloned. Cloning is required
+	// because we mutate the entity (UpsertAlias / alias removal) and the objects
+	// stored in MemDB are read concurrently by lock-free read transactions on
+	// performance standbys. Caching by ID ensures that aliases belonging to the
+	// same entity are batched onto the same clone, which the maps above rely on
+	// for correct grouping.
+	entityCache := map[string]*identity.Entity{}
+
+	// fetchEntityForLocalAlias returns a private, cloned copy of the entity
+	// associated with the provided local alias, reusing a previously cloned
+	// copy when one already exists for the same entity.
+	fetchEntityForLocalAlias := func(alias *identity.Alias) (*identity.Entity, error) {
+		if entity, ok := entityCache[alias.CanonicalID]; ok {
+			return entity, nil
+		}
+
+		entity := i.FetchEntityForLocalAliasInTxn(txn, alias)
+		if entity == nil {
+			// FetchEntityForLocalAliasInTxn already logs any error
+			return nil, nil
+		}
+
+		entity, err := entity.Clone()
+		if err != nil {
+			return nil, err
+		}
+
+		entityCache[alias.CanonicalID] = entity
+
+		return entity, nil
+	}
+
 	if bucket != nil {
 		// The storage entry for the local alias bucket exists, so we need to
 		// compare the local aliases in that bucket with those in MemDB and only
@@ -1020,50 +1199,60 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 			}
 
 			for _, bucketLocalAlias := range bucketLocalAliases.Aliases {
-				// Find the entity related to bucketLocalAlias in MemDB in order
-				// to track any local aliases modifications that must be made in
-				// this entity.
-				memDBEntity := i.FetchEntityForLocalAliasInTxn(txn, bucketLocalAlias)
-				if memDBEntity == nil {
-					// FetchEntityForLocalAliasInTxn already logs any error
-					return
-				}
-
 				// memDBLocalAlias starts off nil but gets set to the local
 				// alias from memDBLocalAliases whose ID matches the ID of
 				// bucketLocalAlias.
 				var memDBLocalAlias *identity.Alias
-				for i, localAlias := range memDBLocalAliases {
+				for idx, localAlias := range memDBLocalAliases {
 					if localAlias.ID == bucketLocalAlias.ID {
 						memDBLocalAlias = localAlias
 
 						// Remove this processed local alias from the
 						// memDBLocalAliases slice, so that all that
 						// will be left are unprocessed local aliases.
-						copy(memDBLocalAliases[i:], memDBLocalAliases[i+1:])
+						copy(memDBLocalAliases[idx:], memDBLocalAliases[idx+1:])
 						memDBLocalAliases = memDBLocalAliases[:len(memDBLocalAliases)-1]
 
 						break
 					}
 				}
 
-				// We've considered the use of github.com/google/go-cmp here,
-				// but opted for sticking with reflect.DeepEqual because go-cmp
-				// is intended for testing and is able to panic in some
-				// situations.
-				if memDBLocalAlias == nil || !reflect.DeepEqual(memDBLocalAlias, bucketLocalAlias) {
-					// The bucketLocalAlias is not in MemDB or it has changed in
-					// storage.
-					err = i.MemDBUpsertAliasInTxn(txn, bucketLocalAlias, false)
-					if err != nil {
-						i.logger.Error("failed to update local alias in MemDB", "alias_id", bucketLocalAlias.ID, "error", err)
-						return
-					}
-
-					// Add this local alias to the set of local aliases that
-					// need to be updated for memDBEntity.
-					entityLocalAliasesToUpsert[memDBEntity] = append(entityLocalAliasesToUpsert[memDBEntity], bucketLocalAlias)
+				// Compare with proto.Equal rather than reflect.DeepEqual.
+				// reflect.DeepEqual is both semantically wrong for protobuf
+				// messages and unsafe: it reads the messages' internal
+				// bookkeeping fields (state, sizeCache) with plain loads, which
+				// race with the concurrent readers that marshal these shared
+				// MemDB objects on performance standbys. proto.Equal compares
+				// only the message contents, so it is safe to run against the
+				// shared alias.
+				if memDBLocalAlias != nil && proto.Equal(memDBLocalAlias, bucketLocalAlias) {
+					// This local alias did not change in storage; nothing to do.
+					continue
 				}
+
+				// The bucketLocalAlias is not in MemDB or it has changed in
+				// storage, so its entity must be updated. Clone the entity now
+				// (only entities that actually change get cloned) so that we
+				// never mutate the shared MemDB copy.
+				memDBEntity, cloneErr := fetchEntityForLocalAlias(bucketLocalAlias)
+				if cloneErr != nil {
+					i.logger.Error("failed to clone entity for local alias", "entity_id", bucketLocalAlias.CanonicalID, "error", cloneErr)
+					return
+				}
+				if memDBEntity == nil {
+					// fetchEntityForLocalAlias already logs any fetch error
+					return
+				}
+
+				err = i.MemDBUpsertAliasInTxn(txn, bucketLocalAlias, false)
+				if err != nil {
+					i.logger.Error("failed to update local alias in MemDB", "alias_id", bucketLocalAlias.ID, "error", err)
+					return
+				}
+
+				// Add this local alias to the set of local aliases that
+				// need to be updated for memDBEntity.
+				entityLocalAliasesToUpsert[memDBEntity] = append(entityLocalAliasesToUpsert[memDBEntity], bucketLocalAlias)
 			}
 		}
 	}
@@ -1071,9 +1260,13 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	// Any local aliases still remaining in memDBLocalAliases do not exist in
 	// storage and should be removed from MemDB.
 	for _, memDBLocalAlias := range memDBLocalAliases {
-		memDBEntity := i.FetchEntityForLocalAliasInTxn(txn, memDBLocalAlias)
+		memDBEntity, fetchErr := fetchEntityForLocalAlias(memDBLocalAlias)
+		if fetchErr != nil {
+			i.logger.Error("failed to clone entity for local alias", "entity_id", memDBLocalAlias.CanonicalID, "error", fetchErr)
+			return
+		}
 		if memDBEntity == nil {
-			// FetchEntityForLocalAliasInTxn already logs any error
+			// fetchEntityForLocalAlias already logs any fetch error
 			return
 		}
 
@@ -1295,6 +1488,51 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 	return i.MemDBEntityByAliasIDInTxn(txn, alias.ID, clone)
 }
 
+// entityByAliasFactorsIf fetches and clones an entity by alias factors only when
+// shouldReturn evaluates to true for the matching alias.
+func (i *IdentityStore) entityByAliasFactorsIf(mountAccessor, aliasName string, shouldReturn func(*identity.Alias) bool) (*identity.Entity, error) {
+	if mountAccessor == "" {
+		return nil, fmt.Errorf("missing mount accessor")
+	}
+
+	if aliasName == "" {
+		return nil, fmt.Errorf("missing alias name")
+	}
+
+	txn := i.db.Txn(false)
+
+	return i.entityByAliasFactorsInTxnIf(txn, mountAccessor, aliasName, shouldReturn)
+}
+
+// entityByAliasFactorsInTxnIf fetches and clones an entity by alias factors only
+// when shouldReturn evaluates to true for the matching alias.
+func (i *IdentityStore) entityByAliasFactorsInTxnIf(txn *memdb.Txn, mountAccessor, aliasName string, shouldReturn func(*identity.Alias) bool) (*identity.Entity, error) {
+	var entity *identity.Entity
+
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	if mountAccessor == "" {
+		return nil, fmt.Errorf("missing mount accessor")
+	}
+
+	if aliasName == "" {
+		return nil, fmt.Errorf("missing alias name")
+	}
+
+	alias, err := i.MemDBAliasByFactorsInTxn(txn, mountAccessor, aliasName, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if alias == nil {
+		return entity, nil
+	}
+
+	return i.MemDBEntityByAliasIDInTxnClonePredicate(txn, alias.ID, shouldReturn)
+}
+
 // CreateEntity creates a new entity.
 func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"identity", "create_entity"}, time.Now())
@@ -1321,7 +1559,8 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 		1,
 		[]metrics.Label{
 			nsLabel,
-		})
+		},
+	)
 
 	return entity.Clone()
 }
@@ -1353,12 +1592,14 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, false, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
-	// Check if an entity already exists for the given alias
-	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
+	// Fast path: only clone and return the entity when alias metadata is unchanged.
+	entity, err = i.entityByAliasFactorsIf(alias.MountAccessor, alias.Name, func(existingAlias *identity.Alias) bool {
+		return strutil.EqualStringMaps(existingAlias.Metadata, alias.Metadata)
+	})
 	if err != nil {
 		return nil, false, err
 	}
-	if entity != nil && changedAliasIndex(entity, alias) == -1 {
+	if entity != nil {
 		return entity, false, nil
 	}
 
@@ -1369,20 +1610,31 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	// Check if an entity was created before acquiring the lock
-	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
+	// Check if an entity was created before acquiring the lock.
+	// We don't clone here because:
+	// 1. If no changes needed, we clone before returning
+	// 2. If changes needed, we'll modify and clone at the end anyway
+	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, false, err
 	}
 	if entity != nil {
+		// Clone immediately to avoid modifying MemDB state directly
+		entity, err = entity.Clone()
+		if err != nil {
+			return nil, false, err
+		}
+
 		idx := changedAliasIndex(entity, alias)
 		if idx == -1 {
+			// No changes needed, return the cloned entity
 			return entity, false, nil
 		}
+
+		// Safe to modify the cloned entity
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
 		a.LastUpdateTime = timestamppb.Now()
-
 		update = true
 	}
 
@@ -1432,7 +1684,8 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 				nsLabel,
 				{"auth_method", newAlias.MountType},
 				{"mount_point", newAlias.MountPath},
-			})
+			},
+		)
 		entityCreated = true
 	}
 

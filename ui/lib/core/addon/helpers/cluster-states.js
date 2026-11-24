@@ -14,46 +14,55 @@ export const CLUSTER_STATES = {
     glyph: 'check-circle',
     isOk: true,
     isSyncing: false,
+    color: 'success',
   },
   ready: {
     glyph: 'check-circle',
     isOk: true,
     isSyncing: false,
+    color: 'success',
   },
   'stream-wals': {
     glyph: 'check-circle',
     isOk: true,
     isSyncing: false,
+    color: 'success',
   },
   'merkle-diff': {
     glyph: 'sync-reverse',
     isOk: true,
     isSyncing: true,
+    color: 'warning',
   },
   connecting: {
     glyph: 'sync-reverse',
     isOk: true,
     isSyncing: true,
+    color: 'warning',
   },
   'merkle-sync': {
     glyph: 'sync-reverse',
     isOk: true,
     isSyncing: true,
+    color: 'warning',
   },
   idle: {
     glyph: 'x-square',
     isOk: false,
     isSyncing: false,
+    color: 'critical',
   },
   transient_failure: {
     glyph: 'x-circle',
     isOk: false,
     isSyncing: false,
+    color: 'critical',
   },
   shutdown: {
     glyph: 'x-circle',
     isOk: false,
     isSyncing: false,
+    color: 'critical',
   },
 };
 

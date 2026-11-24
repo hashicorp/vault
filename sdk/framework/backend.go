@@ -114,9 +114,21 @@ type Backend struct {
 	// to communicate with a plugin on when to rotate a credential
 	RotateCredential func(context.Context, *logical.Request) error
 
+	// HealthCheck is the optional callback invoked when the HealthCheckManager
+	// routes a health check operation to the plugin. The plugin defines which
+	// checks to perform. Plugins that do not set this field return
+	// 501 Not Implemented for health check operations.
+	//
+	// The callback receives the full logical.Request to access storage and read
+	// the plugin's configuration. The path being checked is available in req.Path.
+	HealthCheck func(context.Context, *logical.Request) (*logical.HealthCheckExecutionResult, error)
+
 	// ActivationFunc is the callback function used by ActivationFlags to
 	// communicate with a plugin to activate a feature.
 	ActivationFunc func(context.Context, *logical.Request, string) error
+
+	// ConsumptionBillingManager is the consumption billing manager the backend can use to write billing data.
+	ConsumptionBillingManager logical.ConsumptionBillingManager
 
 	logger       log.Logger
 	system       logical.SystemView
@@ -233,6 +245,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return b.handleRollback(ctx, req)
 	case logical.RotationOperation:
 		return b.handleRotation(ctx, req)
+	case logical.HealthCheckOperation:
+		return b.handleHealthCheck(ctx, req)
 	}
 
 	// If the path is empty and it is a help operation, handle that.
@@ -357,7 +371,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 // HandlePatchOperation acts as an abstraction for performing JSON merge patch
 // operations (see https://datatracker.ietf.org/doc/html/rfc7396) for HTTP
-// PATCH requests. It is responsible for properly processing and marshalling
+// PATCH requests. It is responsible for properly processing and marshalli ng
 // the input and existing resource prior to performing the JSON merge operation
 // using the MergePatch function from the json-patch library. The preprocessor
 // is an arbitrary func that can be provided to further process the input. The
@@ -440,6 +454,11 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	b.system = config.System
 	b.events = config.EventsSender
 	b.observations = config.ObservationRecorder
+	if b.System() != nil && b.System().GetConsumptionBillingManager() != nil {
+		b.ConsumptionBillingManager = b.System().GetConsumptionBillingManager()
+	} else {
+		b.ConsumptionBillingManager = logical.NewNullConsumptionBillingManager()
+	}
 	return nil
 }
 
@@ -546,7 +565,7 @@ func (b *Backend) init() {
 	for i, p := range b.Paths {
 		// Detect the coding error of failing to initialise Pattern
 		if len(p.Pattern) == 0 {
-			panic(fmt.Sprintf("Routing pattern cannot be blank"))
+			panic("Routing pattern cannot be blank")
 		}
 
 		// Detect the coding error of attempting to define a CreateOperation without defining an ExistenceCheck
@@ -719,6 +738,28 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 	return resp, merr.ErrorOrNil()
 }
 
+// handleHealthCheck invokes the HealthCheck func set on the backend.
+// Returns a 501 Not Implemented coded error when the plugin has not implemented
+// the callback.
+func (b *Backend) handleHealthCheck(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	if b.HealthCheck == nil {
+		return nil, logical.CodedError(http.StatusNotImplemented, "health check not supported by this plugin")
+	}
+
+	// health check attempts to store the result which is a write operation, so we short-circuit the request
+	if !b.WriteSafeReplicationState() {
+		return nil, logical.ErrReadOnly
+	}
+
+	// Pass the full request to provide storage access and path information
+	healthCheckResponse, err := b.HealthCheck(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return healthCheckResponse.ToLogicalResponse(), nil
+}
+
 // handleRotation invokes the RotateCredential func set on the backend.
 func (b *Backend) handleRotation(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.RotateCredential == nil {
@@ -821,6 +862,41 @@ func (b *Backend) RecordObservation(ctx context.Context, observationType string,
 		return ErrNoObservations
 	}
 	return b.observations.RecordObservationFromPlugin(ctx, observationType, data)
+}
+
+// RecordObservationWithRequest is used to record observations through the
+// plugin's observation system. It attaches information from the request to the
+// observation data. The request path, client ID, entity ID, and request ID are
+// included.
+// This method returns ErrNoObservations if the observation system has not been
+// configured or enabled.
+func (b *Backend) RecordObservationWithRequest(ctx context.Context, req *logical.Request, observationType string, data map[string]interface{}) error {
+	if b.observations == nil {
+		return ErrNoObservations
+	}
+
+	// Attach request information to the observation data
+	if req != nil {
+		if data == nil {
+			data = make(map[string]interface{})
+		}
+		data["path"] = req.Path
+		data["client_id"] = req.ClientID
+		data["entity_id"] = req.EntityID
+		data["request_id"] = req.ID
+	}
+
+	return b.observations.RecordObservationFromPlugin(ctx, observationType, data)
+}
+
+// TryRecordObservationWithRequest is like RecordObservationWithRequest but
+// logs a warning instead of returning an error if recording the observation fails
+// for reasons other than the observation system not being configured/enabled
+func (b *Backend) TryRecordObservationWithRequest(ctx context.Context, req *logical.Request, observationType string, data map[string]interface{}) {
+	err := b.RecordObservationWithRequest(ctx, req, observationType, data)
+	if err != nil && !errors.Is(err, ErrNoObservations) {
+		b.Logger().Warn("failed to record observation", "error", err, "observation_type", observationType)
+	}
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.

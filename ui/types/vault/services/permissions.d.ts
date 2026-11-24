@@ -16,5 +16,7 @@ export default class PermissionsService extends Service {
   canViewAll: boolean | null;
   permissionsBanner: string | null;
   chrootNamespace: string | null | undefined;
-  hasNavPermission: (string) => boolean;
+  hasPermission: (pathName: string, capabilities?: Array<string | null>) => boolean;
+  hasPermissionBeneath: (pathName: string, capabilities: string[], excludedSubpaths?: string[]) => boolean;
+  hasNavPermission: (navItem: string, routeParams?: string | string[], requireAll?: boolean) => boolean;
 }

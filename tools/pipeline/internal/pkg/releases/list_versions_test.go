@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package releases
@@ -158,6 +158,7 @@ func Test_VersionReq_Run(t *testing.T) {
 	} {
 		t.Run(desc, func(t *testing.T) {
 			t.Parallel()
+			test.req.ProductName = "vault"
 			res, err := test.req.Run(context.Background())
 			if test.fail {
 				require.Error(t, err)

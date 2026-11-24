@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -20,7 +20,7 @@ import { tracked } from '@glimmer/tracking';
  */
 
 export default class MfaSetupStepOne extends Component {
-  @service store;
+  @service api;
   @tracked error = '';
   @tracked warning = '';
   @tracked qrCode = '';
@@ -48,13 +48,15 @@ export default class MfaSetupStepOne extends Component {
   async postCurrentTokenGenerate() {
     this.error = '';
     this.warning = '';
-    const adapter = this.store.adapterFor('mfa-setup');
     let response;
 
     try {
-      response = await adapter.currentTokenGenerate({
-        method_id: this.UUID, // comes from value on the input
+      const apiResponse = await this.api.identity.mfaGenerateTotpSecretRaw({
+        MfaGenerateTotpSecretRequest: {
+          method_id: this.UUID, // comes from value on the input
+        },
       });
+      response = await apiResponse.raw.json();
       this.args.saveUUIDandQrCode(this.UUID, response.data?.url);
       // if there was a warning it won't fail but needs to be handled here and the flow needs to be interrupted
       const warnings = response.warnings || [];
@@ -73,7 +75,8 @@ export default class MfaSetupStepOne extends Component {
       }
     } catch (error) {
       this.UUID = ''; // clear the UUID
-      this.error = error.errors;
+      const parsed = await this.api.parseError(error);
+      this.error = parsed.response?.errors || [parsed.message];
       return 'stop_progress';
     }
     return response;

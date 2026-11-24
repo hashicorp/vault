@@ -8,11 +8,12 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -455,6 +456,55 @@ func testACLPolicyMerge(t *testing.T, ns *namespace.Namespace) {
 	}
 }
 
+// TestACL_SubscribeEventTypesMerge verifies that subscribe_event_types are preserved
+// when merged with another policy stanza for the same path that omits them.
+func TestACL_SubscribeEventTypesMerge(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+
+		withSubscribe, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+			path "secret/foo" {
+				capabilities = ["read", "subscribe"]
+				subscribe_event_types = ["abc", "def"]
+			}
+		`))
+		require.NoError(t, err)
+
+		withoutSubscribeEventTypes, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+			path "secret/foo" {
+				capabilities = ["read", "update"]
+			}
+		`))
+		require.NoError(t, err)
+
+		testCases := []struct {
+			name     string
+			policies []*Policy
+		}{
+			{
+				name:     "subscribe policy first",
+				policies: []*Policy{withSubscribe, withoutSubscribeEventTypes},
+			},
+			{
+				name:     "subscribe policy second",
+				policies: []*Policy{withoutSubscribeEventTypes, withSubscribe},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				ctx := namespace.RootContext(context.Background())
+				acl, err := NewACL(ctx, tc.policies)
+				require.NoError(t, err)
+
+				caps, eventTypes := acl.CapabilitiesAndSubscribeEventTypes(ctx, "secret/foo")
+				require.Contains(t, caps, SubscribeCapability)
+				require.ElementsMatch(t, []string{"abc", "def"}, eventTypes)
+			})
+		}
+	})
+}
+
 func TestACL_AllowOperation(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
@@ -537,6 +587,123 @@ func testACLAllowOperation(t *testing.T, ns *namespace.Namespace) {
 			}
 		}
 	}
+}
+
+// TestACL_ExactDenyTrailingSlashBypass verifies that an exact deny rule written
+// without a trailing slash (e.g. "sys/mounts/protected") cannot be bypassed by
+// appending a trailing slash to the request path. Before the fix, the exact
+// lookup for "sys/mounts/protected/" would miss the "sys/mounts/protected" key,
+// fall through to the broader wildcard delete grant, and allow the operation.
+// The fix mirrors the existing LIST behaviour: when the first exact lookup
+// misses on a path that has a trailing slash, a second lookup is attempted with
+// the slash stripped.
+func TestACL_ExactDenyTrailingSlashBypass(t *testing.T) {
+	t.Parallel()
+
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	// Policy mirrors the real-world attacker setup:
+	//   - wildcard DELETE on all sys/mounts/* (the broad grant)
+	//   - exact DENY on the canonical path WITHOUT a trailing slash
+	//     (as a policy author would naturally write it)
+	const policy = `
+path "sys/mounts/*" {
+  capabilities = ["delete"]
+}
+path "sys/mounts/protected" {
+  capabilities = ["deny"]
+}
+`
+	parsed, err := ParseACLPolicy(ns, policy)
+	require.NoError(t, err, "policy should parse without error")
+
+	acl, err := NewACL(ctx, []*Policy{parsed})
+	require.NoError(t, err, "ACL construction should succeed")
+
+	cases := []struct {
+		name        string
+		path        string
+		wantAllowed bool
+	}{
+		{
+			// Canonical path — exact deny key matches directly; must be blocked.
+			name:        "canonical path without slash is denied",
+			path:        "sys/mounts/protected",
+			wantAllowed: false,
+		},
+		{
+			// Trailing-slash variant — previously bypassed the exact deny.
+			// After the fix the slash-stripped second lookup must find the deny.
+			name:        "trailing slash path is denied",
+			path:        "sys/mounts/protected/",
+			wantAllowed: false,
+		},
+		{
+			// A sibling path that is NOT explicitly denied must still be allowed
+			// by the wildcard grant — the fix must not break normal operation.
+			name:        "unprotected sibling path is allowed",
+			path:        "sys/mounts/other",
+			wantAllowed: true,
+		},
+		{
+			// Sibling with trailing slash — also allowed by wildcard.
+			name:        "unprotected sibling path with slash is allowed",
+			path:        "sys/mounts/other/",
+			wantAllowed: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			req := &logical.Request{
+				Operation: logical.DeleteOperation,
+				Path:      tc.path,
+			}
+			result := acl.AllowOperation(ctx, req, false)
+			require.Equal(t, tc.wantAllowed, result.Allowed,
+				"AllowOperation(%q, DELETE).Allowed", tc.path)
+		})
+	}
+
+	// A less-specific segment-wildcard deny (sys/+/+) must not win over a
+	// more-specific prefix allow (sys/mounts/protected*) via the alternate
+	// slash form check. Specificity ordering must be preserved.
+	t.Run("segment wildcard deny specificity preserved", func(t *testing.T) {
+		t.Parallel()
+		const pol = `
+path "sys/+/+" {
+  capabilities = ["deny"]
+}
+path "sys/mounts/protected*" {
+  capabilities = ["delete"]
+}
+`
+		p2, err := ParseACLPolicy(ns, pol)
+		require.NoError(t, err)
+		acl2, err := NewACL(ctx, []*Policy{p2})
+		require.NoError(t, err)
+
+		for _, tc := range []struct {
+			path        string
+			wantAllowed bool
+		}{
+			// More-specific prefix allow must win on both slash forms.
+			{"sys/mounts/protected", true},
+			{"sys/mounts/protected/", true},
+			// Path only matched by the broad deny must still be denied.
+			{"sys/auth/token/", false},
+		} {
+			t.Run(tc.path, func(t *testing.T) {
+				t.Parallel()
+				req := &logical.Request{Operation: logical.DeleteOperation, Path: tc.path}
+				result := acl2.AllowOperation(ctx, req, false)
+				require.Equal(t, tc.wantAllowed, result.Allowed,
+					"AllowOperation(%q, DELETE).Allowed", tc.path)
+			})
+		}
+	})
 }
 
 func TestACL_ValuePermissions(t *testing.T) {
@@ -729,6 +896,146 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 		if authResults.Allowed {
 			t.Fatalf("bad: case %d %#v: %v", i, pt, authResults.Allowed)
 		}
+	}
+}
+
+// TestACL_ListTrailingSlashDeny exercises the SECVULN-45175 fix: a
+// trailing-slash LIST request must respect more-specific DENY policies even
+// when a broader ALLOW rule is also reachable via the trimmed form of the path.
+// It also guards the VAULT-3825 regression: a segment-wildcard rule without a
+// trailing slash must continue to grant LIST on trailing-slash paths.
+func TestACL_ListTrailingSlashDeny(t *testing.T) {
+	t.Parallel()
+
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	type tc struct {
+		name     string
+		policies []string
+		path     string
+		wantList bool
+	}
+
+	cases := []tc{
+		// CVE core case: a more-specific prefix deny must not be bypassed by
+		// the trimmed-path lookup reaching only the broader allow.
+		{
+			name: "prefix-deny-more-specific-than-prefix-allow",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: false,
+		},
+		// Inverse: more-specific allow must win over broader deny.
+		{
+			name: "prefix-allow-more-specific-than-prefix-deny",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["deny"] }`,
+				`path "kv1/private/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: true,
+		},
+		// VAULT-3825 regression: a segment-wildcard policy written without a
+		// trailing slash ("kv1/+") must still grant LIST on trailing-slash paths
+		// ("kv1/private/") — that was the original intent of the slash-stripping
+		// logic.
+		{
+			name: "segwc-allow-no-slash-grants-list-on-slash-path",
+			policies: []string{
+				`path "kv1/+" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: true,
+		},
+		// CRITICAL regression guard: a segment-wildcard deny "kv1/+" must still
+		// fire on "kv1/private/" even when a broader prefix allow "kv1/*" exists.
+		// If the segwc deny is silently dropped the fix is incomplete.
+		{
+			name: "segwc-deny-preserved-over-prefix-allow",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+				`path "kv1/+" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: false,
+		},
+		// The LIST trailing-slash branch only fires when the path ends in "/";
+		// requests without one must use the normal (non-trailing-slash) code path.
+		{
+			name: "no-trailing-slash-allow-unchanged",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private",
+			wantList: true,
+		},
+		// "kv1/private/*" (stored as prefix key "kv1/private/") does NOT match
+		// the query "kv1/private" (no slash) because LongestPrefix requires the
+		// query to start with the key, and "kv1/private" does not start with
+		// "kv1/private/".  The broader allow "kv1/*" wins; this is correct.
+		{
+			name: "no-trailing-slash-no-deny-correct-semantics",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private",
+			wantList: true,
+		},
+		// The deny on kv1/private/* must not affect the sibling kv1/public/*.
+		{
+			name: "sibling-path-not-affected-by-specific-deny",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/public/",
+			wantList: true,
+		},
+		// Baseline: a plain prefix allow, no deny at all.
+		{
+			name: "allow-only-prefix-slash-path",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/anything/",
+			wantList: true,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var policies []*Policy
+			for i, pstr := range tc.policies {
+				p, err := ParseACLPolicy(ns, pstr)
+				if err != nil {
+					t.Fatalf("policy %d parse error: %v", i, err)
+				}
+				policies = append(policies, p)
+			}
+
+			acl, err := NewACL(ctx, policies)
+			if err != nil {
+				t.Fatalf("NewACL error: %v", err)
+			}
+
+			req := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      tc.path,
+			}
+			result := acl.AllowOperation(ctx, req, false)
+			if result.Allowed != tc.wantList {
+				t.Errorf("AllowOperation(%q, LIST).Allowed = %v, want %v",
+					tc.path, result.Allowed, tc.wantList)
+			}
+		})
 	}
 }
 
@@ -1415,7 +1722,7 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				},
 				"case_sensitive_value_matching": {
 					parameters: `{"allowedParam": "ALLOWEDVALUE"}`,
-					allowed:    false,
+					allowed:    false, // non-policies params remain case-sensitive
 				},
 			},
 		},
@@ -1465,7 +1772,355 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				},
 				"case_sensitive_value_matching": {
 					parameters: `{"deniedParam": "DENIEDVALUE"}`,
+					allowed:    true, // non-policies params remain case-sensitive
+				},
+				"mixed_case_value_does_not_match_denied": {
+					parameters: `{"deniedParam": "DeniedValue"}`,
+					allowed:    true, // non-policies params remain case-sensitive
+				},
+			},
+		},
+		"token_policies_denied_parameters_case_folding": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"token_policies" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				// String form — works in both legacy and new slice matching.
+				"exact_lowercase_string_is_denied": {
+					parameters: `{"token_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"mixed_case_string_is_also_denied": {
+					parameters: `{"token_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"all_caps_string_is_also_denied": {
+					parameters: `{"token_policies": "SUPER-ADMIN"}`,
+					allowed:    false,
+				},
+				"non_denied_string_value_is_allowed": {
+					parameters: `{"token_policies": "default"}`,
 					allowed:    true,
+				},
+				// List form — only meaningful with new slice matching; legacy mode
+				// compares the whole slice value and would never match a string entry.
+				"exact_lowercase_list_is_denied": {
+					parameters:           `{"token_policies": ["super-admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"mixed_case_list_is_also_denied": {
+					parameters:           `{"token_policies": ["Super-Admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"all_caps_list_is_also_denied": {
+					parameters:           `{"token_policies": ["SUPER-ADMIN"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"non_denied_list_value_is_allowed": {
+					parameters:           `{"token_policies": ["default"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"token_policies_allowed_parameters_case_folding": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"token_policies" = ["read-only"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				// String form — works in both legacy and new slice matching.
+				"exact_lowercase_string_is_allowed": {
+					parameters: `{"token_policies": "read-only"}`,
+					allowed:    true,
+				},
+				"mixed_case_string_is_also_allowed": {
+					parameters: `{"token_policies": "Read-Only"}`,
+					allowed:    true,
+				},
+				"non_allowed_string_value_is_denied": {
+					parameters: `{"token_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				// List form — only meaningful with new slice matching.
+				"exact_lowercase_list_is_allowed": {
+					parameters:           `{"token_policies": ["read-only"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"mixed_case_list_is_also_allowed": {
+					parameters:           `{"token_policies": ["Read-Only"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"non_allowed_list_value_is_denied": {
+					parameters:           `{"token_policies": ["super-admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		// Whitespace canonicalization. Downstream consumers trim surrounding
+		// whitespace from policy names, so a value such as " super-admin "
+		// resolves to the denied policy and must be denied at the ACL layer too.
+		"policies_denied_parameters_whitespace_trimming": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"policies" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"exact_value_is_denied": {
+					parameters: `{"policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"leading_space_is_also_denied": {
+					parameters: `{"policies": " super-admin"}`,
+					allowed:    false,
+				},
+				"trailing_space_is_also_denied": {
+					parameters: `{"policies": "super-admin "}`,
+					allowed:    false,
+				},
+				"surrounding_tabs_are_also_denied": {
+					parameters: `{"policies": "\tsuper-admin\t"}`,
+					allowed:    false,
+				},
+				"surrounding_newlines_are_also_denied": {
+					parameters: `{"policies": "\nsuper-admin\r\n"}`,
+					allowed:    false,
+				},
+				// U+00A0 no-break space and U+2028 line separator are both
+				// reported as whitespace by unicode.IsSpace, so TrimSpace
+				// removes them and the value resolves to the denied policy.
+				"surrounding_unicode_whitespace_is_also_denied": {
+					parameters: `{"policies": "\u00a0super-admin\u2028"}`,
+					allowed:    false,
+				},
+				"whitespace_and_mixed_case_combined_is_also_denied": {
+					parameters: `{"policies": "  Super-Admin\t"}`,
+					allowed:    false,
+				},
+				// Interior whitespace is not trimmed by the downstream
+				// canonicalization either, so this is a genuinely different
+				// policy name and must remain allowed.
+				"interior_whitespace_is_a_different_policy_and_allowed": {
+					parameters: `{"policies": "super admin"}`,
+					allowed:    true,
+				},
+				"whitespace_in_list_form_is_also_denied": {
+					parameters:           `{"policies": [" Super-Admin "]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				// Comma-separated strings are the wire form of
+				// framework.TypeCommaStringSlice; each element is canonicalized.
+				"whitespace_in_comma_separated_string_is_also_denied": {
+					parameters:           `{"policies": "default, Super-Admin "}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"policy_infix_glob_denials": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"policies" = [" TEAM.*.LEAD "]
+						"token_policies" = ["TEAM.*.LEAD"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"scalar_infix_glob_is_denied": {
+					parameters: `{"policies": "team.platform.lead"}`,
+					allowed:    false,
+				},
+				"list_infix_glob_is_denied": {
+					parameters:           `{"policies": ["default", "team.platform.lead"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"token_policies_infix_glob_is_denied": {
+					parameters:           `{"token_policies": ["team.platform.lead"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"different_policy_is_allowed": {
+					parameters: `{"policies": "team.platform.reader"}`,
+					allowed:    true,
+				},
+			},
+		},
+		// Token-role policy fields were not covered by the partial remediation,
+		// leaving them vulnerable to both mixed-case and whitespace variants.
+		// These fields determine the policies of tokens issued through the role.
+		"token_role_policy_fields_denied_parameters_canonicalization": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"allowed_policies" = ["super-admin"]
+						"disallowed_policies" = ["super-admin"]
+						"allowed_policies_glob" = ["super-admin"]
+						"disallowed_policies_glob" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"allowed_policies_exact_is_denied": {
+					parameters: `{"allowed_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"allowed_policies_mixed_case_is_also_denied": {
+					parameters: `{"allowed_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"allowed_policies_whitespace_is_also_denied": {
+					parameters: `{"allowed_policies": " super-admin "}`,
+					allowed:    false,
+				},
+				"allowed_policies_list_form_is_also_denied": {
+					parameters:           `{"allowed_policies": [" Super-Admin "]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"disallowed_policies_mixed_case_is_also_denied": {
+					parameters: `{"disallowed_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"disallowed_policies_whitespace_is_also_denied": {
+					parameters: `{"disallowed_policies": "\tsuper-admin\n"}`,
+					allowed:    false,
+				},
+				"allowed_policies_glob_mixed_case_is_also_denied": {
+					parameters: `{"allowed_policies_glob": "SUPER-ADMIN"}`,
+					allowed:    false,
+				},
+				"allowed_policies_glob_whitespace_is_also_denied": {
+					parameters: `{"allowed_policies_glob": " super-admin"}`,
+					allowed:    false,
+				},
+				"disallowed_policies_glob_mixed_case_is_also_denied": {
+					parameters: `{"disallowed_policies_glob": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"disallowed_policies_glob_whitespace_is_also_denied": {
+					parameters: `{"disallowed_policies_glob": "super-admin "}`,
+					allowed:    false,
+				},
+				"non_denied_policy_name_remains_allowed": {
+					parameters: `{"allowed_policies": "read-only"}`,
+					allowed:    true,
+				},
+			},
+		},
+		// Agent Registry and RADIUS policy fields canonicalized by their downstream consumers.
+		"agent_registry_and_radius_policy_fields_canonicalization": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"ceiling_policies" = ["super-admin"]
+						"unregistered_user_policies" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"ceiling_policies_mixed_case_is_denied": {
+					parameters: `{"ceiling_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"ceiling_policies_whitespace_is_denied": {
+					parameters: `{"ceiling_policies": " super-admin "}`,
+					allowed:    false,
+				},
+				"unregistered_user_policies_mixed_case_is_denied": {
+					parameters: `{"unregistered_user_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"unregistered_user_policies_whitespace_is_denied": {
+					parameters: `{"unregistered_user_policies": "super-admin\t"}`,
+					allowed:    false,
+				},
+			},
+		},
+		// Non-policy parameters must keep their existing exact-match semantics;
+		// canonicalization must not leak into unrelated parameters.
+		"non_policy_parameters_are_not_canonicalized": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"policy" = ["super-admin"]
+						"name" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"policy_document_param_exact_match_is_denied": {
+					parameters: `{"policy": "super-admin"}`,
+					allowed:    false,
+				},
+				"policy_document_param_whitespace_matches_under_slice_matching": {
+					parameters:           `{"policy": " super-admin "}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"policy_document_param_whitespace_allowed_under_legacy_matching": {
+					parameters:              `{"policy": " super-admin "}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"name_param_mixed_case_remains_allowed": {
+					parameters: `{"name": "Super-Admin"}`,
+					allowed:    true,
+				},
+			},
+		},
+		// allowed_parameters must remain fail-closed: canonicalization may only
+		// make a value match an explicitly allowed entry, never bypass the list.
+		"policies_allowed_parameters_remain_fail_closed": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"policies" = ["read-only"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"allowed_value_with_whitespace_is_allowed": {
+					parameters: `{"policies": " Read-Only "}`,
+					allowed:    true,
+				},
+				"unlisted_policy_is_denied": {
+					parameters: `{"policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"unlisted_policy_with_whitespace_is_still_denied": {
+					parameters: `{"policies": " Super-Admin "}`,
+					allowed:    false,
+				},
+				"unlisted_parameter_is_denied": {
+					parameters: `{"some_other_param": "value"}`,
+					allowed:    false,
 				},
 			},
 		},

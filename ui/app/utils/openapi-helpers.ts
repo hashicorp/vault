@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { debug } from '@ember/debug';
-import { camelize, capitalize, dasherize } from '@ember/string';
+import { capitalize, dasherize } from '@ember/string';
 import { singularize } from 'ember-inflector';
 
 interface Path {
@@ -59,17 +58,6 @@ interface OpenApiPath {
   post?: OpenApiAction;
   delete?: OpenApiAction;
 }
-interface Attribute {
-  name: string;
-  type: string | undefined;
-  options: {
-    editType?: string;
-    fieldGroup?: string;
-    fieldValue?: string;
-    label?: string;
-    readonly?: boolean;
-  };
-}
 interface OpenApiProp {
   description: string;
   type: string;
@@ -88,16 +76,15 @@ interface OpenApiProp {
   deprecated?: boolean;
   enum?: string[];
 }
-interface MixedAttr {
+export interface MixedAttr {
   type?: string;
-  helpText?: string;
   editType?: string;
   fieldGroup: string;
   fieldValue?: string;
   label?: string;
   readonly?: boolean;
   possibleValues?: string[];
-  defaultValue?: string | number | (() => string | number);
+  defaultValue?: string | number;
   sensitive?: boolean;
   readOnly?: boolean;
   name?: string;
@@ -204,35 +191,7 @@ export function filterPathsByItemType(pathInfo: PathInfo, itemType: string): Pat
   });
 }
 
-/**
- * This object maps model names to the openAPI path that hydrates the model, given the backend path.
- */
-const OPENAPI_POWERED_MODELS = {
-  'kmip/config': (backend: string) => `/v1/${backend}/config?help=1`,
-  'kmip/role': (backend: string) => `/v1/${backend}/scope/example/role/example?help=1`,
-  'pki/certificate/generate': (backend: string) => `/v1/${backend}/issue/example?help=1`,
-  'pki/certificate/sign': (backend: string) => `/v1/${backend}/sign/example?help=1`,
-  'pki/config/acme': (backend: string) => `/v1/${backend}/config/acme?help=1`,
-  'pki/config/cluster': (backend: string) => `/v1/${backend}/config/cluster?help=1`,
-  'pki/config/urls': (backend: string) => `/v1/${backend}/config/urls?help=1`,
-  'pki/role': (backend: string) => `/v1/${backend}/roles/example?help=1`,
-  'pki/sign-intermediate': (backend: string) => `/v1/${backend}/issuer/example/sign-intermediate?help=1`,
-  'pki/tidy': (backend: string) => `/v1/${backend}/config/auto-tidy?help=1`,
-  'role-ssh': (backend: string) => `/v1/${backend}/roles/example?help=1`,
-};
-
-export function getHelpUrlForModel(modelType: string, backend?: string) {
-  if (modelType in OPENAPI_POWERED_MODELS && backend) {
-    const urlFn = OPENAPI_POWERED_MODELS[modelType as keyof typeof OPENAPI_POWERED_MODELS];
-    return urlFn(backend);
-  }
-  return null;
-}
-
-export const expandOpenApiProps = function (
-  props: OpenApiProps,
-  outputFormat: 'model' | 'form' = 'model'
-): Record<string, MixedAttr> {
+export const expandOpenApiProps = function (props: OpenApiProps): Record<string, MixedAttr> {
   const attrs: Record<string, MixedAttr> = {};
   // expand all attributes
   for (const propName in props) {
@@ -268,25 +227,15 @@ export const expandOpenApiProps = function (
       editType = items.type + capitalize(type);
     }
 
-    // to preserve legacy behavior set the description to helpText
-    // this pattern is deprecated when used with Form class since description is better represented as subText
-    const descriptionKey = outputFormat === 'model' ? 'helpText' : 'subText';
     const attrDefn: MixedAttr = {
       editType,
-      [descriptionKey]: description,
+      subText: description,
       possibleValues: prop['enum'],
-      fieldValue: isId ? 'mutableId' : undefined,
       fieldGroup: group || 'default',
       readOnly: isId,
       defaultValue: value || undefined,
       identifier,
     };
-
-    if (type === 'object' && !!value && outputFormat !== 'form') {
-      attrDefn.defaultValue = () => {
-        return value;
-      };
-    }
 
     if (sensitive) {
       attrDefn.sensitive = true;
@@ -311,8 +260,7 @@ export const expandOpenApiProps = function (
       }
     }
 
-    const key = outputFormat === 'model' ? camelize(propName) : propName;
-    attrs[key] = attrDefn;
+    attrs[propName] = attrDefn;
   }
   return attrs;
 };
@@ -331,83 +279,8 @@ export const propsForSchema = function (helpResponse: OpenApiHelpResponse) {
     // this maps to the location of the item in openapi.components.schemas
     const schemaRef = schema.$ref.replace('#/components/schemas/', '');
     const props = openapi.components.schemas[schemaRef]?.['properties'] as OpenApiProps;
-    return expandOpenApiProps(props, 'form');
+    return expandOpenApiProps(props);
   }
 
   return {};
 };
-
-/**
- * combineOpenApiAttrs takes attributes defined on an existing models
- * and adds in the attributes found on an OpenAPI response. The values
- * defined on the model should take precedence so we can overwrite
- * attributes from OpenAPI.
- */
-export const combineOpenApiAttrs = function (
-  oldAttrs: Map<string, Attribute>,
-  openApiProps: Record<string, MixedAttr>
-) {
-  const allAttrs: Record<string, boolean> = {};
-  const attrsArray: Attribute[] = [];
-  const newFields: string[] = [];
-
-  // First iterate over all the existing attrs and combine with recieved props, if they exist
-  oldAttrs.forEach(function (oldAttr, name) {
-    const attr: Attribute = { name, type: oldAttr.type, options: oldAttr.options };
-    const openApiProp = openApiProps[name];
-    if (openApiProp) {
-      const { type, ...options } = openApiProp;
-      // TODO: previous behavior took the openApi type no matter what
-      attr.type = oldAttr.type ?? type;
-      if (oldAttr.type && type && type !== oldAttr.type) {
-        debug(`mismatched type for ${name} -- ${type} vs ${oldAttr.type}`);
-      }
-      attr.options = { ...options, ...oldAttr.options };
-    }
-    attrsArray.push(attr);
-    // add to all attrs so we skip in the next part
-    allAttrs[name] = true;
-  });
-
-  // then iterate over all the new props and add them if they haven't already been accounted for
-  for (const name in openApiProps) {
-    // iterate over each
-    if (allAttrs[name]) {
-      continue;
-    } else {
-      const prop = openApiProps[name];
-      if (prop) {
-        const { type, ...options } = prop;
-        newFields.push(name);
-        attrsArray.push({ name, type, options });
-      }
-    }
-  }
-  return { attrs: attrsArray, newFields };
-};
-
-// interface FieldGroups {
-//   default: string[];
-//   [key: string]: string[];
-// }
-
-// export const combineFieldGroups = function (
-//   currentGroups: Array<Record<string, string[]>>,
-//   newFields: string[],
-//   excludedFields: string[]
-// ) {
-//   console.log({ currentGroups, newFields, excludedFields });
-//   let allFields: string[] = [];
-//   for (const group of currentGroups) {
-//     const fields = Object.values(group)[0] || [];
-//     allFields = allFields.concat(fields);
-//   }
-//   const otherFields = newFields.filter((field) => {
-//     return !allFields.includes(field) && !excludedFields.includes(field);
-//   });
-//   if (otherFields.length) {
-//     currentGroups[0].default = currentGroups[0].default.concat(otherFields);
-//   }
-
-//   return currentGroups;
-// };

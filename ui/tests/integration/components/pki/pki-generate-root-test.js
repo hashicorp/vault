@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,11 +10,20 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki/pki-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 import sinon from 'sinon';
+
+const PKI_NOT_VALID_AFTER = {
+  radioTtl: '[data-test-radio-button="ttl"]',
+  radioDate: '[data-test-radio-button="not_after"]',
+  ttlTimeInput: '[data-test-ttl-value="TTL"]',
+  ttlUnitInput: '[data-test-select="ttl-unit"]',
+  dateInput: '[data-test-input="not_after"]',
+};
 
 module('Integration | Component | pki-generate-root', function (hooks) {
   setupRenderingTest(hooks);
@@ -223,6 +232,49 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.true(this.generateStub.calledOnce, 'generate endpoint used when there is no issuer permission');
   });
 
+  test('it renders Not valid after as radio controls and sends not_after when specific date selected', async function (assert) {
+    assert.expect(5);
+    this.generateStub.resolves({
+      certificate: CERTIFICATES.loadedCert,
+    });
+
+    await this.renderComponent();
+
+    assert.dom(PKI_NOT_VALID_AFTER.radioTtl).exists('TTL radio renders for customTtl field');
+    assert.dom(PKI_NOT_VALID_AFTER.radioDate).exists('Specific date radio renders for customTtl field');
+
+    await fillIn(GENERAL.inputByAttr('type'), 'internal');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'foo');
+    await click(PKI_NOT_VALID_AFTER.radioDate);
+    await fillIn(PKI_NOT_VALID_AFTER.dateInput, '2030-05-04');
+    await click(GENERAL.submitButton);
+
+    assert.true(this.generateStub.calledOnce, 'Generate root endpoint is called on submit');
+    const payload = this.generateStub.firstCall.args[2];
+    assert.ok(payload.not_after, 'Selected specific date maps to not_after in the payload');
+    assert.strictEqual(payload.ttl, '', 'TTL is cleared when specific date is selected');
+  });
+
+  test('it sends ttl when TTL is selected in Not valid after field', async function (assert) {
+    assert.expect(3);
+    this.generateStub.resolves({
+      certificate: CERTIFICATES.loadedCert,
+    });
+
+    await this.renderComponent();
+
+    await fillIn(GENERAL.inputByAttr('type'), 'internal');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'foo');
+    await fillIn(PKI_NOT_VALID_AFTER.ttlTimeInput, '5');
+    await fillIn(PKI_NOT_VALID_AFTER.ttlUnitInput, 'h');
+    await click(GENERAL.submitButton);
+
+    assert.true(this.generateStub.calledOnce, 'Generate root endpoint is called on submit');
+    const payload = this.generateStub.firstCall.args[2];
+    assert.ok(payload.ttl, 'TTL is included in payload when TTL option is selected');
+    assert.notOk(payload.not_after, 'Specific date is cleared when TTL is selected');
+  });
+
   module('URLs section', function () {
     test('it does not render when no urls passed', async function (assert) {
       this.withUrls = false;
@@ -236,5 +288,25 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
       assert.dom(PKI_GENERATE_ROOT.urlSectionTitle).hasText('Issuer URLs');
     });
+  });
+
+  test('it blocks a Not valid after TTL longer than Vault supports', async function (assert) {
+    assert.expect(4);
+    this.generateStub.resolves({ certificate: CERTIFICATES.loadedCert });
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('type'), 'internal');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'foo');
+    await fillIn(PKI_NOT_VALID_AFTER.ttlTimeInput, '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL_PICKER.error).hasText('TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.true(this.generateStub.notCalled, 'no root is generated');
+
+    await fillIn(PKI_NOT_VALID_AFTER.ttlTimeInput, '106751');
+    await click(GENERAL.submitButton);
+    assert.true(this.generateStub.calledOnce, 'the root is generated once the TTL is valid');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
   });
 });

@@ -21,8 +21,11 @@ func pathUsersList(b *backend) *framework.Path {
 			ItemType:        "User",
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathUserList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathUserList,
+				Summary:  "List users configured in the Okta auth method.",
+			},
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
@@ -58,10 +61,40 @@ func pathUsers(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.DeleteOperation: b.pathUserDelete,
-			logical.ReadOperation:   b.pathUserRead,
-			logical.UpdateOperation: b.pathUserWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathUserDelete,
+				Summary:  "Delete an Okta auth method user.",
+				Responses: map[int][]framework.Response{
+					204: {{Description: "No Content"}},
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathUserRead,
+				Summary:  "Return the properties of an Okta auth method user.",
+				Responses: map[int][]framework.Response{
+					200: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"groups": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "List of groups associated with the user.",
+							},
+							"policies": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "List of policies associated with the user.",
+							},
+						},
+					}},
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathUserWrite,
+				Summary:  "Create or update an Okta auth method user.",
+				Responses: map[int][]framework.Response{
+					204: {{Description: "No Content"}},
+				},
+			},
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,

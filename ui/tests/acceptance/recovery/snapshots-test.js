@@ -46,7 +46,7 @@ module('Acceptance | recovery | snapshots', function (hooks) {
 
     await visit('/vault/recovery/snapshots');
     assert
-      .dom(`${GENERAL.navLink('Secrets Recovery')} .hds-badge`)
+      .dom(`${GENERAL.navLink('Secrets recovery')} .hds-badge`)
       .hasText('Enterprise', 'side nav link renders "Enterprise" badge');
     assert.strictEqual(currentURL(), '/vault/recovery/snapshots');
     assert.dom(GENERAL.emptyStateTitle).hasText('Secrets Recovery is an enterprise feature');
@@ -94,7 +94,7 @@ module('Acceptance | recovery | snapshots', function (hooks) {
         };
       });
 
-      await click(GENERAL.navLink('Secrets Recovery'));
+      await click(GENERAL.navLink('Resilience and recovery'));
       assert.strictEqual(currentURL(), '/vault/recovery/snapshots/1234/manage');
       assert.strictEqual(currentRouteName(), 'vault.cluster.recovery.snapshots.snapshot.manage');
     });

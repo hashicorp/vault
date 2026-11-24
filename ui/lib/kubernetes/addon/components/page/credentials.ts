@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,12 +11,14 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { add } from 'date-fns';
 import timestamp from 'vault/utils/timestamp';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type { HTMLElementEvent } from 'vault/forms';
 import type { KubernetesCredentials } from 'vault/secrets/kubernetes';
+import type { TtlEvent } from 'vault/app-types';
 
 /**
  * @module Credentials
@@ -37,6 +39,7 @@ export default class CredentialsPageComponent extends Component<Args> {
   @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked ttl = '';
+  @tracked isTtlValid = true;
   @tracked clusterRoleBinding = false;
   @tracked kubernetesNamespace = '';
   @tracked error = '';
@@ -58,14 +61,20 @@ export default class CredentialsPageComponent extends Component<Args> {
   }
 
   @action
-  updateTtl({ goSafeTimeString }: { goSafeTimeString: string }) {
-    this.ttl = goSafeTimeString;
+  updateTtl({ enabled, seconds, goSafeTimeString, isValid }: TtlEvent) {
+    // A TTL that was turned off keeps being sent as before, unless Vault would reject it. Then none is sent,
+    // so the role's default is used.
+    const isHiddenOverMax = !enabled && isDurationOverMax(seconds);
+    this.ttl = isHiddenOverMax ? '' : goSafeTimeString;
+    this.isTtlValid = isValid;
   }
 
   fetchCredentials = task(
     waitFor(async (event) => {
       event.preventDefault();
       this.error = '';
+      // the picker explains an over-limit TTL, so it only needs to stop the request
+      if (!this.isTtlValid) return;
 
       try {
         const { currentPath } = this.secretMountPath;

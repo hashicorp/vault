@@ -32,14 +32,76 @@ func TestRaft_ParseConfig(t *testing.T) {
 		wantErr      string
 		wantWarns    []string
 	}{
-		// RAFT WAL --------------------------------------------------------------
+		// LOG STORE configuration -----------------------------------------------
 		{
-			name: "WAL backend junk",
+			name: "log_store, valid raft_wal",
 			conf: map[string]string{
-				"raft_wal": "notabooleanlol",
+				"log_store": "raft_wal",
 			},
-			wantErr: "does not parse as a boolean",
+			wantMutation: func(cfg *RaftBackendConfig) {
+				cfg.LogStore = "raft_wal"
+			},
 		},
+		{
+			name: "log_store, valid raft_boltdb",
+			conf: map[string]string{
+				"log_store": "raft_boltdb",
+			},
+			wantMutation: func(cfg *RaftBackendConfig) {
+				cfg.LogStore = "raft_boltdb"
+			},
+		},
+		{
+			name: "log_store, invalid value",
+			conf: map[string]string{
+				"log_store": "invalid",
+			},
+			wantErr: "log_store must be either 'raft_wal' or 'raft_boltdb'",
+		},
+		{
+			name: "log_store, default when not set",
+			conf: map[string]string{},
+			wantMutation: func(cfg *RaftBackendConfig) {
+				cfg.LogStore = "raft_wal"
+			},
+		},
+		{
+			name: "legacy raft_wal true maps to raft_wal",
+			conf: map[string]string{
+				"raft_wal": "true",
+			},
+			wantMutation: func(cfg *RaftBackendConfig) {
+				cfg.LogStore = "raft_wal"
+			},
+		},
+		{
+			name: "legacy raft_wal false maps to raft_boltdb",
+			conf: map[string]string{
+				"raft_wal": "false",
+			},
+			wantMutation: func(cfg *RaftBackendConfig) {
+				cfg.LogStore = "raft_boltdb"
+			},
+		},
+		{
+			name: "log_store takes precedence over legacy raft_wal",
+			conf: map[string]string{
+				"log_store": "raft_wal",
+				"raft_wal":  "false",
+			},
+			wantMutation: func(cfg *RaftBackendConfig) {
+				cfg.LogStore = "raft_wal"
+			},
+		},
+		{
+			name: "invalid legacy raft_wal value",
+			conf: map[string]string{
+				"raft_wal": "invalid",
+			},
+			wantErr: "raft_wal does not parse as a boolean",
+		},
+
+		// RAFT Log Verifier -----------------------------------------------------
 		{
 			name: "WAL verifier junk",
 			conf: map[string]string{

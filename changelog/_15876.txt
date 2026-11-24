@@ -1,0 +1,3 @@
+```release-note:security
+core: Update software.sslmate.com/src/go-pkcs12 to v0.7.2 to fix security vulnerability GO-2026-5052.
+```

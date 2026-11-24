@@ -110,7 +110,7 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 			migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
 
 			b.Logger().Info("performing PKI migration to new keys/issuers layout")
-			anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
+			anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName, "")
 			if err != nil {
 				return err
 			}

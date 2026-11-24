@@ -57,19 +57,23 @@
 
 // is-success and is-info are the two types of progress bars we have
 .progress.is-info::-webkit-progress-value {
-  background-color: #3e8ed0;
+  background-color: var(--token-color-palette-blue-200);
 }
 
 .progress.is-info::-moz-progress-bar {
-  background-color: #3e8ed0;
+  background-color: var(--token-color-palette-blue-200);
 }
 
 .progress.is-info::-ms-fill {
-  background-color: #3e8ed0;
+  background-color: var(--token-color-palette-blue-200);
 }
 
 .progress.is-info:indeterminate {
-  background-image: linear-gradient(to right, #3e8ed0 30%, #ededed 30%);
+  background-image: linear-gradient(
+    to right,
+    var(--token-color-palette-blue-200) 30%,
+    var(--token-color-surface-faint) 30%
+  );
 }
 
 .progress.is-success::-webkit-progress-value {
@@ -85,5 +89,9 @@
 }
 
 .progress.is-success:indeterminate {
-  background-image: linear-gradient(to right, var(--token-color-palette-green-200) 30%, #ededed 30%);
+  background-image: linear-gradient(
+    to right,
+    var(--token-color-palette-green-200) 30%,
+    var(--token-color-surface-faint) 30%
+  );
 }

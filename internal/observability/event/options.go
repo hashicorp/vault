@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package event
@@ -21,14 +21,15 @@ type Option func(*options) error
 
 // Options are used to represent configuration for an Event.
 type options struct {
-	withID          string
-	withNow         time.Time
-	withFacility    string
-	withTag         string
-	withSocketType  string
-	withMaxDuration time.Duration
-	withFileMode    *os.FileMode
-	withLogger      hclog.Logger
+	withID                string
+	withNow               time.Time
+	withFacility          string
+	withTag               string
+	withSocketType        string
+	withMaxDuration       time.Duration
+	withFileMode          *os.FileMode
+	nonExecutableFileMode bool
+	withLogger            hclog.Logger
 }
 
 // getDefaultOptions returns Options with their default values.
@@ -201,6 +202,15 @@ func WithFileMode(mode string) Option {
 			o.withFileMode = &m
 		}
 
+		return nil
+	}
+}
+
+// WithNonExecutableFileMode configures a file mode without executable bits.
+// The mode 0000 preserves an existing file's mode, except for executable bits.
+func WithNonExecutableFileMode() Option {
+	return func(o *options) error {
+		o.nonExecutableFileMode = true
 		return nil
 	}
 }

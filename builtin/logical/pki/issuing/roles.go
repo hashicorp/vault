@@ -6,6 +6,7 @@ package issuing
 import (
 	"context"
 	"crypto/x509"
+	"encoding/asn1"
 	"errors"
 	"fmt"
 	"strings"
@@ -29,19 +30,20 @@ const (
 )
 
 type RoleEntry struct {
-	LeaseMax                      string        `json:"lease_max"`
-	Lease                         string        `json:"lease"`
-	DeprecatedMaxTTL              string        `json:"max_ttl"`
-	DeprecatedTTL                 string        `json:"ttl"`
-	TTL                           time.Duration `json:"ttl_duration"`
-	MaxTTL                        time.Duration `json:"max_ttl_duration"`
-	AllowLocalhost                bool          `json:"allow_localhost"`
-	AllowedBaseDomain             string        `json:"allowed_base_domain"`
-	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
-	AllowedDomains                []string      `json:"allowed_domains_list"`
-	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
-	AllowBaseDomain               bool          `json:"allow_base_domain"`
-	AllowBareDomains              bool          `json:"allow_bare_domains"`
+	LeaseMax               string        `json:"lease_max"`
+	Lease                  string        `json:"lease"`
+	DeprecatedMaxTTL       string        `json:"max_ttl"`
+	DeprecatedTTL          string        `json:"ttl"`
+	TTL                    time.Duration `json:"ttl_duration"`
+	MaxTTL                 time.Duration `json:"max_ttl_duration"`
+	AllowLocalhost         bool          `json:"allow_localhost"`
+	AllowedBaseDomain      string        `json:"allowed_base_domain"`
+	AllowedDomainsOld      string        `json:"allowed_domains,omitempty"`
+	AllowedDomains         []string      `json:"allowed_domains_list"`
+	AllowedDomainsTemplate bool          `json:"allowed_domains_template"`
+	AllowBaseDomain        bool          `json:"allow_base_domain"`
+	AllowBareDomains       bool          `json:"allow_bare_domains"`
+	// Deprecated: AllowTokenDisplayName is retained for backward compatibility but has not been writeable since v0.4.0
 	AllowTokenDisplayName         bool          `json:"allow_token_displayname"`
 	AllowSubdomains               bool          `json:"allow_subdomains"`
 	AllowGlobDomains              bool          `json:"allow_glob_domains"`
@@ -81,6 +83,7 @@ type RoleEntry struct {
 	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers"`
 	AllowedUserIDs                []string      `json:"allowed_user_ids"`
+	CsrExtraNamesOIDs             []string      `json:"csr_extra_names_oids"`
 	AllowedURISANs                []string      `json:"allowed_uri_sans"`
 	AllowedURISANsTemplate        bool          `json:"allowed_uri_sans_template"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers"`
@@ -92,7 +95,21 @@ type RoleEntry struct {
 	// Name is only set when the role has been stored, on the fly roles have a blank name
 	Name string `json:"-"`
 	// WasModified indicates to callers if the returned entry is different than the persisted version
-	WasModified bool `json:"-"`
+	WasModified  bool                  `json:"-"`
+	ParameterSet certutil.ParameterSet `json:"parameter_set,omitempty"`
+}
+
+// CsrExtraNamesOIDsContains reports whether the given OID is listed in
+// r.CsrExtraNamesOIDs. The comparison is done in dotted-decimal string form so
+// no ASN.1 parsing is required.
+func (r *RoleEntry) CsrExtraNamesOIDsContains(oid asn1.ObjectIdentifier) bool {
+	target := oid.String()
+	for _, s := range r.CsrExtraNamesOIDs {
+		if s == target {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *RoleEntry) ToResponseData() map[string]interface{} {
@@ -136,6 +153,7 @@ func (r *RoleEntry) ToResponseData() map[string]interface{} {
 		"allowed_other_sans":                 r.AllowedOtherSANs,
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
 		"allowed_user_ids":                   r.AllowedUserIDs,
+		"csr_extra_names_oids":               r.CsrExtraNamesOIDs,
 		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
 		"cn_validations":                     r.CNValidations,
@@ -144,6 +162,7 @@ func (r *RoleEntry) ToResponseData() map[string]interface{} {
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 		"not_after":                          r.NotAfter,
 		"issuer_ref":                         r.Issuer,
+		"parameter_set":                      r.ParameterSet,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

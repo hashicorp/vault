@@ -5,10 +5,10 @@
 
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const testCases = [
   {
@@ -89,19 +89,13 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
   });
 
   test('it shows empty states when no roleType passed in', async function (assert) {
-    setRunOptions({
-      rules: {
-        // Fails on #ember-testing-container
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
     await render(hbs`<DatabaseRoleSettingForm @attrs={{this.model.attrs}} @model={{this.model}}/>`);
-    assert.dom('[data-test-component="empty-state"]').exists({ count: 2 }, 'Two empty states exist');
+    assert.dom(GENERAL.emptyStateTitle).exists({ count: 2 }, 'Two empty states exist');
   });
 
   test('it shows appropriate fields based on roleType and db plugin', async function (assert) {
     this.set('roleType', 'static');
-    this.set('dbParams', { plugin_name: '', skip_static_role_rotation_import: false });
+    this.set('dbParams', { plugin_name: '', skip_static_role_import_rotation: false });
     await render(hbs`
       <DatabaseRoleSettingForm
         @attrs={{this.model.attrs}}
@@ -113,7 +107,7 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
     for (const testCase of testCases) {
       const staticFields = getFields(testCase.staticRoleFields);
       const dynamicFields = getFields(testCase.dynamicRoleFields);
-      this.set('dbParams', { plugin_name: testCase.pluginType, skip_static_role_rotation_import: false });
+      this.set('dbParams', { plugin_name: testCase.pluginType, skip_static_role_import_rotation: false });
       this.set('roleType', 'static');
       staticFields.show.forEach((attr) => {
         assert

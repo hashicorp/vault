@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-const _KeyUsageName = "encryptdecryptsignverifywrapunwrapgenerate_random"
+const _KeyUsageName = "encryptdecryptsignverifywrapunwrapgenerate_randommac"
 
-var _KeyUsageIndex = [...]uint8{0, 7, 14, 18, 24, 28, 34, 49}
+var _KeyUsageIndex = [...]uint8{0, 7, 14, 18, 24, 28, 34, 49, 52}
 
 func (i KeyUsage) String() string {
 	i -= 1
@@ -18,7 +18,7 @@ func (i KeyUsage) String() string {
 	return _KeyUsageName[_KeyUsageIndex[i]:_KeyUsageIndex[i+1]]
 }
 
-var _KeyUsageValues = []KeyUsage{1, 2, 3, 4, 5, 6, 7}
+var _KeyUsageValues = []KeyUsage{1, 2, 3, 4, 5, 6, 7, 8}
 
 var _KeyUsageNameToValueMap = map[string]KeyUsage{
 	_KeyUsageName[0:7]:   1,
@@ -28,6 +28,7 @@ var _KeyUsageNameToValueMap = map[string]KeyUsage{
 	_KeyUsageName[24:28]: 5,
 	_KeyUsageName[28:34]: 6,
 	_KeyUsageName[34:49]: 7,
+	_KeyUsageName[49:52]: 8,
 }
 
 // KeyUsageString retrieves an enum value from the enum constants string name.

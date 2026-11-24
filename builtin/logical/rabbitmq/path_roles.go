@@ -88,7 +88,16 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	return nil, req.Storage.Delete(ctx, "role/"+name)
+	err := req.Storage.Delete(ctx, "role/"+name)
+	if err != nil {
+		return nil, err
+	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQRoleDelete, map[string]interface{}{
+		"role_name": name,
+	})
+
+	return nil, nil
 }
 
 // Reads an existing role
@@ -105,6 +114,10 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 	if role == nil {
 		return nil, nil
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQRoleRead, map[string]interface{}{
+		"role_name": name,
+	})
 
 	return &logical.Response{
 		Data: structs.New(role).Map(),
@@ -163,6 +176,10 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQRoleWrite, map[string]interface{}{
+		"role_name": name,
+	})
 
 	return nil, nil
 }

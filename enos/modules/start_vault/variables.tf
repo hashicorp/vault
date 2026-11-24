@@ -1,6 +1,20 @@
 # Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
+variable "retry_join_method" {
+  type        = string
+  description = <<-EOF
+    What method of retry_join_method to use. Must map to a go-discover provider type or "leader_api_addr"
+  EOF
+
+  default = "aws"
+
+  validation {
+    condition     = contains(["aws", "leader_api_addr"], var.retry_join_method)
+    error_message = "The retry_join_method must match a go-discover provider type or be 'leader_api_addr'. No other retry_join_method types are supported."
+  }
+}
+
 variable "cluster_name" {
   type        = string
   description = "The Vault cluster name"
@@ -105,6 +119,12 @@ variable "manage_service" {
   type        = bool
   description = "Manage the Vault service users and systemd unit. Disable this to use configuration in RPM and Debian packages"
   default     = true
+}
+
+variable "leader_api_addr" {
+  type        = string
+  description = "An optional API address of the leader to use for leader_api_addr retry_join. If not set the first var.host address will be used"
+  default     = null
 }
 
 variable "listener_port" {

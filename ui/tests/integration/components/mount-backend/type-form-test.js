@@ -9,7 +9,6 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const secretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false })
@@ -66,12 +65,6 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
 
     test('it renders correct items for enterprise secrets', async function (assert) {
       assert.expect(allSecretTypes.length, 'renders all enterprise secret engines');
-      setRunOptions({
-        rules: {
-          // TODO: Fix disabled enterprise options with enterprise badge
-          'color-contrast': { enabled: false },
-        },
-      });
       await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
       for (const type of allSecretTypes) {
         assert.dom(GENERAL.cardContainer(type)).exists(`Renders ${type} secret engine`);

@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/route';
-import { KubernetesListRolesListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiKubernetesListRolesListEnum } from '@hashicorp/vault-client-typescript';
 
 import type { KubernetesApplicationModel } from '../application';
 import type ApiService from 'vault/services/api';
@@ -38,7 +38,7 @@ export default class KubernetesRolesRoute extends Route {
       const { pageFilter } = (transition.to?.queryParams || {}) as { pageFilter?: string };
       const { keys } = await this.api.secrets.kubernetesListRoles(
         currentPath,
-        KubernetesListRolesListEnum.TRUE
+        SecretsApiKubernetesListRolesListEnum.TRUE
       );
       const roles = pageFilter
         ? keys?.filter((key) => key.toLowerCase().includes(pageFilter.toLowerCase()))
@@ -69,6 +69,8 @@ export default class KubernetesRolesRoute extends Route {
     super.setupController(controller, resolvedModel);
     const { currentPath } = this.secretMountPath;
     controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'overview', model: currentPath },
       { label: 'Roles' },

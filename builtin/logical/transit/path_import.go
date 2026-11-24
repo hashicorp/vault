@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"strconv"
 	"strings"
 	"time"
 
@@ -129,6 +128,10 @@ func (b *backend) pathImportVersion() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "The name of the key",
 			},
+			"type": {
+				Type:        framework.TypeString,
+				Description: "Enterprise only. If specified, allows choosing a new key type for the new version. Otherwise, it assumes latest existing version.",
+			},
 			"ciphertext": {
 				Type: framework.TypeString,
 				Description: `The base64-encoded ciphertext of the keys. The AES key should be encrypted using OAEP 
@@ -240,9 +243,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if p != nil {
-		if b.System().CachingDisabled() {
-			p.Unlock()
-		}
+		p.Unlock()
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}
 
@@ -256,6 +257,15 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyImport, map[string]interface{}{
+		"key_name":               name,
+		"type":                   polReq.KeyType,
+		"derived":                polReq.Derived,
+		"exportable":             polReq.Exportable,
+		"allow_plaintext_backup": polReq.AllowPlaintextBackup,
+		"auto_rotate_period":     int64(autoRotatePeriod.Seconds()),
+	})
+
 	return nil, nil
 }
 
@@ -267,11 +277,57 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
+	// resolve key type
+	keyType := d.Get("type").(string)
+	if keyType != "" && !constants.IsEnterprise {
+		return logical.ErrorResponse("key type can only be specified in enterprise versions of Vault"), logical.ErrInvalidRequest
+	}
+	var polKeyType keysutil.KeyType
+	if keyType != "" {
+		switch strings.ToLower(keyType) {
+		case "aes128-gcm96":
+			polKeyType = keysutil.KeyType_AES128_GCM96
+		case "aes256-gcm96":
+			polKeyType = keysutil.KeyType_AES256_GCM96
+		case "chacha20-poly1305":
+			polKeyType = keysutil.KeyType_ChaCha20_Poly1305
+		case "ecdsa-p256":
+			polKeyType = keysutil.KeyType_ECDSA_P256
+		case "ecdsa-p384":
+			polKeyType = keysutil.KeyType_ECDSA_P384
+		case "ecdsa-p521":
+			polKeyType = keysutil.KeyType_ECDSA_P521
+		case "ed25519":
+			polKeyType = keysutil.KeyType_ED25519
+		case "rsa-2048":
+			polKeyType = keysutil.KeyType_RSA2048
+		case "rsa-3072":
+			polKeyType = keysutil.KeyType_RSA3072
+		case "rsa-4096":
+			polKeyType = keysutil.KeyType_RSA4096
+		case "hmac":
+			polKeyType = keysutil.KeyType_HMAC
+		case "aes128-cmac":
+			polKeyType = keysutil.KeyType_AES128_CMAC
+		case "aes192-cmac":
+			polKeyType = keysutil.KeyType_AES192_CMAC
+		case "aes256-cmac":
+			polKeyType = keysutil.KeyType_AES256_CMAC
+		case "aes128-cbc":
+			polKeyType = keysutil.KeyType_AES128_CBC
+		case "aes256-cbc":
+			polKeyType = keysutil.KeyType_AES256_CBC
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
+		}
+	}
+
 	polReq := keysutil.PolicyRequest{
 		Storage:      req.Storage,
 		Name:         name,
 		Upsert:       false,
 		IsPrivateKey: isCiphertextSet,
+		WriteLocked:  true,
 	}
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
@@ -280,6 +336,17 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	if p == nil {
 		return nil, fmt.Errorf("no key found with name %s; to import a new key, use the import/ endpoint", name)
 	}
+	// Check existing policy key type and do verification
+	var effectiveType keysutil.KeyType
+	if keyType == "" {
+		effectiveType = p.KeyVersionType(p.LatestVersion)
+	} else {
+		effectiveType = polKeyType
+	}
+	if effectiveType.IsEnterpriseOnly() && !constants.IsEnterprise {
+		return logical.ErrorResponse(fmt.Sprintf(ErrKeyTypeEntOnly, effectiveType)), logical.ErrInvalidRequest
+	}
+	defer p.Unlock()
 	if !p.Imported {
 		return nil, errors.New("the import_version endpoint can only be used with an imported key")
 	}
@@ -287,32 +354,35 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		return nil, errors.New("import_version cannot be used on keys with convergent encryption enabled")
 	}
 
-	if !b.System().CachingDisabled() {
-		p.Lock(true)
-	}
-	defer p.Unlock()
-
-	key, resp, err := b.extractKeyFromFields(ctx, req, d, p.Type, isCiphertextSet)
+	key, resp, err := b.extractKeyFromFields(ctx, req, d, effectiveType, isCiphertextSet)
 	if err != nil {
 		return resp, err
 	}
 
+	var versionToUpdate *int
 	// Get param version if set else import a new version.
 	if version, ok := d.GetOk("version"); ok {
-		versionToUpdate := version.(int)
+		versionValue := version.(int)
+		versionToUpdate = &versionValue
 
 		// Check if given version can be updated given input
-		err = p.KeyVersionCanBeUpdated(versionToUpdate, isCiphertextSet)
+		err = p.KeyVersionCanBeUpdated(*versionToUpdate, isCiphertextSet)
 		if err == nil {
-			err = p.ImportPrivateKeyForVersion(ctx, req.Storage, versionToUpdate, key)
+			err = p.ImportPrivateKeyForVersion(ctx, req.Storage, *versionToUpdate, key)
 		}
 	} else {
-		err = p.ImportPublicOrPrivate(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
+		err = p.ImportPublicOrPrivate(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader(), effectiveType)
 	}
 
 	if err != nil {
 		return nil, err
 	}
+
+	metadata := b.keyPolicyObservationMetadata(p)
+	if versionToUpdate != nil {
+		metadata["import_version"] = *versionToUpdate
+	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyImport, metadata)
 
 	return nil, nil
 }
@@ -326,15 +396,14 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	wrappedEphKey := ciphertext[:EncryptedKeyBytes]
 	wrappedImportKey := ciphertext[EncryptedKeyBytes:]
 
-	wrappingKey, err := b.getWrappingKey(ctx, storage)
+	privWrappingKey, err := b.getWrappingKey(ctx, storage)
 	if err != nil {
 		return nil, err
 	}
-	if wrappingKey == nil {
+	if privWrappingKey == nil {
 		return nil, fmt.Errorf("error importing key: wrapping key was nil")
 	}
 
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	ephKey, err := rsa.DecryptOAEP(hashFn, b.GetRandomReader(), privWrappingKey, wrappedEphKey, []byte{})
 	if err != nil {
 		return nil, err

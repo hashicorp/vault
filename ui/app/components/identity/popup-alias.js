@@ -11,30 +11,33 @@ import errorMessage from 'vault/utils/error-message';
 
 export default class IdentityPopupAlias extends Component {
   @service flashMessages;
+  @service api;
+  @service router;
   @tracked showConfirmModal = false;
 
-  onSuccess(type, id) {
-    if (this.args.onSuccess) {
-      this.args.onSuccess();
-    }
-    this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
+  onSuccess(type, name) {
+    const itemType = type === 'group' ? 'groups' : 'entities';
+    this.router.transitionTo(`vault.cluster.access.identity.${itemType}.aliases.index`);
+    this.flashMessages.success(`Successfully deleted alias: ${name}`);
   }
-  onError(err, type, id) {
+  onError(err, name) {
     if (this.args.onError) {
       this.args.onError();
     }
     const error = errorMessage(err);
-    this.flashMessages.danger(`There was a problem deleting ${type}: ${id} - ${error}`);
+    this.flashMessages.danger(`There was a problem deleting alias: ${name} - ${error}`);
   }
 
   @action
   async deleteAlias() {
-    const { identityType, id } = this.args.item;
+    const { identityType } = this.args;
+    const { id, name } = this.args.item;
     try {
-      await this.args.item.destroyRecord();
-      this.onSuccess(identityType, id);
+      const methodType = identityType === 'group' ? 'groupDeleteAliasById' : 'entityDeleteAliasById';
+      await this.api.identity[methodType](id);
+      this.onSuccess(identityType, name);
     } catch (e) {
-      this.onError(e, identityType, id);
+      this.onError(e, name);
     }
   }
 }

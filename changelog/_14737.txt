@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Remove invalid value from the supported list of ACME algorithms.
+```

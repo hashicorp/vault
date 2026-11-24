@@ -3,12 +3,6 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{this.title}}>
-  <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </:breadcrumbs>
-</Page::Header>
-
 {{#if this.showActionTypes}}
   <div class="box is-bottomless is-fullwidth is-marginless">
     <div class="columns">
@@ -40,8 +34,6 @@
       {{/each}}
     </div>
   </div>
-{{else}}
-  <Toolbar />
 {{/if}}
 
 {{#if (eq this.actionType "import")}}
@@ -66,8 +58,11 @@
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else}}
-  <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
-  <hr class="has-background-gray-100" />
+  <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+    <A.Header @title="Choose an option" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="To see configuration options, choose your desired output above." data-test-empty-state-message />
+  </Hds::ApplicationState>
+  <Hds::Separator />
   <Hds::ButtonSet>
     <Hds::Button @text="Done" disabled={{true}} data-test-submit />
     <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />

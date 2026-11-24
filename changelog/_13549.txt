@@ -1,0 +1,11 @@
+```release-note:security
+core: Resolve GO-2026-4518 and GHSA-jqcq-xjh3-6g23 by upgrading to github.com/jackc/pgx/v5
+```
+```release-note:security
+sdk: Resolve GO-2026-4518 and GHSA-jqcq-xjh3-6g23 by upgrading to github.com/jackc/pgx/v5
+```
+```release-note:breaking-change
+sdk/helpers/docker: Migrate docker helpers from github.com/docker/docker to
+github.com/moby/moby. This was necessary as github.com/docker/docker is no
+longer maintained. Resolves GHSA-x744-4wpc-v9h2 and GHSA-pxq6-2prw-chj9.
+```

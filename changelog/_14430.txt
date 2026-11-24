@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Update KV max_version validation to disallow negative values.
+```

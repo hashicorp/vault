@@ -7,8 +7,8 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/route';
 import {
-  LdapListStaticRolesListEnum,
-  LdapListDynamicRolesListEnum,
+  SecretsApiLdapListStaticRolesListEnum,
+  SecretsApiLdapListDynamicRolesListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -30,11 +30,13 @@ export default class LdapOverviewRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
   async model() {
-    const { promptConfig, secretsEngine } = this.modelFor('application') as LdapApplicationModel;
+    const { promptConfig, secretsEngine, isSelfManaged } = this.modelFor(
+      'application'
+    ) as LdapApplicationModel;
     const { currentPath } = this.secretMountPath;
     const requests = [
-      this.api.secrets.ldapListStaticRoles(currentPath, LdapListStaticRolesListEnum.TRUE),
-      this.api.secrets.ldapListDynamicRoles(currentPath, LdapListDynamicRolesListEnum.TRUE),
+      this.api.secrets.ldapListStaticRoles(currentPath, SecretsApiLdapListStaticRolesListEnum.TRUE),
+      this.api.secrets.ldapListDynamicRoles(currentPath, SecretsApiLdapListDynamicRolesListEnum.TRUE),
     ];
     const results = await Promise.allSettled(requests);
     const roles = [];
@@ -48,6 +50,7 @@ export default class LdapOverviewRoute extends Route {
     }
     return {
       promptConfig,
+      isSelfManaged,
       secretsEngine,
       roles,
     };
@@ -61,7 +64,8 @@ export default class LdapOverviewRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath },
     ];
   }

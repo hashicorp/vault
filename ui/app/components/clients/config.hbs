@@ -4,41 +4,56 @@
 }}
 
 {{#if (eq @mode "edit")}}
-  <form onsubmit={{action "onSaveChanges"}} data-test-clients-config-form>
+  <form onsubmit={{this.onSubmit}} data-test-clients-config-form>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <MessageError @model={{@model}} @errorMessage={{this.error}} />
-      {{#each @model.formFields as |attr|}}
-        {{#if (eq attr.name "enabled")}}
-          {{#unless @model.reportingEnabled}}
-            <label class="is-label">Usage data collection</label>
-            <p class="sub-text">
-              Enable or disable client tracking. Keep in mind that disabling tracking will delete the data for the current
-              month.
-            </p>
-            <div class="control is-flex has-bottom-margin-l">
-              <input
-                data-test-input="enabled"
-                type="checkbox"
-                id="enabled"
-                name="enabled"
-                class="toggle is-success is-small"
-                checked={{eq @model.enabled "On"}}
-                {{on "change" this.toggleEnabled}}
-              />
-              <label for="enabled" class="has-text-weight-bold is-size-8">
-                Data collection is
-                {{lowercase @model.enabled}}
-              </label>
-            </div>
-          {{/unless}}
-        {{else}}
-          <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.validations}} />
-        {{/if}}
-      {{/each}}
+      <MessageError @errorMessage={{this.errorMessage}} />
+      {{! reporting_enabled is specifically for automated reporting }}
+      {{! it will be false for CE clusters or enterprise customers who have opted out of automated license reporting }}
+      {{#unless @config.reporting_enabled}}
+        <label class="is-label">Usage data collection</label>
+        <p class="sub-text">
+          Enable or disable client tracking. Keep in mind that disabling tracking will delete the data for the current month.
+        </p>
+        <div class="control is-flex has-bottom-margin-l">
+          <Hds::Form::Toggle::Field
+            @id="enabled"
+            data-test-input="enabled"
+            checked={{this.enabled}}
+            {{on "change" (pipe (pick "target.checked") (fn (mut this.enabled)))}}
+            as |F|
+          >
+            <F.Label data-test-form-field-label>
+              Data collection is
+              {{if this.enabled "on" "off"}}
+            </F.Label>
+          </Hds::Form::Toggle::Field>
+        </div>
+      {{/unless}}
+
+      <div class="field" data-test-field="name">
+        <Hds::Form::TextInput::Field
+          @value={{@config.retention_months}}
+          @isInvalid={{this.validationError}}
+          disabled={{this.save.isRunning}}
+          autocomplete="off"
+          spellcheck="false"
+          data-test-input="retention_months"
+          {{on "input" (pipe (pick "target.value") (fn (mut @config.retention_months)))}}
+          as |F|
+        >
+          <F.Label>Retention period</F.Label>
+          <F.HelperText>
+            The number of months of activity logs to maintain for client tracking.
+          </F.HelperText>
+          {{#if this.validationError}}
+            <F.Error data-test-validation-error="retention_months">{{this.validationError}}</F.Error>
+          {{/if}}
+        </Hds::Form::TextInput::Field>
+      </div>
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
-        <Hds::Button @text="Save" type="submit" disabled={{this.buttonDisabled}} data-test-submit />
+        <Hds::Button @text="Save" type="submit" disabled={{this.save.isRunning}} data-test-submit />
         <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.clients.config" />
       </Hds::ButtonSet>
     </div>
@@ -50,7 +65,7 @@
         {{this.modalTitle}}
       </M.Header>
       <M.Body>
-        {{#if (eq @model.enabled "On")}}
+        {{#if this.enabled}}
           <p class="has-bottom-margin-s" data-test-clients-config-modal="on">
             Vault will start tracking data starting from today’s date,
             {{date-format (now) "MMMM d, yyyy"}}. If you’ve previously enabled usage tracking, that historical data will
@@ -75,7 +90,7 @@
 {{else}}
   <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-clients-config-table>
     {{#each this.infoRows as |item|}}
-      <InfoTableRow @label={{item.label}} @helperText={{item.helperText}} @value={{get @model item.valueKey}} />
+      <InfoTableRow @label={{item.label}} @helperText={{item.helperText}} @value={{item.value}} />
     {{/each}}
   </div>
 {{/if}}

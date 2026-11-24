@@ -3,41 +3,36 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title={{@role.name}}>
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-header-title>
-      {{@role.name}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
-<Toolbar aria-label="menu items for managing role {{@role.name}}">
-  <ToolbarActions>
-    {{#if @capabilities.canDelete}}
-      <ConfirmAction
-        @buttonText="Delete role"
-        class="toolbar-button"
-        @buttonColor="secondary"
-        @onConfirmAction={{this.delete}}
-        data-test-delete
-      />
-      <div class="toolbar-separator"></div>
-    {{/if}}
-    {{#if @capabilities.canGenerateCreds}}
-      <ToolbarLink @route="roles.role.credentials" data-test-generate-credentials>
-        Generate credentials
-      </ToolbarLink>
-    {{/if}}
-    {{#if @capabilities.canUpdate}}
-      <ToolbarLink @route="roles.role.edit" data-test-edit>
-        Edit role
-      </ToolbarLink>
-    {{/if}}
-  </ToolbarActions>
-</Toolbar>
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+      {{#if @capabilities.canUpdate}}
+        <D.Interactive @icon="edit" @route="roles.role.edit" data-test-popup-menu="Edit role">
+          Edit role
+        </D.Interactive>
+      {{/if}}
+      {{#if @capabilities.canGenerateCreds}}
+        <D.Interactive @icon="key" @route="roles.role.credentials" data-test-popup-menu="Generate credentials">
+          Generate credentials
+        </D.Interactive>
+      {{/if}}
+      {{#if @capabilities.canDelete}}
+        <D.Interactive
+          @color="critical"
+          @icon="trash"
+          {{on "click" (fn (mut this.showConfirmDeleteModal) true)}}
+          data-test-popup-menu="Delete role"
+        >
+          Delete role
+        </D.Interactive>
+      {{/if}}
+    </Hds::Dropdown>
+  </:actions>
+</Page::Header>
 
 {{#each this.displayFields as |field|}}
   <InfoTableRow
@@ -67,3 +62,13 @@
     {{/each-in}}
   </div>
 {{/each}}
+
+{{#if this.showConfirmDeleteModal}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="You will not be able to recover it later."
+    @confirmTitle="Are you sure?"
+    @onClose={{fn (mut this.showConfirmDeleteModal) false}}
+    @onConfirm={{this.delete}}
+  />
+{{/if}}

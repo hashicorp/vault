@@ -4,18 +4,36 @@
  */
 
 import { service } from '@ember/service';
-import { computed } from '@ember/object';
-import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
+import { reject } from 'rsvp';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import getStorage from '../../lib/token-storage';
 import localStorage from 'vault/lib/local-storage';
-import ClusterRoute from 'vault/mixins/cluster-route';
-import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 import { assert } from '@ember/debug';
+import config from 'vault/config/environment';
 
-import { v4 as uuidv4 } from 'uuid';
+import { getOrCreateAnalyticsUserId } from 'vault/utils/preferences';
+
+import {
+  INIT,
+  UNSEAL,
+  AUTH,
+  CLUSTER_INDEX,
+  OIDC_CALLBACK,
+  OIDC_PROVIDER,
+  NS_OIDC_PROVIDER,
+  DR_REPLICATION_SECONDARY,
+  DR_REPLICATION_SECONDARY_DETAILS,
+  EXCLUDED_REDIRECT_URLS,
+} from 'vault/lib/route-paths';
+
+const CLUSTER_STATE = {
+  UNINITIALIZED: 'uninitialized',
+  SEALED: 'sealed',
+  DR_SECONDARY: 'dr-secondary',
+  ACTIVE: 'active',
+};
 
 const POLL_INTERVAL_MS = 10000;
 
@@ -29,34 +47,27 @@ export const getManagedNamespace = (nsParam, root) => {
   return `${root}/${nsParam}`;
 };
 
-export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
-  auth: service(),
-  api: service(),
-  analytics: service(),
-  currentCluster: service(),
-  customMessages: service(),
-  flagsService: service('flags'),
-  namespaceService: service('namespace'),
-  permissions: service(),
-  router: service(),
-  store: service(),
-  version: service(),
-  modelTypes: computed(function () {
-    return ['node', 'secret', 'secret-engine'];
-  }),
+export default class ClusterRoute extends Route {
+  @service auth;
+  @service api;
+  @service analytics;
+  @service currentCluster;
+  @service customMessages;
+  @service('flags') flagsService;
+  @service('namespace') namespaceService;
+  @service permissions;
+  @service router;
+  @service version;
 
-  queryParams: {
+  queryParams = {
     namespaceQueryParam: {
       refreshModel: true,
     },
-  },
+  };
 
-  getClusterId(params) {
-    const { cluster_name } = params;
-    const records = this.store.peekAll('cluster');
-    const cluster = records.find((record) => record.name === cluster_name);
-    return cluster?.id ?? null;
-  },
+  getCluster(params) {
+    return this.modelFor('vault').find((cluster) => cluster.name === params.cluster_name);
+  }
 
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
@@ -87,28 +98,28 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       }
     }
     this.namespaceService.setNamespace(namespace);
-    const id = this.getClusterId(params);
-    if (id) {
-      this.auth.setCluster(id);
+    const cluster = this.getCluster(params);
+    if (cluster) {
+      this.auth.setCluster(cluster.id);
       if (this.auth.currentToken) {
         this.version.fetchVersion();
         await this.permissions.getPaths.perform();
       }
       return this.version.fetchFeatures();
     } else {
-      return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
+      return reject({ httpStatus: 404, path: params.cluster_name });
     }
-  },
+  }
 
   model(params) {
     // if a user's browser settings block localStorage they will be unable to use Vault. The method will throw the error and the rest of the application will not load.
     localStorage.isLocalStorageSupported();
 
-    const id = this.getClusterId(params);
-    return this.store.findRecord('cluster', id);
-  },
+    return this.getCluster(params).reload();
+  }
 
-  poll: task(function* () {
+  poll = task({ keepLatest: true }, async () => {
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       // In test mode, polling causes acceptance tests to hang due to never-settling promises.
       // To avoid this, polling is disabled during tests.
@@ -117,22 +128,20 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       if (Ember.testing) {
         return;
       }
-      yield timeout(POLL_INTERVAL_MS);
+      await timeout(POLL_INTERVAL_MS);
       try {
         /* eslint-disable-next-line ember/no-controller-access-in-routes */
-        yield this.controller.model.reload();
-        yield this.transitionToTargetRoute();
+        await this.controller.model.reload();
+        await this.transitionToTargetRoute();
       } catch (e) {
         // we want to keep polling here
       }
     }
-  })
-    .cancelOn('deactivate')
-    .keepLatest(),
+  });
 
   // Note: do not make this afterModel hook async, it will break the DR secondary flow.
   afterModel(model, transition) {
-    this._super(...arguments);
+    super.afterModel(...arguments);
 
     this.currentCluster.setCluster(model);
     if (model.needsInit && this.auth.currentToken) {
@@ -156,11 +165,32 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     this.addAnalyticsService(model);
 
     return this.transitionToTargetRoute(transition);
-  },
+  }
+
+  // Reads the operator's ui_telemetry flag from sys/internal/ui/settings and hands
+  // it to the analytics service's consent gate.
+  async startVaultSmAnalytics() {
+    const { ANALYTICS_CONFIG } = config.APP;
+    let uiTelemetryEnabled = false;
+    try {
+      const settings = await this.api.sys.internalUiReadSettings();
+      uiTelemetryEnabled = Boolean(settings?.ui_telemetry_enabled);
+    } catch (e) {
+      uiTelemetryEnabled = false;
+    }
+    this.analytics.startVaultSmAnalytics(uiTelemetryEnabled, ANALYTICS_CONFIG);
+  }
 
   async addAnalyticsService(model) {
-    // identify user for analytics service
-    if (this.analytics.activated) {
+    // HVD-managed clusters start Segment at the application-route level, with no
+    // consent gate. The consent-gated Segment start is Self-Managed only.
+    if (!this.flagsService.isHvdManaged) await this.startVaultSmAnalytics();
+
+    // Identify the user for analytics. Compute the identity when analytics is
+    // active OR when the consent banner is about to prompt — in the latter case
+    // the analytics service caches it and applies it if the user accepts, so the
+    // session is identified even though consent is granted after this route loads.
+    if (this.analytics.activated || this.analytics.shouldPromptConsent) {
       let licenseId = '';
 
       try {
@@ -172,35 +202,117 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       }
 
       try {
-        const entity_id = this.auth.authData?.entityId;
-        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
+        // Store the raw and un-prefixed ID, the entity ID when authenticated, else a
+        // stable per-browser uuid persisted in localStorage (token-based access
+        // has no entity ID). The `vault-` realm prefix is applied only here at
+        // identify() time and is never persisted or sent as uniqueSecurityName.
+        const entityId = this.auth.authData?.entityId;
+        const uniqueSecurityName = entityId ? entityId : getOrCreateAnalyticsUserId();
 
-        this.analytics.identifyUser(entity, {
+        this.analytics.identifyUser(`vault-${uniqueSecurityName}`, {
+          realmName: 'vault',
+          uniqueSecurityName,
           licenseId: licenseId,
+          clusterId: model.id,
           licenseState: model.license?.state || 'community',
           version: model.version.version,
           storageType: model.storageType,
           replicationMode: model.replicationMode,
-          isEnterprise: Boolean(model.license),
+          // Use the version service (resolved in the parent `vault` route via
+          // fetchType) rather than `model.license`, which is loaded by a separate
+          // license fetch and is frequently null here — making an enterprise
+          // cluster report productPlanName "community".
+          isEnterprise: this.version.isEnterprise,
+          isHvdManaged: this.flagsService.isHvdManaged,
         });
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.log('unable to start analytics', e);
+        console.error('unable to start analytics', e);
       }
     }
-  },
+  }
+
+  deactivate() {
+    this.poll.cancelAll();
+  }
 
   setupController() {
-    this._super(...arguments);
+    super.setupController(...arguments);
     this.poll.perform();
-  },
+  }
 
-  actions: {
-    error(e) {
-      if (e.httpStatus === 503 && e.errors[0] === 'Vault is sealed') {
-        this.refresh();
+  error = (e) => {
+    if (e.httpStatus === 503 && e.errors[0] === 'Vault is sealed') {
+      this.refresh();
+    }
+    return true;
+  };
+
+  get clusterState() {
+    const cluster = this.modelFor(this.routeName);
+    switch (true) {
+      case cluster.needsInit:
+        return CLUSTER_STATE.UNINITIALIZED;
+      case cluster.sealed:
+        return CLUSTER_STATE.SEALED;
+      case cluster.dr?.isSecondary:
+        return CLUSTER_STATE.DR_SECONDARY;
+      default:
+        return CLUSTER_STATE.ACTIVE;
+    }
+  }
+
+  get allowedRedirectRoutes() {
+    const state = this.clusterState;
+    const isAuthenticated = !!this.auth.currentToken;
+
+    switch (true) {
+      case state === CLUSTER_STATE.UNINITIALIZED:
+        return [INIT];
+      case state === CLUSTER_STATE.SEALED:
+        // here we allow init so that we don't redirect users who haven't downloaded keys after init
+        return [UNSEAL, INIT];
+      case state === CLUSTER_STATE.DR_SECONDARY:
+        return [DR_REPLICATION_SECONDARY, DR_REPLICATION_SECONDARY_DETAILS];
+      case isAuthenticated === false:
+        return [AUTH, OIDC_PROVIDER, NS_OIDC_PROVIDER, OIDC_CALLBACK];
+      default:
+        return [null];
+    }
+  }
+
+  targetRouteName(transition) {
+    const currentRouteName = this.router.currentRouteName;
+    const allowedRoutes = this.allowedRedirectRoutes;
+
+    // if the target route or current route is in the allowed routes, go there, otherwise choose the first allowed route
+    return (
+      allowedRoutes?.find((r) => transition?.targetName === r || currentRouteName === r) || allowedRoutes[0]
+    );
+  }
+
+  transitionToTargetRoute(transition = {}) {
+    const targetRoute = this.targetRouteName(transition);
+    if (
+      targetRoute &&
+      targetRoute !== this.routeName &&
+      targetRoute !== transition.targetName &&
+      targetRoute !== this.router.currentRouteName
+    ) {
+      // there may be query params so check for inclusion rather than exact match
+      const isExcluded = EXCLUDED_REDIRECT_URLS.find((url) => this.router.currentURL?.includes(url));
+      if (
+        // only want to redirect if we're going to authenticate
+        targetRoute === AUTH &&
+        transition.targetName !== CLUSTER_INDEX &&
+        !isExcluded
+      ) {
+        return this.router.transitionTo(targetRoute, {
+          queryParams: { redirect_to: this.router.currentURL },
+        });
       }
-      return true;
-    },
-  },
-});
+      return this.router.transitionTo(targetRoute);
+    }
+
+    return Promise.resolve();
+  }
+}

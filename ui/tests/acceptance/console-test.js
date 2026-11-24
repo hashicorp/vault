@@ -25,6 +25,7 @@ module('Acceptance | console', function (hooks) {
   test("refresh reloads the current route's data", async function (assert) {
     assert.expect(6);
     await visit(`/vault/secrets-engines`);
+
     const ids = [uuidv4(), uuidv4(), uuidv4()];
     for (const id of ids) {
       const inputString = `write sys/mounts/console-route-${id} type=kv`;
@@ -34,7 +35,7 @@ module('Acceptance | console', function (hooks) {
     await consoleComponent.runCommands('refresh');
     await settled();
     for (const id of ids) {
-      assert.dom(GENERAL.tableRow(`console-route-${id}/`)).exists('new engine is shown on the page');
+      assert.dom(GENERAL.listItem(`console-route-${id}/`)).exists('new engine is shown on the page');
     }
     // Clean up
     for (const id of ids) {
@@ -45,7 +46,7 @@ module('Acceptance | console', function (hooks) {
     await consoleComponent.runCommands('refresh');
     await settled();
     for (const id of ids) {
-      assert.dom(GENERAL.tableRow(`console-route-${id}/`)).doesNotExist('engine was removed');
+      assert.dom(GENERAL.listItem(`console-route-${id}/`)).doesNotExist('engine was removed');
     }
   });
 

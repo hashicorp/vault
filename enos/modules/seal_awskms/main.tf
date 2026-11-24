@@ -41,6 +41,10 @@ resource "aws_kms_key" "key" {
   description             = "auto-unseal-key-${local.cluster_name}"
   deletion_window_in_days = 7 // 7 is the shortest allowed window
   tags                    = var.common_tags
+
+  timeouts {
+    create = "10m"
+  }
 }
 
 resource "aws_kms_alias" "alias" {

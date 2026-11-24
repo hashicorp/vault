@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
@@ -29,12 +28,6 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
     this.issuersGenerateStub = sinon.stub(api.secrets, 'pkiIssuersGenerateIntermediate');
     this.generateStub = sinon.stub(api.secrets, 'pkiGenerateIntermediate');
 
-    setRunOptions({
-      rules: {
-        // something strange happening here
-        'link-name': { enabled: false },
-      },
-    });
     this.clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
 
     this.form = new PkiConfigGenerateForm('PkiGenerateIntermediateRequest', {}, { isNew: true });

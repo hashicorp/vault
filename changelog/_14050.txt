@@ -1,0 +1,3 @@
+```release-note:bug
+identity: fixed a rare but possible data race issue with identities. 
+```

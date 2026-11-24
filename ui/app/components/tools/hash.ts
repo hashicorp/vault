@@ -29,6 +29,10 @@ export default class ToolsHash extends Component {
   @tracked sum = '';
   @tracked errorMessage = '';
 
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Hash data' }];
+  }
+
   @action
   reset() {
     this.algorithm = 'sha2-256';

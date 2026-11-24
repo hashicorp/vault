@@ -9,3 +9,46 @@
   padding: size_variables.$spacing-24;
   line-height: initial;
 }
+
+.dashboard-header-with-gradient {
+  // Lift the header's direct children above the ::before gradient blob.
+  // The ::before has no z-index so it paints at the base of the stacking
+  // context; giving all sibling children position: relative; z-index: 1
+  // ensures they always paint on top of it.
+  /* stylelint-disable selector-class-pattern */
+  > .hds-page-header__body,
+  > .hds-page-header__metadata {
+    position: relative;
+    z-index: 1;
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: linear-gradient(
+      315deg,
+      #f22f2f 0%,
+      #f58a25 15%,
+      #7061a3 30%,
+      #ffaa42 45%,
+      #ffc011 60%,
+      #fff940 75%,
+      #f58a25 85%,
+      #7230ff 100%
+    );
+    opacity: 0.18;
+    filter: blur(60px);
+    pointer-events: none;
+  }
+}
+
+.telemetry-consent {
+  position: relative;
+  z-index: 1;
+}

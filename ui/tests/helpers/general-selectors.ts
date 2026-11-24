@@ -10,6 +10,7 @@ export const GENERAL = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx: string) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   breadcrumbLink: (label: string) => `[data-test-breadcrumb="${label}"] a`,
+  currentBreadcrumb: (label: string) => `[data-test-breadcrumb="${label}"]`,
   breadcrumbs: '[data-test-breadcrumbs]',
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',
@@ -20,8 +21,8 @@ export const GENERAL = {
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
   tabLink: (name: string) => `[data-test-tab="${name}"] a`,
-  hdsTab: (name: string) => `[data-test-tab="${name}"] button`, // HDS tab buttons
-  hdsTabPanel: (name: string) => `[data-test-panel="${name}"]`,
+  hdsTab: (name: string) => (name ? `[data-test-tab="${name}"] button` : '[data-test-tab] button'), // HDS tab buttons
+  hdsTabPanel: (name: string) => (name ? `[data-test-panel="${name}"]` : '[data-test-panel]'),
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
   navLink: (label: string) =>
     label ? `[data-test-sidebar-nav-link="${label}"]` : '[data-test-sidebar-nav-link]',
@@ -35,9 +36,9 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
-  nextButton: '[data-test-next-button]',
   revealButton: (label: string) => `[data-test-reveal="${label}"] button`, // intended for Hds::Reveal components
   accordionButton: (label: string) => `[data-test-accordion="${label}"] button`, // intended for Hds::Accordion components
+  accordionContent: (label: string) => `[data-test-accordion="${label}"] .hds-accordion-item__content`,
   // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
@@ -47,26 +48,35 @@ export const GENERAL = {
   /* ────── Menus & Lists ────── */
   dropdownToggle: (text: string) => `[data-test-dropdown="${text}"]`, // Use when dropdown toggle has text
   menuTrigger: '[data-test-popup-menu-trigger]', // Use when dropdown toggle is just an icon
-  menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
+  menuItem: (name?: string) => (name ? `[data-test-popup-menu="${name}"]` : '[data-test-popup-menu]'),
   listItem: (label: string) => (label ? `[data-test-list-item="${label}"]` : '[data-test-list-item]'),
   listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
   /* ────── Tables ────── */
   table: (title: string) => `[data-test-table="${title}"]`,
-  tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
+  tableRow: (idx?: number) =>
+    idx !== undefined ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]',
+  tableParentRow: '[data-test-table-parent-row]',
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
+  tableDataNested: (idx: number, key: string) =>
+    `[role="row"]:nth-of-type(${idx + 1}) [data-test-table-data="${key}"]`,
   tableColumnHeader: (col: number, { isAdvanced = false } = {}) =>
     `${isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'}:nth-child(${col})`, // number is not 0-indexed, first column header is 1
   tableColumnHeaderSortButton: (col: number, { isAdvanced = false } = {}) =>
     `${
       isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'
     }:nth-child(${col}) .hds-advanced-table__th-button--sort`, // number is not 0-indexed, first column header is 1
+  tableExpandableColumn: (idx?: number, key?: string) =>
+    `${GENERAL.tableData(idx, key)} [data-advanced-table-child-focusable]`,
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
   confirmModalInput: '[data-test-confirmation-modal-input]',
+  confirmTextInput: '[data-test-confirm-modal-input]',
+  confirmWarning: '[data-test-confirm-modal-warning]',
   confirmMessage: '[data-test-confirm-action-message]',
+  confirmTitle: '[data-test-confirm-action-title]',
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
@@ -85,14 +95,18 @@ export const GENERAL = {
   inputGroupByAttr: (attr: string) => `[data-test-input-group="${attr}"]`,
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   labelById: (id: string) => `label[id="${id}"]`,
+  labelFor: (name: string) => `label[for="${name}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   maskedInput: '[data-test-masked-input]',
   radioByAttr: (attr: string) => (attr ? `[data-test-radio="${attr}"]` : '[data-test-radio]'),
+  radioCardByAttr: (attr: string) => (attr ? `[data-test-radio-card="${attr}"]` : '[data-test-radio-card]'),
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   stringListByIdx: (index: number) => `[data-test-string-list-input="${index}"]`,
   textToggle: '[data-test-text-toggle]',
   textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  superSelect: (name: string) => `[data-test-super-select="${name}"]`,
+  formLabel: (name: string) => `[data-test-form-label="${name}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,
@@ -106,9 +120,11 @@ export const GENERAL = {
     addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
-  kvSuggestion: {
-    input: '[data-test-kv-suggestion-input]',
-    select: '[data-test-kv-suggestion-select]',
+  // the FormField "keyValueInputs" editType (Hds::Form::KeyValueInputs), distinct from kvObjectEditor above
+  kvFieldByAttr: (attr: string, idx = 0) => `[data-test-kv-field="${attr}-${idx}"]`,
+  suggestion: {
+    input: (type: string) => `[data-test-suggestion-input="${type}"]`,
+    select: (type: string) => `[data-test-suggestion-select="${type}"]`,
   },
 
   /* ────── Search Select ────── */
@@ -139,22 +155,24 @@ export const GENERAL = {
   emptyStateSubtitle: '[data-test-empty-state-subtitle]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
+  emptyState: (attr: string) => `[data-test-empty-state="${attr}"]`,
   flashMessage: '[data-test-flash-message]',
   latestFlashContent: '[data-test-flash-message]:last-of-type [data-test-flash-message-body]',
   inlineAlert: '[data-test-inline-alert]',
+  inlineAlertByAttr: (attr: string) => `[data-test-inline-alert="${attr}"]`,
   inlineError: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
   messageDescription: '[data-test-message-error-description]',
-  notFound: '[data-test-not-found]',
-  validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
-  validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
+  validationErrorByAttr: (attr: string) => `[data-test-validation-error="${attr}"]`,
+  validationWarningByAttr: (attr: string) => `[data-test-validation-warning="${attr}"]`,
+  invalidFormMessage: '[data-test-invalid-form-message]',
 
   pageError: {
     error: '[data-test-page-error]',
-    errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,
-    errorSubtitle: '[data-test-page-error-subtitle]',
-    errorMessage: '[data-test-page-error-message]',
-    errorDetails: '[data-test-page-error-details]',
+    title: (httpStatus?: number) =>
+      httpStatus ? `[data-test-page-error-title="${httpStatus}"]` : '[data-test-page-error-title]',
+    message: '[data-test-page-error-message]',
+    details: '[data-test-page-error-details]',
   },
 
   /* ────── Pagination ────── */
@@ -185,6 +203,8 @@ export const GENERAL = {
     header: (title: string) => `[data-test-modal-header="${title}"]`,
     body: (title: string) => `[data-test-modal-body="${title}"]`,
   },
+  confirmModal: '[data-test-confirm-modal]',
+  wizardIntro: '[data-test-intro]',
 
   /* ────── Misc ────── */
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
@@ -192,4 +212,7 @@ export const GENERAL = {
   licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
+  textDisplay: (attr?: string) => (attr ? `[data-test-text-display="${attr}"]` : '[data-test-text-display]'),
+  textBody: (attr: string) => `[data-test-text-body="${attr}"]`,
+  widget: (name: string) => `[data-test-widget="${name}"]`,
 };

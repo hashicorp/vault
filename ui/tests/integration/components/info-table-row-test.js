@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -39,10 +39,6 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('default', DEFAULT);
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
-  });
-
-  hooks.afterEach(function () {
-    this.owner.unregister('service:store');
   });
 
   test('it renders', async function (assert) {

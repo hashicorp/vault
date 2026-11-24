@@ -22,15 +22,14 @@ module('Integration | Component | replication page/mode-index', function (hooks)
   setupEngine(hooks, 'replication');
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.onEnable = () => {};
-    this.clusterModel = { replicationAttrs: {} };
+    this.cluster = { replicationAttrs: {} };
     this.replicationMode = '';
     this.replicationDisabled = true;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::ModeIndex @replicationDisabled={{this.replicationDisabled}} @replicationMode={{this.replicationMode}} @cluster={{this.clusterModel}} @onEnableSuccess={{this.onEnable}} />`,
+        hbs`<Page::ModeIndex @replicationDisabled={{this.replicationDisabled}} @replicationMode={{this.replicationMode}} @cluster={{this.cluster}} @onEnableSuccess={{this.onEnable}} />`,
         { owner: this.engine }
       );
     };
@@ -43,7 +42,7 @@ module('Integration | Component | replication page/mode-index', function (hooks)
     test('it renders correctly when replication disabled', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(S.title).hasText('Enable Disaster Recovery Replication');
+      assert.dom(S.title).hasText('Enable disaster recovery replication');
       assert.dom(S.enableForm).exists();
       assert.dom(S.notAllowed).doesNotExist();
       assert.dom(GENERAL.submitButton).exists('Enable button shows by default if no permissions available');
@@ -57,7 +56,7 @@ module('Integration | Component | replication page/mode-index', function (hooks)
     });
 
     test('it hides enable button if no permissions', async function (assert) {
-      this.clusterModel.canEnablePrimaryDr = false;
+      this.cluster.canEnablePrimaryDr = false;
       await this.renderComponent();
 
       assert.dom(S.enableForm).exists();
@@ -66,7 +65,7 @@ module('Integration | Component | replication page/mode-index', function (hooks)
     });
 
     test('it shows enable button if has permissions', async function (assert) {
-      this.clusterModel.canEnablePrimaryDr = true;
+      this.cluster.canEnablePrimaryDr = true;
       await this.renderComponent();
 
       assert.dom(S.enableForm).exists();
@@ -82,7 +81,7 @@ module('Integration | Component | replication page/mode-index', function (hooks)
     test('it renders correctly when replication disabled', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(S.title).hasText('Enable Performance Replication');
+      assert.dom(S.title).hasText('Enable performance replication');
       assert.dom(S.enableForm).exists();
       assert.dom(S.notAllowed).doesNotExist();
       assert.dom(GENERAL.submitButton).exists('Enable button shows by default if no permissions available');
@@ -96,7 +95,7 @@ module('Integration | Component | replication page/mode-index', function (hooks)
     });
 
     test('it hides enable button if no permissions', async function (assert) {
-      this.clusterModel.canEnablePrimaryPerformance = false;
+      this.cluster.canEnablePrimaryPerformance = false;
       await this.renderComponent();
 
       assert.dom(S.enableForm).exists();
@@ -105,7 +104,7 @@ module('Integration | Component | replication page/mode-index', function (hooks)
     });
 
     test('it shows enable button if has permissions', async function (assert) {
-      this.clusterModel.canEnablePrimaryPerformance = true;
+      this.cluster.canEnablePrimaryPerformance = true;
       await this.renderComponent();
 
       assert.dom(S.enableForm).exists();

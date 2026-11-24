@@ -20,7 +20,7 @@ scenario "dev_pr_replication" {
   matrix {
     arch              = ["amd64", "arm64"]
     artifact          = ["local", "deb", "rpm", "zip"]
-    distro            = ["amzn", "leap", "rhel", "sles", "ubuntu"]
+    distro            = ["amzn", "rhel", "sles", "ubuntu"]
     edition           = ["ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     primary_backend   = ["consul", "raft"]
     primary_seal      = ["awskms", "pkcs11", "shamir"]
@@ -44,7 +44,7 @@ scenario "dev_pr_replication" {
 
     exclude {
       artifact = ["deb", "rpm"]
-      distro   = ["sles", "leap"]
+      distro   = ["sles"]
     }
 
     exclude {
@@ -78,7 +78,6 @@ scenario "dev_pr_replication" {
     // specified in enos-providers.hcl), and we need to be able to access both of those here.
     enos_provider = {
       amzn   = provider.enos.ec2_user
-      leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
@@ -679,14 +678,18 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      ports             = global.ports
-      ipv4_cidr         = step.create_vpc.ipv4_cidr
-      hosts             = step.create_primary_cluster_targets.hosts
-      leader_host       = step.get_primary_cluster_ips.leader_host
-      vault_addr        = step.create_primary_cluster.api_addr_localhost
-      vault_edition     = matrix.edition
-      vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_primary_cluster.root_token
+      ports                  = global.ports
+      ipv4_cidr              = step.create_vpc.ipv4_cidr
+      hosts                  = step.create_primary_cluster_targets.hosts
+      integration_host_state = null
+      kmip_enabled           = false
+      ldap_enabled           = false
+      leader_host            = step.get_primary_cluster_ips.leader_host
+      vault_addr             = step.create_primary_cluster.api_addr_localhost
+      vault_audit_log_path   = step.create_primary_cluster.audit_device_file_path
+      vault_edition          = matrix.edition
+      vault_install_dir      = local.vault_install_dir
+      vault_root_token       = step.create_primary_cluster.root_token
     }
   }
 

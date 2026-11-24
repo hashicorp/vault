@@ -43,8 +43,12 @@ export default class KvForm extends Form<KvFormData> {
       },
     ],
     max_versions: [
-      { type: 'number', message: 'Maximum versions must be a number.' },
+      { type: 'number', options: { min: 0 }, message: 'Maximum versions must be a non-negative number.' },
       { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
+      {
+        validator: ({ max_versions }: KvForm['data']) => !max_versions?.toString().includes('.'),
+        message: 'Maximum versions must be a whole number.',
+      },
     ],
   };
 

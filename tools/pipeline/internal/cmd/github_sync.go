@@ -14,6 +14,7 @@ func newGithubSyncCmd() *cobra.Command {
 		Long:  "Github sync commands",
 	}
 	syncCmd.AddCommand(newSyncGithubBranchCmd())
+	syncCmd.AddCommand(newGithubSyncGoModCmd())
 
 	return syncCmd
 }

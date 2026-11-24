@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -82,6 +83,43 @@ func TestPolicy_HmacCmacSupported(t *testing.T) {
 				t.Fatalf("cmac should not have been supported for keytype %s", keyType.String())
 			}
 		}
+	}
+}
+
+func TestKeyType_KeyUsages(t *testing.T) {
+	tests := []struct {
+		keyType  KeyType
+		expected []string
+	}{
+		{KeyType_AES256_GCM96, []string{"aead-encryption"}},
+		{KeyType_AES128_GCM96, []string{"aead-encryption"}},
+		{KeyType_ChaCha20_Poly1305, []string{"aead-encryption"}},
+		{KeyType_AES128_CBC, []string{"symmetric-encryption"}},
+		{KeyType_AES256_CBC, []string{"symmetric-encryption"}},
+		{KeyType_ECDSA_P256, []string{"digital-signature"}},
+		{KeyType_ECDSA_P384, []string{"digital-signature"}},
+		{KeyType_ECDSA_P521, []string{"digital-signature"}},
+		{KeyType_ED25519, []string{"digital-signature"}},
+		{KeyType_ML_DSA, []string{"digital-signature"}},
+		{KeyType_SLH_DSA, []string{"digital-signature"}},
+		{KeyType_HYBRID, []string{"digital-signature"}},
+		{KeyType_RSA2048, []string{"asymmetric-encryption", "digital-signature"}},
+		{KeyType_RSA3072, []string{"asymmetric-encryption", "digital-signature"}},
+		{KeyType_RSA4096, []string{"asymmetric-encryption", "digital-signature"}},
+		{KeyType_HMAC, []string{"message-authentication"}},
+		{KeyType_AES128_CMAC, []string{"message-authentication"}},
+		{KeyType_AES192_CMAC, []string{"message-authentication"}},
+		{KeyType_AES256_CMAC, []string{"message-authentication"}},
+		{KeyType_MANAGED_KEY, []string{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.keyType.String(), func(t *testing.T) {
+			got := tt.keyType.KeyUsages()
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("KeyType(%s).KeyUsages() = %v, want %v", tt.keyType.String(), got, tt.expected)
+			}
+		})
 	}
 }
 
@@ -210,9 +248,7 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	if !upserted {
 		t.Fatal("expected an upsert")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	testBytes := make([]byte, len(p.Keys["1"].Key))
 	copy(testBytes, p.Keys["1"].Key)
@@ -259,9 +295,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{{}, p.Keys["1"]}
@@ -316,9 +350,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	checkKeys(t, ctx, p, storage, keysArchive, "upgrade", 10, 10, 10)
 
@@ -356,9 +388,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("policy nil after bad delete")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	// Now do it properly
 	p.DeletionAllowed = true
@@ -394,8 +424,8 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 func Test_Archiving(t *testing.T) {
 	lockManagerWithCache, _ := NewLockManager(true, 0)
 	lockManagerWithoutCache, _ := NewLockManager(false, 0)
-	testArchivingUpgradeCommon(t, lockManagerWithCache)
-	testArchivingUpgradeCommon(t, lockManagerWithoutCache)
+	testArchivingCommon(t, lockManagerWithCache)
+	testArchivingCommon(t, lockManagerWithoutCache)
 }
 
 func testArchivingCommon(t *testing.T, lm *LockManager) {
@@ -419,9 +449,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{{}, p.Keys["1"]}
@@ -573,6 +601,7 @@ func Test_StorageErrorSafety(t *testing.T) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
+	defer p.Unlock()
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{{}, p.Keys["1"]}
@@ -620,6 +649,7 @@ func Test_BadUpgrade(t *testing.T) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
+	defer p.Unlock()
 
 	orig, err := copystructure.Copy(p)
 	if err != nil {
@@ -685,6 +715,7 @@ func Test_BadArchive(t *testing.T) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
+	defer p.Unlock()
 
 	for i := 2; i <= 10; i++ {
 		err = p.Rotate(ctx, storage, rand.Reader)
@@ -753,11 +784,16 @@ func Test_Import(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating test keys: %s", err)
 	}
+	nonPKCS8Keys, err := generateNonPKCS8FormatKeys()
+	if err != nil {
+		t.Fatalf("error generating non-PKCS#8 test keys: %s", err)
+	}
 
 	tests := map[string]struct {
 		policy      Policy
 		key         []byte
 		shouldError bool
+		wantErr     string
 	}{
 		"import AES key": {
 			policy: Policy{
@@ -799,15 +835,61 @@ func Test_Import(t *testing.T) {
 			key:         testKeys[KeyType_AES256_GCM96],
 			shouldError: true,
 		},
+		"import incorrect rsa key format": {
+			policy: Policy{
+				Name: "test-non-pkcs8-rsa-key",
+				Type: KeyType_RSA2048,
+			},
+			key:         nonPKCS8Keys[KeyType_RSA2048],
+			shouldError: true,
+			wantErr:     "error parsing asymmetric key: private key must be encoded as PKCS#8; detected key format: RSA PRIVATE KEY (PKCS#1)",
+		},
+		"import incorrect ecdsa key format": {
+			policy: Policy{
+				Name: "test-non-pkcs8-ecdsa-key",
+				Type: KeyType_ECDSA_P256,
+			},
+			key:         nonPKCS8Keys[KeyType_ECDSA_P256],
+			shouldError: true,
+			wantErr:     "error parsing asymmetric key: private key must be encoded as PKCS#8; detected key format: EC PRIVATE KEY (SEC1)",
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			if err := test.policy.Import(ctx, storage, test.key, rand.Reader); (err != nil) != test.shouldError {
+			err := test.policy.Import(ctx, storage, test.key, rand.Reader)
+			if (err != nil) != test.shouldError {
 				t.Fatalf("error importing key: %s", err)
+			}
+
+			if test.wantErr != "" && (err == nil || !strings.Contains(err.Error(), test.wantErr)) {
+				t.Fatalf("expected error containing: %q, got %q", test.wantErr, err)
 			}
 		})
 	}
+}
+
+func generateNonPKCS8FormatKeys() (map[KeyType][]byte, error) {
+	keyMap := make(map[KeyType][]byte)
+
+	rsaKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA2048] = x509.MarshalPKCS1PrivateKey(rsaKey)
+
+	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	sec1DER, err := x509.MarshalECPrivateKey(ecdsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_ECDSA_P256] = sec1DER
+
+	return keyMap, nil
 }
 
 func generateTestKeys() (map[KeyType][]byte, error) {
@@ -883,6 +965,7 @@ func BenchmarkSymmetric(b *testing.B) {
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	}, rand.Reader)
+	defer p.Unlock()
 	key, _ := p.GetKey(nil, 1, 32)
 	pt := make([]byte, 10)
 	ad := make([]byte, 10)
@@ -893,6 +976,7 @@ func BenchmarkSymmetric(b *testing.B) {
 			})
 		pt2, _ := p.SymmetricDecryptRaw(key, ct, SymmetricOpts{
 			AdditionalData: ad,
+			Algorithm:      p.KeyVersionType(1),
 		})
 		if !bytes.Equal(pt, pt2) {
 			b.Fail()
@@ -1262,4 +1346,270 @@ func isUnsupportedGoHashType(hashType HashType, err error) bool {
 	}
 
 	return false
+}
+
+// TestPolicy_KeyEntryAlgorithm verifies that KeyVersionType falls back to the
+// policy-level Type when the key entry's Algorithm is nil, and returns the
+// entry-level algorithm when it is set to a non-nil pointer.
+func TestPolicy_KeyEntryAlgorithm(t *testing.T) {
+	t.Parallel()
+
+	policyType := KeyType(KeyType_AES256_GCM96)
+	entryType := KeyType(KeyType_ECDSA_P256)
+
+	p := &Policy{
+		Type: policyType,
+		Keys: keyEntryMap{
+			"1": KeyEntry{Algorithm: nil},
+			"2": KeyEntry{Algorithm: &entryType},
+		},
+	}
+
+	require.Equal(t, policyType, p.KeyVersionType(1), "nil Algorithm should fall back to policy Type")
+	require.Equal(t, entryType, p.KeyVersionType(2), "non-nil Algorithm should return the entry-level algorithm")
+	require.Equal(t, policyType, p.KeyVersionType(99), "missing key version should fall back to policy Type")
+}
+
+// TestPolicy_RotateInMemoryWithAlgorithmSetsAlgorithmField verifies that after
+// RotateInMemoryWithAlgorithm the newly created key entry has its Algorithm
+// pointer set to the requested key type when the key usage is unchanged.
+func TestPolicy_RotateInMemoryWithAlgorithmSetsAlgorithmField(t *testing.T) {
+	t.Parallel()
+
+	p := &Policy{
+		Type: KeyType_AES256_GCM96,
+		Keys: keyEntryMap{
+			"1": KeyEntry{},
+		},
+		LatestVersion:        1,
+		MinDecryptionVersion: 1,
+	}
+
+	rotateType := KeyType(KeyType_AES128_GCM96)
+	err := p.RotateInMemoryWithAlgorithm(rand.Reader, rotateType, nil)
+	require.NoError(t, err)
+	require.Equal(t, 2, p.LatestVersion)
+
+	entry, ok := p.Keys[strconv.Itoa(p.LatestVersion)]
+	require.True(t, ok, "new key version should exist after rotation")
+	require.NotNil(t, entry.Algorithm, "Algorithm should be non-nil after RotateInMemoryWithAlgorithm")
+	require.Equal(t, rotateType, *entry.Algorithm, "Algorithm pointer should point to the requested key type")
+	require.Equal(t, rotateType, p.KeyVersionType(p.LatestVersion))
+}
+
+// TestPolicy_RotateInMemoryWithAlgorithmRejectsUsageChanges verifies that
+// RotateInMemoryWithAlgorithm rejects algorithm changes that alter key usage.
+func TestPolicy_RotateInMemoryWithAlgorithmRejectsUsageChanges(t *testing.T) {
+	t.Parallel()
+
+	p := &Policy{
+		Type: KeyType_AES256_GCM96,
+		Keys: keyEntryMap{
+			"1": KeyEntry{},
+		},
+		LatestVersion:        1,
+		MinDecryptionVersion: 1,
+	}
+
+	err := p.RotateInMemoryWithAlgorithm(rand.Reader, KeyType_ECDSA_P256, nil)
+	require.EqualError(t, err, "incompatible algorithm ecdsa-p256 for key type aes256-gcm96")
+	require.Equal(t, 1, p.LatestVersion)
+	_, ok := p.Keys["2"]
+	require.False(t, ok, "new key version should not be created after a rejected algorithm change")
+}
+
+// TestIsCompatibleKeyType verifies that isCompatibleKeyType allows algorithm
+// changes that preserve key usage, rejects changes that alter key usage, allows
+// any transition to or from MANAGED_KEY, and blocks algorithm changes away from
+// ED25519 when key derivation is enabled.
+func TestIsCompatibleKeyType(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		newType   KeyType
+		config    PolicyConfig
+		expectErr bool
+	}{
+		// Same-type rotations are always compatible.
+		"aes256-gcm96 to aes256-gcm96": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType: KeyType_AES256_GCM96,
+		},
+		// AEAD <-> AEAD: same usage group, compatible.
+		"aes256-gcm96 to aes128-gcm96": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType: KeyType_AES128_GCM96,
+		},
+		"aes128-gcm96 to chacha20-poly1305": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES128_GCM96},
+			newType: KeyType_ChaCha20_Poly1305,
+		},
+		// Signature <-> Signature: compatible.
+		"ecdsa-p256 to ecdsa-p384": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_ECDSA_P384,
+		},
+		"ecdsa-p256 to ed25519": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_ED25519,
+		},
+		"ed25519 to ecdsa-p521": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ED25519},
+			newType: KeyType_ECDSA_P521,
+		},
+		"ed25519 to ml-dsa": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ED25519},
+			newType: KeyType_ML_DSA,
+		},
+		// RSA has both signature and asymmetric-encryption usages; it is
+		// compatible with pure signature key types.
+		"rsa2048 to rsa4096": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_RSA2048},
+			newType: KeyType_RSA4096,
+		},
+		"rsa2048 to ecdsa-p256": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_RSA2048},
+			newType: KeyType_ECDSA_P256,
+		},
+		"ecdsa-p256 to rsa2048": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_RSA2048,
+		},
+		// Transitions to MANAGED_KEY are always allowed.
+		"aes256-gcm96 to managed-key": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType: KeyType_MANAGED_KEY,
+		},
+		"ecdsa-p256 to managed-key": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_MANAGED_KEY,
+		},
+		// Transitions from MANAGED_KEY are always allowed.
+		"managed-key to aes256-gcm96": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_MANAGED_KEY},
+			newType: KeyType_AES256_GCM96,
+		},
+		// ED25519 with derivation: only ED25519 is allowed.
+		"ed25519 derived to ed25519": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ED25519, Derived: true},
+			newType: KeyType_ED25519,
+		},
+		"ed25519 derived to ecdsa-p256 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_ED25519, Derived: true},
+			newType:   KeyType_ECDSA_P256,
+			expectErr: true,
+		},
+		// Cross-usage incompatibilities.
+		"aes256-gcm96 to ecdsa-p256 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType:   KeyType_ECDSA_P256,
+			expectErr: true,
+		},
+		"ecdsa-p256 to aes256-gcm96 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType:   KeyType_AES256_GCM96,
+			expectErr: true,
+		},
+		"hmac to aes256-gcm96 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_HMAC},
+			newType:   KeyType_AES256_GCM96,
+			expectErr: true,
+		},
+		"aes256-gcm96 to hmac is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType:   KeyType_HMAC,
+			expectErr: true,
+		},
+	}
+
+	for name, tt := range testCases {
+		t.Run(name, func(t *testing.T) {
+			pol := NewPolicy(tt.config)
+			pol.Keys = keyEntryMap{
+				"1": KeyEntry{},
+			}
+
+			err := pol.isCompatibleKeyType(tt.newType)
+			if tt.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetKeyConfig(t *testing.T) {
+	var hmacType KeyType = KeyType_HMAC
+	var ecdsaType KeyType = KeyType_ECDSA_P384
+
+	testCases := map[string]struct {
+		pol            *Policy
+		expectedType   KeyType
+		expectedConfig *KeyConfig
+	}{
+		"before key creation": {
+			pol: &Policy{
+				Type: KeyType_ECDSA_P384,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{},
+		},
+		"key rotation": {
+			pol: &Policy{
+				Type:          KeyType_ECDSA_P384,
+				Keys:          keyEntryMap{"1": KeyEntry{}},
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{},
+		},
+		"key rotation with algorithm": {
+			pol: &Policy{
+				Type:          KeyType_ECDSA_P384,
+				Keys:          keyEntryMap{"1": KeyEntry{Algorithm: &ecdsaType}},
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{},
+		},
+		"hmac keys before key creation": {
+			pol: &Policy{
+				Type:    KeyType_HMAC,
+				KeySize: 32,
+			},
+			expectedType:   KeyType_HMAC,
+			expectedConfig: &KeyConfig{KeySize: 32},
+		},
+		"hmac key rotation": {
+			pol: &Policy{
+				Type:          KeyType_ECDSA_P384,
+				Keys:          keyEntryMap{"1": KeyEntry{}},
+				KeySize:       32,
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{KeySize: 32},
+		},
+		"hmac key rotation with algorithm": {
+			pol: &Policy{
+				Type:          KeyType_HMAC,
+				Keys:          keyEntryMap{"1": KeyEntry{KeySize: 32, Algorithm: &hmacType}},
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_HMAC,
+			expectedConfig: &KeyConfig{KeySize: 32},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			keyType, keyConfig, err := tc.pol.getKeyConfig(tc.pol.LatestVersion)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedType, keyType)
+			require.Equal(t, tc.expectedConfig, keyConfig)
+		})
+	}
 }

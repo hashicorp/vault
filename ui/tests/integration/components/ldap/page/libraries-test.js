@@ -4,13 +4,12 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -47,12 +46,6 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
         />`,
         { owner: this.engine }
       );
-
-    setRunOptions({
-      rules: {
-        list: { enabled: false },
-      },
-    });
   });
 
   test('it should render tab page header', async function (assert) {

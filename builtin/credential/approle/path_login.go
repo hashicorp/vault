@@ -271,7 +271,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 				return nil, err
 			}
 			if entry == nil {
-				return logical.ErrorResponse(fmt.Sprintf("invalid secret_id %q", secretID)), nil
+				return logical.ErrorResponse("invalid role or secret ID"), nil
 			}
 
 			// If there exists a single use left, delete the SecretID entry from

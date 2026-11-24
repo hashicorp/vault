@@ -4,25 +4,20 @@
  */
 
 import Ember from 'ember';
-import { computed } from '@ember/object';
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
-export default Route.extend(ModelBoundaryRoute, {
-  auth: service(),
-  controlGroup: service(),
-  flashMessages: service(),
-  console: service(),
-  permissions: service(),
-  namespaceService: service('namespace'),
-  router: service(),
-  version: service(),
-  customMessages: service(),
-
-  modelTypes: computed(function () {
-    return ['secret', 'secret-engine'];
-  }),
+export default class LogoutRoute extends Route {
+  @service analytics;
+  @service auth;
+  @service controlGroup;
+  @service flashMessages;
+  @service console;
+  @service permissions;
+  @service('namespace') namespaceService;
+  @service router;
+  @service version;
+  @service customMessages;
 
   beforeModel({ to: { queryParams } }) {
     const ns = this.namespaceService.path;
@@ -33,6 +28,9 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
+    // Clear the analytics identity so the next user to log in on this browser is
+    // not attributed to or aliased with the user who just logged out.
+    this.analytics.reset();
     this.version.version = null;
 
     if (this.version.isEnterprise) {
@@ -49,5 +47,5 @@ export default Route.extend(ModelBoundaryRoute, {
       const { cluster_name } = this.paramsFor('vault.cluster');
       location.assign(this.router.urlFor('vault.cluster.auth', cluster_name, { queryParams }));
     }
-  },
-});
+  }
+}

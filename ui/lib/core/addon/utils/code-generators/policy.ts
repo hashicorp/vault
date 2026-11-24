@@ -4,20 +4,58 @@
  */
 
 import { tracked } from '@glimmer/tracking';
+import { formatEot } from './formatters';
+
+export enum PolicyTypes {
+  ACL = 'acl',
+  RGP = 'rgp',
+  EGP = 'egp',
+}
 
 export const ACL_CAPABILITIES = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'] as const;
 export type AclCapability = (typeof ACL_CAPABILITIES)[number]; // 'create' | 'read' | 'update' | 'delete' | 'list' | 'patch' | 'sudo'
 
 export class PolicyStanza {
   @tracked capabilities: Set<AclCapability> = new Set();
-  @tracked path = '';
+  @tracked path;
+
+  constructor({ path = '' } = {}) {
+    this.path = path;
+  }
 
   get preview() {
     return aclTemplate(this.path, Array.from(this.capabilities));
   }
+
+  get isValid() {
+    // Path is required for each stanza to be valid; capabilities are optional
+    return !this.invalidPath;
+  }
+
+  // These getters return an error message when invalid and an empty string when valid.
+  // Negative naming is a little counterintuitive, but simplifies template logic
+  // so the message only renders when the value is truthy.
+  get invalidCapabilities() {
+    return this.capabilities.size > 0 ? '' : 'Rule must have at least one capability.';
+  }
+
+  get invalidPath() {
+    const isValid = typeof this.path === 'string' && this.path.trim().length > 0;
+    return isValid ? '' : 'Path is required.';
+  }
 }
 
 export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.preview).join('\n');
+
+export const policySnippetArgs = (policyName: string, policy: string) => {
+  const formattedPolicy = formatEot(policy);
+  const resourceArgs = { name: `"${policyName}"`, policy: formattedPolicy };
+
+  return {
+    terraform: { resource: 'vault_policy', resourceArgs },
+    cli: { command: `policy write ${policyName}`, content: `- ${formattedPolicy}` },
+  };
+};
 
 /**
  * Formats an ACL policy stanza in HCL

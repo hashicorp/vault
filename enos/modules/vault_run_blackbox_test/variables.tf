@@ -1,0 +1,132 @@
+# Copyright IBM Corp. 2016, 2025
+# SPDX-License-Identifier: BUSL-1.1
+
+variable "leader_host" {
+  type = object({
+    private_ip = string
+    public_ip  = string
+  })
+  description = "The vault cluster host that is the leader"
+}
+
+variable "leader_public_ip" {
+  type        = string
+  description = "The public IP of the Vault leader"
+}
+
+variable "ip_version" {
+  type        = number
+  description = "The IP version used for the Vault TCP listener"
+  default     = 4
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
+variable "vault_root_token" {
+  type        = string
+  description = "The vault root token"
+}
+
+variable "test_names" {
+  type        = list(string)
+  description = "List of specific tests to run (e.g., ['TestStepdownAndLeaderElection', 'TestUnsealedStatus']). Empty list runs all tests."
+  default     = []
+}
+
+variable "test_package" {
+  type        = string
+  description = "The Go package path for the tests (e.g., ./vault/external_tests/blackbox)"
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The full Vault address (for cloud environments). If provided, takes precedence over leader_public_ip."
+  default     = null
+}
+
+variable "vault_namespace" {
+  type        = string
+  description = "The Vault namespace to operate in (for HCP environments). Optional."
+  default     = null
+}
+
+variable "integration_host_state" {
+  type        = any
+  description = "The state from the external integration setup"
+  default     = null
+}
+
+variable "vault_edition" {
+  type        = string
+  description = "The Vault edition (ce, ent, ent.hsm, ent.fips1402, ent.hsm.fips1402)"
+  default     = "ent"
+}
+
+variable "vault_product_version" {
+  type        = string
+  description = "The Vault product version (e.g., 1.15.0)"
+  default     = null
+}
+
+variable "vault_revision" {
+  type        = string
+  description = "The Vault git revision/commit SHA"
+  default     = null
+}
+
+variable "vault_build_date" {
+  type        = string
+  description = "The Vault build date"
+  default     = null
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where Vault is installed"
+  default     = null
+}
+
+variable "vault_ibm_license_edition" {
+  type        = string
+  description = "The expected Vault edition in use in the IBM PAO license"
+  default     = null
+}
+
+variable "test_env_vars" {
+  type        = map(string)
+  description = "Additional environment variables to pass to the test"
+  default     = {}
+}
+
+variable "verify_expected_state" {
+  type        = string
+  description = "Default EXPECTED_STATE for isolated/verify tests (0 or 1). Used when test_env_vars does not already set EXPECTED_STATE."
+  default     = "1"
+}
+
+variable "verify_timeout_seconds" {
+  type        = string
+  description = "Default TIMEOUT_SECONDS for isolated/verify tests. Used when test_env_vars does not already set TIMEOUT_SECONDS."
+  default     = "180"
+}
+
+variable "verify_retry_interval" {
+  type        = string
+  description = "Default RETRY_INTERVAL for isolated/verify tests. Used when test_env_vars does not already set RETRY_INTERVAL."
+  default     = "5"
+}
+
+variable "verify_default_lcq" {
+  type        = string
+  description = "Expected DEFAULT_LCQ (max_leases) value for TestDefaultLCQ in isolated/verify. Empty string causes the test to skip (upgrading from < 1.16.0). Mirrors vault_autopilot_default_max_leases in vault_verify_default_lcq module."
+  default     = ""
+}
+
+variable "enable_testonly_tests" {
+  type        = bool
+  description = "Enable tests that require the 'testonly' build tag (e.g., verify tests). Set to true for docker environments to run verify tests."
+  default     = null
+}

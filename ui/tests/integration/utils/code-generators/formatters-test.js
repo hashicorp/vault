@@ -49,4 +49,12 @@ line 3
 EOT`;
     assert.strictEqual(formatted, expected, 'it wraps multi-line content');
   });
+
+  test('formatEot: it handles undefined args', async function (assert) {
+    const formatted = formatEot();
+    const expected = `<<EOT
+
+EOT`;
+    assert.strictEqual(formatted, expected, 'it handles undefined args');
+  });
 });

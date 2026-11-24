@@ -23,7 +23,6 @@ import (
 
 func TestPlugin_lifecycle(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
 
 	env := []string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)}
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v4-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MockV4", env)
@@ -224,7 +223,6 @@ func TestPlugin_lifecycle(t *testing.T) {
 
 func TestPlugin_VersionSelection(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
 
 	for _, version := range []string{"v11.0.0", "v11.0.1-rc1", "v2.0.0"} {
 		vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v5-database-plugin", consts.PluginTypeDatabase, version, "TestBackend_PluginMain_MockV5", []string{})
@@ -337,7 +335,6 @@ func TestPlugin_VersionSelection(t *testing.T) {
 
 func TestPlugin_VersionMustBeExplicitlyUpgraded(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}

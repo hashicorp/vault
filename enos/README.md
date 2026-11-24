@@ -7,7 +7,7 @@ of the `build` workflow. While intended to be executed via Github Actions using
 the results of the `build` workflow, scenarios are also executable from a developer
 machine that has the requisite dependencies and configuration.
 
-Refer to the [Enos documentation](https://github.com/hashicorp/Enos-Docs)
+Refer to the [Enos documentation](https://hashicorp.atlassian.net/wiki/x/GQCKOwE)
 for further information regarding installation, execution or composing Enos scenarios.
 
 ## When to use Enos
@@ -99,7 +99,7 @@ enos scenario run upgrade artifact_source:local
 # To run the same scenario variants that are run in CI, refer to the scenarios listed
 # in json files under .github/enos-run-matrices directory,
 # adding `artifact_source:local` to run locally.
-enos scenario run smoke backend:consul consul_version:1.12.3 distro:ubuntu seal:awskms artifact_source:local arch:amd64 edition:oss
+enos scenario run smoke backend:consul distro:ubuntu seal:awskms artifact_source:local arch:amd64 edition:oss
 # Launch an individual scenario but leave infrastructure up after execution
 enos scenario launch smoke artifact_source:local
 # Check an individual scenario for validity. This is useful during scenario
@@ -217,7 +217,7 @@ Here are the steps to configure the GitHub Actions service user:
 - Full access to the CI AWS account is required.
 
 **Notes:**
-- For help with access to Terraform Cloud and the CI Account, contact the QT team on Slack (#team-quality)
+- For help with access to Terraform Cloud and the CI Account, contact the Vault Automation team on Slack (#team-vault-automation)
   for an invite. After receiving an invite to Terraform Cloud, a personal access token can be created
   by clicking `User Settings` --> `Tokens` --> `Create an API token`.
 - Access to the AWS account can be done via Doormat, at: https://doormat.hashicorp.services/.
@@ -228,7 +228,7 @@ Here are the steps to configure the GitHub Actions service user:
 1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the
    repository for which it is being created, but the pattern is: `<repository>-ci-enos-service-user-iam`,
    e.g. `vault-ci-enos-service-user-iam`. It is important that the execution mode for the workspace be set
-   to `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality)
+   to `local`. For help on setting up the workspace, contact the Vault Automation team on Slack (#team-vault-automation)
 
 
 2. **Execute the Terraform module**
@@ -250,7 +250,7 @@ workspace must be created as follows:
 1. **Create the Terraform Cloud Workspace** - The name workspace to be created depends on the repository
    for which it is being created, but the pattern is: `<repository>-ci-bootstrap`, e.g.
    `vault-ci-bootstrap`. It is important that the execution mode for the workspace be set to
-   `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality).
+   `local`. For help on setting up the workspace, contact the Vault Automation team on Slack (#team-vault-automation).
 
 Once the workspace has been created, changes to the bootstrap module will automatically be applied via
 the GitHub PR workflow. Each time a PR is created for changes to files within that module the module

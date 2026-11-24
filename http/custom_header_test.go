@@ -4,6 +4,7 @@
 package http
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/hashicorp/vault/vault"
@@ -83,8 +84,8 @@ func TestCustomResponseHeaders(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseHeader(t, resp, customHeader200)
 
-	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/update")
-	testResponseStatus(t, resp, 400)
+	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/verify")
+	testResponseStatus(t, resp, http.StatusBadRequest)
 	testResponseHeader(t, resp, defaultCustomHeaders)
 	testResponseHeader(t, resp, customHeader4xx)
 	testResponseHeader(t, resp, customHeader400)

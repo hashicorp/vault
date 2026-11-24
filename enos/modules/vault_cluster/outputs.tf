@@ -13,7 +13,7 @@ output "api_addrs" {
 
 output "audit_device_file_path" {
   description = "The file path for the audit device, if enabled"
-  value       = var.enable_audit_devices ? local.audit_device_file_path : "file audit device not enabled"
+  value       = var.enable_audit_devices ? local.audit_device_file_path : null
 }
 
 output "cluster_name" {
@@ -48,6 +48,10 @@ output "keys_base64" {
 
 output "keys_base64_secondary" {
   value = try(module.start_vault.keys_base64_secondary, null)
+}
+
+output "leader_api_addr" {
+  value = module.start_vault.leader_api_addr
 }
 
 output "listener_port" {

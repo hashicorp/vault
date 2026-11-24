@@ -30,4 +30,8 @@ export class DummyProvider implements AnalyticsProvider {
   trackEvent() {
     /* intentionally blank */
   }
+
+  reset() {
+    /* intentionally blank */
+  }
 }

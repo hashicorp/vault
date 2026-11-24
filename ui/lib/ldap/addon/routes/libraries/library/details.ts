@@ -32,7 +32,8 @@ export default class LdapLibraryDetailsRoute extends Route {
     const routeParams = (childResource: string) => [currentPath, childResource];
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
       ...ldapBreadcrumbs(resolvedModel.library.completeLibraryName, routeParams, libraryRoutes, true),

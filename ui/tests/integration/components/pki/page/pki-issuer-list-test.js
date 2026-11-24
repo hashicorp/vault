@@ -4,11 +4,17 @@
  */
 
 import { module, test } from 'qunit';
-import { render } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { STANDARD_META } from 'vault/tests/helpers/pagination';
+
+const SELECTORS = {
+  dropdown: '[data-test-issuer-generate-dropdown]',
+  issuerRoot: '[data-test-generate-issuer="root"]',
+  issuerIntermediate: '[data-test-generate-issuer="intermediate"]',
+};
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered
@@ -65,6 +71,7 @@ module('Integration | Component | page/pki-issuer-list', function (hooks) {
       }
     });
   });
+
   test('it renders when issuer data even though issuer metadata isnt provided', async function (assert) {
     this.issuers = [
       {
@@ -82,5 +89,13 @@ module('Integration | Component | page/pki-issuer-list', function (hooks) {
 
     await this.renderComponent();
     assert.dom(`[data-test-is-default="1"]`).hasText('default issuer');
+  });
+
+  test('it renders download options when the dropdown is toggled', async function (assert) {
+    await this.renderComponent();
+
+    await click(SELECTORS.dropdown);
+    assert.dom(SELECTORS.issuerRoot).hasText('Root');
+    assert.dom(SELECTORS.issuerIntermediate).hasText('Intermediate CSR');
   });
 });

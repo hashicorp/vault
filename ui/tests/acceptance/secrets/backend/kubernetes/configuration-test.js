@@ -68,9 +68,8 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
     await this.visitConfiguration();
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.kubernetes.configuration',
-      'Transitions to configuration route on fetch 404'
+      'vault.cluster.secrets.backend.kubernetes.configure',
+      'Transitions to configure route on fetch 404'
     );
-    assert.dom('[data-test-empty-state-title]').hasText('Kubernetes not configured', 'Config cta renders');
   });
 });

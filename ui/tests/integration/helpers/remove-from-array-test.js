@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { removeManyFromArray, removeFromArray } from 'vault/helpers/remove-from-array';
 
 module('Integration | Helper | remove-from-array', function (hooks) {

@@ -13,16 +13,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	gocache "github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -973,7 +973,11 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		EntityID:  "test-entity-id",
 	})
 	expectSuccess(t, resp, err)
-	parsedToken, err := jwt.ParseSigned(resp.Data["token"].(string))
+	parsedToken, err := jwt.ParseSigned(resp.Data["token"].(string), []jose.SignatureAlgorithm{
+		jose.RS256, jose.RS384, jose.RS512,
+		jose.ES256, jose.ES384, jose.ES512,
+		jose.EdDSA,
+	})
 	if err != nil {
 		t.Fatalf("error parsing token: %s", err.Error())
 	}
@@ -1600,7 +1604,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 }
 
 func TestOIDC_Flush(t *testing.T) {
-	c := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
+	c := newOIDCCache(t.Context(), ttlcache.NoTTL, false)
 	ns := []*namespace.Namespace{
 		{ID: "ns0"},
 		{ID: "ns1"},
@@ -1636,7 +1640,7 @@ func TestOIDC_Flush(t *testing.T) {
 }
 
 func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
-	cache := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
+	cache := newOIDCCache(t.Context(), ttlcache.NoTTL, false)
 
 	if _, _, err := cache.Get(nil, "foo"); err == nil {
 		t.Fatal("expected error, got nil")

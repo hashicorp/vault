@@ -12,22 +12,26 @@ import { task } from 'ember-concurrency';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
 import { toLabel } from 'core/helpers/to-label';
+import errorMessage from 'vault/utils/error-message';
+import timestamp from 'core/utils/timestamp';
 
 import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type PkiIssuerModel from 'vault/models/pki/issuer';
 import type { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 import type {
   PkiGenerateRootResponse,
-  PkiRotateRootExportedEnum,
+  PkiReadIssuerResponse,
+  SecretsApiPkiRotateRootExportedEnum,
   PkiRotateRootRequest,
 } from '@hashicorp/vault-client-typescript';
 import type { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
 import type ApiService from 'vault/services/api';
+import type DownloadService from 'vault/services/download';
+import type { Extensions } from 'vault/services/download';
 
 interface Args {
-  oldRoot: PkiIssuerModel;
+  oldRoot: PkiReadIssuerResponse;
   certData: ParsedCertificateData;
   breadcrumbs: Breadcrumb;
   parsingErrors: string;
@@ -42,6 +46,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly secretMountPath: SecretMountPath;
   @service declare readonly api: ApiService;
+  @service declare readonly download: DownloadService;
   @service('app-router') declare readonly router: RouterService;
 
   @tracked displayedForm = RADIO_BUTTON_KEY.oldSettings;
@@ -113,7 +118,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
         const { type } = this.newRootForm.data;
         try {
           this.newRoot = await this.api.secrets.pkiRotateRoot(
-            type as PkiRotateRootExportedEnum,
+            type as SecretsApiPkiRotateRootExportedEnum,
             this.secretMountPath.currentPath,
             data as PkiRotateRootRequest
           );
@@ -129,6 +134,31 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
       }
     })
   );
+
+  // Replaces <DownloadButton> so the menu rows can be <Hds::Dropdown> list items.
+  // Closes the menu first because the content is fetched over the network.
+  @action
+  async downloadIssuer(format: 'der' | 'pem', close: CallableFunction) {
+    close();
+    const issuerId = this.newRoot.issuer_id;
+    const ts = timestamp.now().toISOString();
+    // Matches the filename <DownloadButton> produces.
+    const filename = issuerId ? `${issuerId}-${ts}` : ts;
+    const content = await this.fetchDataForDownload(format);
+    if (!content) {
+      this.flashMessages.danger('There was a problem downloading. Please try again.');
+      return;
+    }
+    try {
+      // The download service types `content` as string and has no `der` entry in its
+      // extension/MIME map. Both are fine at runtime as File() accepts a Blob and unknown
+      // extensions fall back to text/plain, which is what <DownloadButton> did untyped.
+      this.download.miscExtension(filename, content as string, format as keyof Extensions);
+      this.flashMessages.info(`Downloading ${filename}`);
+    } catch (error) {
+      this.flashMessages.danger(errorMessage(error, 'There was a problem downloading. Please try again.'));
+    }
+  }
 
   @action
   async fetchDataForDownload(format: 'der' | 'pem') {

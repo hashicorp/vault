@@ -49,7 +49,11 @@ export default class KeyValueHeader extends Component {
     const baseKeyModel = encodePath(this.args.baseKey?.id);
 
     if (root) {
-      crumbs.push(root);
+      if (Array.isArray(root)) {
+        crumbs.push(...root);
+      } else {
+        crumbs.push(root);
+      }
     }
 
     if (!baseKey) {

@@ -4,23 +4,25 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, fillIn, setupOnerror } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ACL_CAPABILITIES, PolicyStanza } from 'core/utils/code-generators/policy';
+import { ACL_CAPABILITIES, formatStanzas, PolicyStanza } from 'core/utils/code-generators/policy';
 
 module('Integration | Component | code-generator/policy/builder', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.onPolicyChange = ({ policy, stanzas }) => {
-      this.set('policyCallback', policy);
+    this.onPolicyChange = ({ stanzas }) => {
+      // Mimics consumers of this component which use formatStanzas as needed
+      this.set('policyCallback', formatStanzas(stanzas));
       this.set('stanzas', stanzas);
     };
 
     this.policyCallback = '';
     this.policyName = undefined;
+    this.renderValidations = false;
     this.stanzas = [new PolicyStanza()];
 
     this.renderComponent = () => {
@@ -28,6 +30,7 @@ module('Integration | Component | code-generator/policy/builder', function (hook
         <CodeGenerator::Policy::Builder
           @onPolicyChange={{this.onPolicyChange}}
           @policyName={{this.policyName}}
+          @renderValidations={{this.renderValidations}}
           @stanzas={{this.stanzas}}
         />`);
     };
@@ -60,63 +63,6 @@ module('Integration | Component | code-generator/policy/builder', function (hook
     await this.renderComponent();
     await this.assertEmptyTemplate(assert);
     assert.dom(GENERAL.button('Add rule')).exists({ count: 1 });
-    assert.dom(GENERAL.accordionButton('Automation snippets')).hasAttribute('aria-expanded', 'false');
-    await click(GENERAL.accordionButton('Automation snippets'));
-    assert.dom(GENERAL.accordionButton('Automation snippets')).hasAttribute('aria-expanded', 'true');
-    assert.dom(GENERAL.hdsTab('terraform')).exists().hasAttribute('aria-selected', 'true');
-    assert.dom(GENERAL.hdsTab('cli')).exists().hasAttribute('aria-selected', 'false');
-  });
-
-  test('it renders default snippets', async function (assert) {
-    await this.renderComponent();
-    await click(GENERAL.accordionButton('Automation snippets'));
-    let expectedSnippet = `resource "vault_policy" "<local identifier>" {
-  name = "<policy name>"
-
-  policy = <<EOT
-  path "" {
-    capabilities = []
-}
-EOT
-}`;
-    assert.dom(GENERAL.hdsTabPanel('terraform')).doesNotHaveAttribute('hidden');
-    assert.dom(GENERAL.hdsTabPanel('cli')).hasAttribute('hidden');
-    assert
-      .dom(GENERAL.fieldByAttr('terraform'))
-      .hasText(expectedSnippet, 'it renders empty terraform snippet');
-
-    expectedSnippet = `vault policy write <policy name> - <<EOT
-  path "" {
-    capabilities = []
-}
-EOT`;
-    await click(GENERAL.hdsTab('cli'));
-    assert.dom(GENERAL.hdsTab('cli')).exists().hasAttribute('aria-selected', 'true');
-    assert.dom(GENERAL.hdsTabPanel('cli')).doesNotHaveAttribute('hidden');
-    assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedSnippet, 'it renders empty cli snippet');
-    assert.dom(GENERAL.hdsTab('terraform')).exists().hasAttribute('aria-selected', 'false');
-    assert.dom(GENERAL.hdsTabPanel('terraform')).hasAttribute('hidden');
-  });
-
-  test('it includes namespace in snippet for non-root namespaces', async function (assert) {
-    const namespace = this.owner.lookup('service:namespace');
-    namespace.path = 'admin';
-    await this.renderComponent();
-    await click(GENERAL.accordionButton('Automation snippets'));
-    const expectedSnippet = `resource "vault_policy" "<local identifier>" {
-  namespace = "admin"
-
-  name = "<policy name>"
-  
-  policy = <<EOT
-  path "" {
-    capabilities = []
-}
-EOT
-}`;
-    assert
-      .dom(GENERAL.fieldByAttr('terraform'))
-      .hasText(expectedSnippet, 'it renders empty terraform snippet');
   });
 
   test('it throws an error when stanzas are not provided', async function (assert) {
@@ -193,33 +139,6 @@ EOT
     assert.dom(`${GENERAL.cardContainer('0')} ${GENERAL.checkboxByAttr('read')}`).isChecked();
     assert.dom(`${GENERAL.cardContainer('1')} ${GENERAL.inputByAttr('path')}`).hasValue('third/path');
     assert.dom(`${GENERAL.cardContainer('1')} ${GENERAL.checkboxByAttr('list')}`).isChecked();
-  });
-
-  test('it updates snippets', async function (assert) {
-    this.policyName = 'my-secure-policy';
-    await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
-    await click(GENERAL.checkboxByAttr('patch'));
-    await click(GENERAL.accordionButton('Automation snippets'));
-    // Check terraform snippet
-    let expectedSnippet = `resource "vault_policy" "<local identifier>" {
-  name = "my-secure-policy"
-
-  policy = <<EOT
-  path "my/super/secret/*" {
-    capabilities = ["patch"]
-}
-EOT
-}`;
-    assert.dom(GENERAL.fieldByAttr('terraform')).hasText(expectedSnippet);
-
-    // Check CLI snippet
-    expectedSnippet = `vault policy write my-secure-policy - <<EOT
-  path "my/super/secret/*" {
-    capabilities = ["patch"]
-}
-EOT`;
-    assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedSnippet);
   });
 
   test('it passes policy updates as changes are made', async function (assert) {
@@ -313,5 +232,14 @@ path "" {
     capabilities = ["delete"]
 }`;
     this.assertPolicyUpdate(assert, expectedPolicy, 'when rules do have an empty path');
+  });
+
+  test('it passes @renderValidations through to CodeGenerator::Policy::Stanza', async function (assert) {
+    this.renderValidations = true;
+    await this.renderComponent();
+    assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path is required.');
+    assert
+      .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+      .doesNotExist('capabilities do not render as a validation error');
   });
 });

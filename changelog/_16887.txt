@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Migrated ExternalLink component to HDS links.
+```

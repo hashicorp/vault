@@ -41,6 +41,10 @@ expiration, before it is removed from the backend storage.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathTidyRoletagDenylistUpdate,
+				Summary:  "Tidy expired entries from the role-tag deny list.",
+				Responses: map[int][]framework.Response{
+					http.StatusAccepted: {{Description: "Accepted"}},
+				},
 			},
 		},
 

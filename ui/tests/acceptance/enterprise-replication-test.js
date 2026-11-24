@@ -3,13 +3,23 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, findAll, currentURL, visit, settled, waitFor } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  findAll,
+  currentURL,
+  currentRouteName,
+  visit,
+  settled,
+  waitFor,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { addSecondary, disableReplication, enableReplication } from 'vault/tests/helpers/replication';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import sinon from 'sinon';
 
 // note: dr secondary tests are done in ./replication-dr-secondaries-test.js
@@ -39,11 +49,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     assert
-      .dom('[data-test-replication-title="Disaster Recovery"]')
-      .includesText('Disaster Recovery', 'it displays the replication type correctly');
-    assert
-      .dom('[data-test-replication-mode-display]')
-      .includesText('primary', 'it displays the cluster mode correctly');
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .includesText('Disaster recovery', 'it displays the replication type correctly');
+    assert.dom(GENERAL.badge('primary')).includesText('primary', 'it displays the cluster mode correctly');
 
     await addSecondary(secondaryName);
     // modal for copying the token appears
@@ -86,7 +94,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
 
-  test('DR primary: shows empty state when secondary mode is not enabled and we navigated to the secondary details page', async function (assert) {
+  test('DR primary: redirects to cluster route when navigating to the secondary details page', async function (assert) {
     // enable dr replication
 
     await visit('/vault/replication/dr');
@@ -96,16 +104,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled(); // eslint-disable-line
     await pollCluster(this.owner);
     await visit('/vault/replication-dr-promote/details');
-
-    assert
-      .dom('[data-test-component="empty-state"]')
-      .exists('Empty state is shown when no secondary is configured');
-    assert
-      .dom('[data-test-empty-state-message]')
-      .hasText(
-        'This Disaster Recovery secondary has not been enabled. You can do so from the Disaster Recovery Primary.',
-        'Renders the correct message for when a primary is enabled but no secondary is configured and we have navigated to the secondary details page.'
-      );
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'redirects to the cluster route');
   });
 
   test('DR primary: runs analytics service when enabled', async function (assert) {
@@ -126,22 +125,6 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     // Clean up spy
     addAnalyticsSpy.restore();
-  });
-
-  test('DR secondary: shows empty state when replication is not enabled', async function (assert) {
-    await visit('/vault/replication-dr-promote/details');
-
-    assert.dom('[data-test-component="empty-state"]').exists();
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .includesText('Disaster Recovery secondary not set up', 'shows the correct title of the empty state');
-
-    assert
-      .dom(GENERAL.emptyStateMessage)
-      .hasText(
-        'This cluster has not been enabled as a Disaster Recovery Secondary. You can do so by enabling replication and adding a secondary from the Disaster Recovery Primary.',
-        'renders default message specific to when no replication is enabled'
-      );
   });
 
   test('Performance primary: add secondary and delete config', async function (assert) {
@@ -170,7 +153,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     // delete config by choosing "no filter" on the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
-    await click('#no-filtering');
+    await click('[data-test-filter-mode="none"]');
     await click('[data-test-config-save]');
     await settled(); // eslint-disable-line
     assert.strictEqual(
@@ -258,7 +241,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert
-      .dom('[data-test-replication-mode-display]')
+      .dom(GENERAL.badge('secondary'))
       .hasText('secondary', 'it displays the cluster mode correctly in header');
   });
 
@@ -274,7 +257,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    await click('[data-test-sidebar-nav-link="Disaster Recovery"]');
+    await click(GENERAL.navLink('Disaster recovery'));
     // let the controller set replicationMode in afterModel
     await waitFor('[data-test-replication-enable-form]');
     await click(GENERAL.submitButton);
@@ -283,10 +266,10 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
 
     // Breadcrumbs only load once we're in the summary mode after enabling
-    await waitFor('[data-test-replication-breadcrumb]');
+    await waitFor(GENERAL.breadcrumb);
     // navigate using breadcrumbs back to replication.index
-    assert.dom('[data-test-replication-breadcrumb]').exists('shows the replication breadcrumb (flaky)');
-    await click('[data-test-replication-breadcrumb] a');
+    assert.dom(GENERAL.currentBreadcrumb('Replication')).exists('shows the replication breadcrumb (flaky)');
+    await click(GENERAL.breadcrumbLink('Replication'));
 
     assert
       .dom('[data-test-replication-summary-card]')
@@ -299,5 +282,113 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .dom('[data-test-selectable-card-container="primary"]')
       .exists('shows the correct card on the details dashboard');
     assert.strictEqual(currentURL(), '/vault/replication/dr');
+  });
+
+  module('secondary token TTL', function (hooks) {
+    const LABEL = 'Time to Live (TTL) for generated secondary token';
+
+    hooks.beforeEach(async function () {
+      this.tokenSpy = sinon.spy(
+        this.owner.lookup('service:api').sys,
+        'systemWriteReplicationPerformancePrimarySecondaryToken'
+      );
+      await enableReplication('performance', 'primary');
+      await pollCluster(this.owner);
+      await settled();
+      this.tokenRequests = () => this.tokenSpy.getCalls();
+      this.openAddSecondary = async (name) => {
+        await visit('/vault/replication/performance/secondaries/add');
+        await fillIn('[data-test-input="Secondary ID"]', name);
+      };
+      this.enterTtl = async (value) => {
+        await click(TTL_PICKER.toggleByLabel(LABEL));
+        await fillIn(TTL_PICKER.valueInputByLabel(LABEL), value);
+        await fillIn(TTL_PICKER.unitInputByLabel(LABEL), 'd');
+      };
+      // the token modal must be dismissed before leaving the page
+      this.dismissTokenModal = async () => {
+        await click(GENERAL.button('Copy token'));
+        await click(GENERAL.cancelButton);
+      };
+    });
+
+    test('it blocks a TTL longer than Vault supports', async function (assert) {
+      assert.expect(5);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('9999999999');
+      await click(GENERAL.submitButton);
+
+      assert.dom(TTL_PICKER.error).hasText(`${LABEL} is too large. Maximum allowed value is 106,751 days.`);
+      assert.strictEqual(this.tokenRequests().length, 0, 'no token is requested');
+
+      await fillIn(TTL_PICKER.valueInputByLabel(LABEL), '106751');
+      await click(GENERAL.submitButton);
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested once the TTL is valid');
+      assert.strictEqual(
+        this.tokenRequests()[0].args[0].ttl,
+        '9223286400s',
+        'the maximum whole days is sent'
+      );
+      await this.dismissTokenModal();
+      assert.dom(TTL_PICKER.error).doesNotExist('the error clears');
+    });
+
+    test('it blocks a TTL too long to be stored as a number', async function (assert) {
+      assert.expect(2);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('9'.repeat(400));
+      await click(GENERAL.submitButton);
+
+      assert.dom(TTL_PICKER.error).exists('the picker shows its error');
+      assert.strictEqual(this.tokenRequests().length, 0, 'no token is requested');
+    });
+
+    test('it sends the default TTL when an over-limit TTL was turned off', async function (assert) {
+      assert.expect(3);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('9999999999');
+      await click(TTL_PICKER.toggleByLabel(LABEL));
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '1800s', 'the default TTL is sent');
+      assert.dom(GENERAL.infoRowValue('TTL')).hasText('1800s', 'the token modal shows the default TTL');
+      await this.dismissTokenModal();
+    });
+
+    // Existing behaviour, kept as it was before the max-duration checks.
+    test('it keeps sending a valid TTL that was turned off', async function (assert) {
+      assert.expect(2);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('2');
+      await click(TTL_PICKER.toggleByLabel(LABEL));
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '172800s', 'the entered TTL is still sent');
+      await this.dismissTokenModal();
+    });
+
+    test('it keeps sending the default TTL when the picker is left off', async function (assert) {
+      assert.expect(3);
+      await this.openAddSecondary('ttlSecondary');
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '1800s', 'the default TTL is sent');
+      assert.dom(GENERAL.infoRowValue('TTL')).hasText('1800s', 'the token modal shows the default TTL');
+      await this.dismissTokenModal();
+    });
+
+    test('it sends the entered TTL when the picker is on', async function (assert) {
+      assert.expect(2);
+      await this.openAddSecondary('ttlSecondary');
+      await this.enterTtl('2');
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(this.tokenRequests().length, 1, 'a token is requested');
+      assert.strictEqual(this.tokenRequests()[0].args[0].ttl, '172800s', 'the entered TTL is sent');
+      await this.dismissTokenModal();
+    });
   });
 });

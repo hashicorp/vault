@@ -8,13 +8,15 @@ import { Promise } from 'rsvp';
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import Ember from 'ember';
+import ClusterResource from 'vault/resources/cluster';
 
 const SPLASH_DELAY = 300;
 
 export default class VaultRoute extends Route {
   @service router;
-  @service store;
   @service version;
+
+  cluster = null;
 
   beforeModel() {
     // So we can know what type (Enterprise/Community) we're running
@@ -24,19 +26,10 @@ export default class VaultRoute extends Route {
   model() {
     const delay = Ember.testing ? 0 : SPLASH_DELAY;
     // hardcode single cluster
-    const fixture = {
-      data: {
-        id: '1',
-        type: 'cluster',
-        attributes: {
-          name: 'vault',
-        },
-      },
-    };
-    this.store.push(fixture);
+    this.cluster ??= new ClusterResource({ id: '1', name: 'vault' }, this);
     return new Promise((resolve) => {
       later(() => {
-        resolve(this.store.peekAll('cluster'));
+        resolve([this.cluster]);
       }, delay);
     });
   }

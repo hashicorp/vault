@@ -1,0 +1,3 @@
+```release-note:bug
+secret sync (enterprise): fix panic in set-association API when using Vault Proxy with token-bound CIDRs. The panic occurred due to missing connection information during CIDR validation.
+```

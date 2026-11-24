@@ -15,6 +15,7 @@ import {
   HTTPQuery,
   HTTPRequestInit,
   RequestOpts,
+  RequiredError,
   ResponseError,
 } from '@hashicorp/vault-client-typescript';
 import config from 'vault/config/environment';
@@ -24,8 +25,16 @@ import type AuthService from 'vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
 import type ControlGroupService from 'vault/services/control-group';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { HeaderMap, XVaultHeaders } from 'vault/api';
-import type { HTTPMethod } from '@hashicorp/vault-client-typescript';
+import type { HeaderMap, ApiErrorResponse, ApiParsedError, XVaultHeaders } from 'vault/api';
+import type { FetchAPI, HTTPMethod } from '@hashicorp/vault-client-typescript';
+
+/** Maps namespace keys to their typed generated-client classes. */
+type ApiNamespaces = {
+  auth: AuthApi;
+  identity: IdentityApi;
+  secrets: SecretsApi;
+  sys: SystemApi;
+};
 
 export default class ApiService extends Service {
   @service('auth') declare readonly authService: AuthService;
@@ -85,17 +94,27 @@ export default class ApiService extends Service {
   };
 
   // -- Post Request Middleware --
+  private async readJson(response: Response) {
+    const contentType = response.headers.get('Content-Type');
+    if (!contentType?.includes('json')) {
+      return null;
+    }
+
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
   showWarnings = waitFor(async (context: ResponseContext) => {
     const response = context.response.clone();
-    // if the response is empty, don't try to parse it
-    if (response.headers.get('Content-Length')) {
-      const json = await response.json();
+    const json = await this.readJson(response);
 
-      if (json?.warnings) {
-        json.warnings.forEach((message: string) => {
-          this.flashMessages.info(message);
-        });
-      }
+    if (json?.warnings) {
+      json.warnings.forEach((message: string) => {
+        this.flashMessages.info(message);
+      });
     }
   });
 
@@ -114,19 +133,23 @@ export default class ApiService extends Service {
       }
     }
     // if the requested path is locked by a control group we need to create a new error response
-    if (headers.get('Content-Length')) {
-      const json = await response.json();
-      const wrapTtl = headers.get('X-Vault-Wrap-TTL');
-      const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(json, wrapTtl);
+    const json = await this.readJson(response);
 
-      if (isLockedByControlGroup) {
-        const error = {
-          message: 'Control Group encountered',
-          isControlGroupError: true,
-          ...json.wrap_info,
-        };
-        return new Response(JSON.stringify(error), { headers, status: 403, statusText: 'Forbidden' });
-      }
+    // derive from REQUEST, not response - transit export is making an api request but trying to also set vault header on the request, not the response - causing a control group error.
+    const wasWrapTTLRequested = (context.init.headers as Headers)?.get?.('X-Vault-Wrap-TTL');
+    const wrapTtl = headers.get('X-Vault-Wrap-TTL');
+    const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(
+      json,
+      wasWrapTTLRequested ? wasWrapTTLRequested : wrapTtl
+    );
+
+    if (isLockedByControlGroup && json) {
+      const error = {
+        message: 'Control Group encountered',
+        isControlGroupError: true,
+        ...json.wrap_info,
+      };
+      return new Response(JSON.stringify(error), { headers, status: 403, statusText: 'Forbidden' });
     }
 
     return;
@@ -151,6 +174,48 @@ export default class ApiService extends Service {
   identity = new IdentityApi(this.configuration);
   secrets = new SecretsApi(this.configuration);
   sys = new SystemApi(this.configuration);
+
+  /**
+   * Calls a method on one of the four API namespace clients (`auth`, `identity`,
+   * `secrets`, `sys`) in a way that is fully type-checked on the branch where the
+   * method exists, but compiles silently on older branches where it may be absent.
+   *
+   * Pass the namespace key as the first argument and a callback that receives the
+   * typed client as the second. On the current branch the client is typed as its
+   * real generated-client class, giving full autocomplete, method name checking, and
+   * argument validation. On older branches the internal `as any` cast silences the
+   * missing-method error without widening the callback's apparent type.
+   *
+   * **Only call this method inside a `this.version.hasFeature(...)` gate.**
+   * The ESLint rule `require-version-guard` enforces this — unguarded usage will
+   * cause a lint error in CI.
+   *
+   * @example
+   * ```ts
+   * if (this.version.hasFeature('agents')) {
+   *   const result = await this.api.versioned('sys', (sys) => sys.newAgentMethod(params));
+   * }
+   * ```
+   *
+   * @see vault/utils/feature-versions — register new version-gated features here
+   * @see ui/docs/versioned-api-calls.md — full guide to the version-gating pattern
+   */
+  versioned<K extends keyof ApiNamespaces, R>(namespace: K, fn: (client: ApiNamespaces[K]) => R): R {
+    const namespaces: ApiNamespaces = {
+      auth: this.auth,
+      identity: this.identity,
+      secrets: this.secrets,
+      sys: this.sys,
+    };
+    // The `as any` cast is an implementation detail confined to this line. It does NOT
+    // affect the type seen by the caller's callback — TypeScript resolves `fn`'s parameter
+    // type from the generic signature (`ApiNamespaces[K]`) at the call site, before this
+    // body is evaluated. On the current branch the callback argument is fully typed as the
+    // real generated-client class; on older branches the cast silences the missing-method
+    // error without widening anything visible to the caller.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return fn(namespaces[namespace] as any);
+  }
 
   // convenience method for overriding headers for given requests to ensure consistency
   // eg. this.api.sys.wrap(data, { headers: { 'X-Vault-Wrap-TTL': wrap } });
@@ -188,53 +253,68 @@ export default class ApiService extends Service {
   // accepts an error response and returns { status, message, response, path }
   // message is built as error.errors joined with a comma, error.message or a fallback message
   // path is the url of the request, minus the origin -> /v1/sys/wrapping/unwrap
-  parseError = waitFor(async (e: unknown, fallbackMessage = 'An error occurred, please try again') => {
-    if (e instanceof ResponseError) {
-      const { status, url } = e.response;
-      // instances where an error is thrown multiple times could result in the body already being read
-      // this will result in a readable stream failure and we can't parse the body
-      // to avoid this, clone the response so we can access the body consistently
-      const error = await e.response.clone().json();
-      // typically the Vault API error response looks like { errors: ['some error message'] }
-      // but sometimes (eg RespondWithStatusCode) it's { data: { error: 'some error message' } }
-      const errors = error.data?.error && !error.errors ? [error.data.error] : error.errors;
-      const message = errors && typeof errors[0] === 'string' ? errors.join(', ') : error.message;
+  parseError = waitFor(
+    async (e: unknown, fallbackMessage = 'An error occurred, please try again'): Promise<ApiParsedError> => {
+      if (e instanceof ResponseError) {
+        const { status, url } = e.response;
+        // instances where an error is thrown multiple times could result in the body already being read
+        // this will result in a readable stream failure and we can't parse the body
+        // to avoid this, clone the response so we can access the body consistently
+        // proxies and some endpoints respond with an empty or non-JSON body, keep the status and use the fallback message
+        const error = ((await e.response
+          .clone()
+          .json()
+          .catch(() => ({}))) ?? {}) as ApiErrorResponse;
+        // typically the Vault API error response looks like { errors: ['some error message'] }
+        // but sometimes (eg RespondWithStatusCode) it's { data: { error: 'some error message' } }
+        const errors = error.data?.error && !error.errors ? [error.data.error] : error.errors;
+        const message = errors && typeof errors[0] === 'string' ? errors.join(', ') : error.message;
+
+        return {
+          message: message || fallbackMessage,
+          status,
+          path: decodeURIComponent(url.replace(document.location.origin, '')),
+          response: error,
+        };
+      }
+
+      // log out generic error for ease of debugging in dev env
+      if (config.environment === 'development') {
+        console.error('API Error:', e);
+      }
+
+      // RequiredError indicates a client-side bug, not something actionable by the user, so log it
+      // for debugging but return the generic fallback instead of its raw internal message.
+      if (e instanceof RequiredError) {
+        console.error(e);
+        return { message: fallbackMessage };
+      }
 
       return {
-        message: message || fallbackMessage,
-        status,
-        path: decodeURIComponent(url.replace(document.location.origin, '')),
-        response: error,
+        message: (e as Error)?.message || fallbackMessage,
       };
     }
+  );
 
-    // log out generic error for ease of debugging in dev env
-    if (config.environment === 'development') {
-      console.log('API Error:', e); // eslint-disable-line no-console
-    }
-
-    return {
-      message: (e as Error)?.message || fallbackMessage,
-    };
-  });
-
-  // accepts a list response as { key_info, keys } and returns a flat array of the key_info datum
+  // accepts a list response as { key_info, keys } (or { data: { key_info, keys } }) and returns a flat array of the key_info datum
   // to preserve the keys (unique identifiers) the value will be set on the datum as the provided uuidKey or id
-  keyInfoToArray(response: unknown = {}, uuidKey = 'id') {
-    const { key_info, keys } = response as { key_info?: Record<string, unknown>; keys?: string[] };
+  keyInfoToArray<T = Record<string, unknown>>(response: unknown = {}, uuidKey = 'id'): T[] {
+    const raw =
+      (response as { data?: { key_info?: Record<string, unknown>; keys?: string[] } })?.data?.key_info !==
+      undefined
+        ? (response as { data: { key_info?: Record<string, unknown>; keys?: string[] } }).data
+        : response;
+    const { key_info, keys } = raw as { key_info?: Record<string, unknown>; keys?: string[] };
     if (!key_info || !keys) {
       return [];
     }
-    return keys.reduce(
-      (arr, key) => {
-        const datum = key_info[key];
-        if (datum) {
-          arr.push({ [uuidKey]: key, ...datum });
-        }
-        return arr;
-      },
-      [] as Record<string, unknown>[]
-    );
+    return keys.reduce((arr, key) => {
+      const datum = key_info[key];
+      if (datum) {
+        arr.push({ [uuidKey]: key, ...datum } as T);
+      }
+      return arr;
+    }, [] as T[]);
   }
 
   // some responses return an object with a uuid as the key rather than an array
@@ -256,31 +336,63 @@ export default class ApiService extends Service {
 
   // interface for making raw fetch requests outside of the generated API methods
   // this should only be used in cases where it's not possible to use the client
-  private async rawRequest(path: string, method: HTTPMethod, body?: unknown) {
-    const context = {
-      url: `${this.configuration.basePath}${path}`,
-      init: { method } as RequestInit,
-    };
+  // Runs the same middleware as the generated client so raw requests also get control group unwrapping and detection,
+  // response warnings and last-fetch tracking, not just headers.
+  private async rawRequest(
+    path: string,
+    method: HTTPMethod,
+    body?: unknown,
+    headers?: HeadersInit,
+    signal?: AbortSignal
+  ) {
+    let url = `${this.configuration.basePath}${path.charAt(0) === '/' ? path : `/${path}`}`;
+    let init: RequestInit = { method };
 
     if (body) {
-      context.init.body = JSON.stringify(body);
+      // binary and form bodies are sent unchanged so the browser sets the correct content type
+      const isRawBody =
+        body instanceof Blob ||
+        body instanceof ArrayBuffer ||
+        ArrayBuffer.isView(body) ||
+        body instanceof FormData;
+      init.body = isRawBody ? (body as BodyInit) : JSON.stringify(body);
+    }
+    if (headers) {
+      init.headers = headers;
+    }
+    if (signal) {
+      init.signal = signal;
     }
 
-    const { url, init } = await this.setHeaders(context as RequestContext);
+    const fetch = this.configuration.fetchApi as FetchAPI;
+    for (const { pre } of this.configuration.middleware) {
+      if (pre) {
+        ({ url, init } = (await pre({ fetch, url, init })) || { url, init });
+      }
+    }
 
-    const response = await this.configuration.fetchApi?.(new Request(url, init));
-    if (!response?.ok) {
-      throw response;
+    let response = await fetch(url, init);
+    for (const { post } of this.configuration.middleware) {
+      if (post) {
+        response = (await post({ fetch, url, init, response: response.clone() })) || response;
+      }
+    }
+
+    if (!response.ok) {
+      throw new ResponseError(response);
     }
     // with various content types like application/pem-certificate-chain or application/pkix-cert for example,
     // return the response so the caller can read the body with the appropriate method (blob, text, json etc.)
     return response;
   }
   request = {
-    get: (path: string) => this.rawRequest(path, 'GET'),
-    post: (path: string, body?: unknown) => this.rawRequest(path, 'POST', body),
-    put: (path: string, body?: unknown) => this.rawRequest(path, 'PUT', body),
-    patch: (path: string, body?: unknown) => this.rawRequest(path, 'PATCH', body),
-    delete: (path: string, body?: unknown) => this.rawRequest(path, 'DELETE', body),
+    get: (path: string, headers?: HeadersInit) => this.rawRequest(path, 'GET', undefined, headers),
+    post: (path: string, body?: unknown, headers?: HeadersInit, signal?: AbortSignal) =>
+      this.rawRequest(path, 'POST', body, headers, signal),
+    put: (path: string, body?: unknown, headers?: HeadersInit) => this.rawRequest(path, 'PUT', body, headers),
+    patch: (path: string, body?: unknown, headers?: HeadersInit) =>
+      this.rawRequest(path, 'PATCH', body, headers),
+    delete: (path: string, body?: unknown, headers?: HeadersInit) =>
+      this.rawRequest(path, 'DELETE', body, headers),
   };
 }

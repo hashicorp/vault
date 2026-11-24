@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update ACL/EGP/RGP policy, identity groups, group aliases, namespaces, and secrets engine list views.
+```

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_BackupRestore(t *testing.T) {
@@ -46,7 +47,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 	var resp *logical.Response
 	var err error
 
-	b, s := createBackendWithStorage(t)
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
 	// Create a key
 	keyReq := &logical.Request{
@@ -255,4 +256,13 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 
 	// Ensure that the restored key is functional
 	validationFunc("test1")
+
+	backupObservations := obsRecorder.ObservationsByType(ObservationTypeTransitKeyBackup)
+	require.Len(t, backupObservations, 1)
+	require.Equal(t, "test", backupObservations[0].Data["key_name"])
+
+	restoreObservations := obsRecorder.ObservationsByType(ObservationTypeTransitKeyRestore)
+	require.Len(t, restoreObservations, 2)
+	require.Equal(t, "test", restoreObservations[0].Data["key_name"])
+	require.Equal(t, "test1", restoreObservations[1].Data["key_name"])
 }

@@ -232,3 +232,144 @@ func TestAddPluginIdentityTokenFields(t *testing.T) {
 		})
 	}
 }
+
+func TestPluginIdentityTokenParams_Equals(t *testing.T) {
+	testcases := []struct {
+		name     string
+		p1       PluginIdentityTokenParams
+		p2       PluginIdentityTokenParams
+		expected bool
+	}{
+		{
+			name: "equal-all-fields",
+			p1: PluginIdentityTokenParams{
+				IdentityTokenTTL:      10 * time.Second,
+				IdentityTokenAudience: "test-aud",
+			},
+			p2: PluginIdentityTokenParams{
+				IdentityTokenTTL:      10 * time.Second,
+				IdentityTokenAudience: "test-aud",
+			},
+			expected: true,
+		},
+		{
+			name: "equal-zero-values",
+			p1: PluginIdentityTokenParams{
+				IdentityTokenTTL:      0,
+				IdentityTokenAudience: "",
+			},
+			p2: PluginIdentityTokenParams{
+				IdentityTokenTTL:      0,
+				IdentityTokenAudience: "",
+			},
+			expected: true,
+		},
+		{
+			name: "different-ttl",
+			p1: PluginIdentityTokenParams{
+				IdentityTokenTTL:      10 * time.Second,
+				IdentityTokenAudience: "test-aud",
+			},
+			p2: PluginIdentityTokenParams{
+				IdentityTokenTTL:      20 * time.Second,
+				IdentityTokenAudience: "test-aud",
+			},
+			expected: false,
+		},
+		{
+			name: "different-audience",
+			p1: PluginIdentityTokenParams{
+				IdentityTokenTTL:      10 * time.Second,
+				IdentityTokenAudience: "test-aud",
+			},
+			p2: PluginIdentityTokenParams{
+				IdentityTokenTTL:      10 * time.Second,
+				IdentityTokenAudience: "different-aud",
+			},
+			expected: false,
+		},
+		{
+			name: "different-both",
+			p1: PluginIdentityTokenParams{
+				IdentityTokenTTL:      10 * time.Second,
+				IdentityTokenAudience: "test-aud",
+			},
+			p2: PluginIdentityTokenParams{
+				IdentityTokenTTL:      20 * time.Second,
+				IdentityTokenAudience: "different-aud",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.p1.Equals(tt.p2)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPluginIdentityTokenParams_Equals_Embedded(t *testing.T) {
+	// Test with embedded struct
+	type ConfigWithIdentityParams struct {
+		Name string
+		PluginIdentityTokenParams
+	}
+
+	testcases := []struct {
+		name     string
+		c1       ConfigWithIdentityParams
+		c2       ConfigWithIdentityParams
+		expected bool
+	}{
+		{
+			name: "embedded-equal",
+			c1: ConfigWithIdentityParams{
+				Name: "config1",
+				PluginIdentityTokenParams: PluginIdentityTokenParams{
+					IdentityTokenTTL:      10 * time.Second,
+					IdentityTokenAudience: "test-aud",
+				},
+			},
+			c2: ConfigWithIdentityParams{
+				Name: "config2", // Different name, but we only compare PluginIdentityTokenParams
+				PluginIdentityTokenParams: PluginIdentityTokenParams{
+					IdentityTokenTTL:      10 * time.Second,
+					IdentityTokenAudience: "test-aud",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "embedded-different",
+			c1: ConfigWithIdentityParams{
+				Name: "config1",
+				PluginIdentityTokenParams: PluginIdentityTokenParams{
+					IdentityTokenTTL:      10 * time.Second,
+					IdentityTokenAudience: "test-aud",
+				},
+			},
+			c2: ConfigWithIdentityParams{
+				Name: "config1",
+				PluginIdentityTokenParams: PluginIdentityTokenParams{
+					IdentityTokenTTL:      20 * time.Second,
+					IdentityTokenAudience: "test-aud",
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test comparing the embedded fields directly
+			result := tt.c1.PluginIdentityTokenParams.Equals(tt.c2.PluginIdentityTokenParams)
+			assert.Equal(t, tt.expected, result)
+
+			// Test using method promotion
+			result2 := tt.c1.Equals(tt.c2.PluginIdentityTokenParams)
+			assert.Equal(t, tt.expected, result2)
+		})
+	}
+}

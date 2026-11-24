@@ -5,6 +5,8 @@ package http
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -18,7 +20,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -266,7 +268,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		req.PathLimited = true
 	}
 
-	if passHTTPReq {
+	if passHTTPReq || strings.HasPrefix(path, "identity/scim/") {
 		req.HTTPRequest = r
 	}
 	if responseWriter != nil {
@@ -375,7 +377,9 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 			return
 		}
 		reqToken := r.Header.Get(consts.AuthHeaderName)
-		if reqToken == "" || token.Load() == "" || reqToken != token.Load() {
+		expectedToken := token.Load()
+
+		if reqToken == "" || expectedToken == "" || subtle.ConstantTimeCompare([]byte(reqToken), []byte(expectedToken)) != 1 {
 			respondError(w, http.StatusForbidden, nil)
 			return
 		}
@@ -430,6 +434,17 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			return
 		}
 
+		// For binary paths we expect the plugin to read directly from the body so we need to ensure
+		// the original body is still available for the forwarding case on entity creation on a perf standby
+		var binaryBuf *bytes.Buffer
+		ra := core.RouterAccess()
+		if ra.IsBinaryPath(r.Context(), trimmedPath) {
+			binaryBuf = &bytes.Buffer{}
+			binaryTeeReader := io.NopCloser(io.TeeReader(r.Body, binaryBuf))
+			r.Body = binaryTeeReader
+			r = r.WithContext(logical.CreateContextOriginalBody(r.Context(), binaryTeeReader))
+		}
+
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to. This also
@@ -445,6 +460,12 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			return
 		case needsForward && !noForward:
 			if origBody != nil {
+				if binaryBuf != nil && binaryBuf.Len() > 0 {
+					// If this is a binary path, we may need to use the buffered body for forwarding
+					// since the original body has been consumed by the plugin. We can use the buffered
+					// data to create a new reader for the forward request.
+					origBody = newMultiReaderCloser(origBody, binaryBuf)
+				}
 				r.Body = origBody
 			}
 			forwardRequest(core, w, r)
@@ -455,8 +476,25 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			// in this case.
 			return
 		default:
+			// For namespaced requests the URL path is rewritten to include the
+			// namespace prefix (e.g. /v1/east-1/sys/mounts/sec) before mux
+			// dispatch, so those requests never match the /v1/sys/... entries in
+			// injectDataIntoTopRoutes and land here with injectDataIntoTopLevel=false.
+			// Check the namespace-stripped trimmedPath against the same routes
+			// (with /v1/ stripped) to catch that case.
+			inject := injectDataIntoTopLevel
+			if !inject {
+				const v1Prefix = "/v1/"
+				for _, r := range injectDataIntoTopRoutes {
+					p := strings.TrimPrefix(r, v1Prefix)
+					if trimmedPath == p || strings.HasPrefix(trimmedPath, p) {
+						inject = true
+						break
+					}
+				}
+			}
 			// Build and return the proper response if everything is fine.
-			respondLogical(core, w, r, req, resp, injectDataIntoTopLevel)
+			respondLogical(core, w, r, req, resp, inject)
 			return
 		}
 	})

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	namespace "github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/timeutil"
+	namespace "github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"google.golang.org/protobuf/proto"

@@ -208,6 +208,13 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 	if err == nil && isValidOCSPStatus(ost.code) {
 		t.Fatalf("should have failed.")
 	}
+
+	// buffer-time check
+	c.ocspResponseCache.Add(dummyKey, &ocspCachedResponse{time: float64(currentTime), nextUpdate: float64(currentTime)})
+	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer, conf)
+	if err == nil && isValidOCSPStatus(ost.code) {
+		t.Fatalf("should have failed.")
+	}
 }
 
 // TestUnitValidOCSPResponse validates various combinations of acceptable OCSP responses

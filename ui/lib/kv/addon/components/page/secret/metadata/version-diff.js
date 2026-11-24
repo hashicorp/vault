@@ -78,9 +78,9 @@ export default class KvSecretMetadataVersionDiff extends Component {
   }
 
   @action
-  handleSelect(side, version, actions) {
+  handleSelect(side, version, close) {
     this[side] = Number(version);
-    actions.close();
+    close();
     this.createVisualDiff();
   }
 
@@ -108,7 +108,7 @@ export default class KvSecretMetadataVersionDiff extends Component {
     const { backend, path } = this.args;
     const initOverride = version ? (context) => this.api.addQueryParams(context, { version }) : undefined;
     try {
-      const { data } = await this.api.secrets.kvV2Read(path, backend, initOverride);
+      const { data } = await this.api.secrets.kvV2Read(path, backend, undefined, initOverride);
       return data;
     } catch (e) {
       // capabilities checks are higher up the tree so this request should not fail

@@ -201,7 +201,6 @@ func Test_Something_With_Docker(t *testing.T) {
     ImageTag:    "latest",
   }
   cluster := docker.NewTestDockerCluster(t, opts)
-  defer cluster.Cleanup()
   
   client := cluster.Nodes()[0].APIClient()
   _, err := client.Logical().Read("sys/storage/raft/configuration")
@@ -226,7 +225,6 @@ func Test_Something_With_Docker(t *testing.T) {
 	VaultLicense: licenseString, // not a path, the actual license bytes
   }
   cluster := docker.NewTestDockerCluster(t, opts)
-  defer cluster.Cleanup()
 }
 ```
 
@@ -245,7 +243,6 @@ build as a debugging convenience.
 func Test_Custom_Build_With_Docker(t *testing.T) {
   opts := docker.DefaultOptions(t)
   cluster := docker.NewTestDockerCluster(t, opts)
-  defer cluster.Cleanup()
 }
 ```
 

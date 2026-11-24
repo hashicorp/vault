@@ -64,6 +64,32 @@ func GetPlugin(t testing.TB, typ consts.PluginType) (string, string, string, str
 	return pluginName, pluginType, pluginMain, pluginVersionLocation
 }
 
+// findRepoRoot walks up the directory tree starting from the current working
+// directory until it finds a directory containing relPath, and returns that
+// directory. This lets test helpers resolve paths relative to the repository
+// root regardless of which package's tests are currently running, without
+// mutating the process's working directory (which is unsafe when tests run
+// in parallel).
+func findRepoRoot(t testing.TB, relPath string) string {
+	t.Helper()
+
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, relPath)); err == nil {
+			return dir
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal(fmt.Errorf("could not locate %s above %s", relPath, dir))
+		}
+		dir = parent
+	}
+}
+
 // to mount a plugin, we need a working binary plugin, so we compile one here.
 // pluginVersion is used to override the plugin's self-reported version
 func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pluginDir string) TestPlugin {
@@ -76,27 +102,12 @@ func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pl
 
 	var pluginBytes []byte
 
-	dir := ""
-	for {
-		// So that we can assign to dir without overshadowing the other
-		// err variables.
-		var getWdErr error
-		dir, getWdErr = os.Getwd()
-		if getWdErr != nil {
-			t.Fatal(getWdErr)
-		}
-		// detect if we are in a subdirectory or the root directory and compensate
-		if _, err := os.Stat(pluginMain); os.IsNotExist(err) {
-			err := os.Chdir("..")
-			if err != nil {
-				t.Fatal(err)
-			}
-		} else {
-			break
-		}
-	}
+	dir := findRepoRoot(t, pluginMain)
 
-	pluginPath := path.Join(pluginDir, pluginName)
+	if !filepath.IsAbs(pluginDir) {
+		pluginDir = filepath.Join(dir, pluginDir)
+	}
+	pluginPath := filepath.Join(pluginDir, pluginName)
 	if pluginVersion != "" {
 		pluginPath += "-" + pluginVersion
 	}
@@ -146,8 +157,7 @@ func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pl
 	}
 
 	sha := sha256.New()
-	_, err := sha.Write(pluginBytes)
-	if err != nil {
+	if _, err := sha.Write(pluginBytes); err != nil {
 		t.Fatal(err)
 	}
 	return TestPlugin{
@@ -167,7 +177,12 @@ func BuildPluginContainerImage(t testing.TB, plugin TestPlugin, pluginDir string
 	} else {
 		ref += ":latest"
 	}
-	args := []string{"build", "--tag=" + ref, "--build-arg=plugin=" + plugin.FileName, "--file=vault/testdata/Dockerfile", pluginDir}
+
+	dockerfileRelPath := filepath.Join("vault", "testdata", "Dockerfile")
+	root := findRepoRoot(t, dockerfileRelPath)
+	dockerfilePath := filepath.Join(root, dockerfileRelPath)
+
+	args := []string{"build", "--tag=" + ref, "--build-arg=plugin=" + plugin.FileName, "--file=" + dockerfilePath, pluginDir}
 	cmd := exec.Command("docker", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

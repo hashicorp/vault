@@ -5,6 +5,8 @@ package database
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -28,6 +30,8 @@ const (
 	// WAL storage key used for static account rotations
 	staticWALKey = "staticRotationKey"
 )
+
+var staticUpdateUserTimeout = 10 * time.Second
 
 // populateQueue loads the priority queue with existing static accounts. This
 // occurs at initialization, after any WAL entries of failed or interrupted
@@ -357,6 +361,36 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 	}
 	walEntry.LastVaultRotation = lvr
 
+	// credential_type is encoded as a JSON number by the WAL framework's
+	// UseNumber decoder, so it arrives as json.Number rather than float64.
+	// Older WALs that predate this field will have no key at all; the zero
+	// value (CredentialTypePassword) remains as a safe fallback for those.
+	if credTypeRaw, ok := data["credential_type"]; ok {
+		switch ct := credTypeRaw.(type) {
+		case json.Number:
+			n, err := ct.Int64()
+			if err == nil {
+				walEntry.CredentialType = v5.CredentialType(n)
+			}
+		case float64:
+			walEntry.CredentialType = v5.CredentialType(ct)
+		}
+	}
+
+	if privateKey, ok := data["new_private_key"].(string); ok {
+		walEntry.NewPrivateKey, err = base64.StdEncoding.DecodeString(privateKey)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding WAL private key: %w", err)
+		}
+	}
+
+	if publicKey, ok := data["new_public_key"].(string); ok {
+		walEntry.NewPublicKey, err = base64.StdEncoding.DecodeString(publicKey)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding WAL public key: %w", err)
+		}
+	}
+
 	return &walEntry, nil
 }
 
@@ -467,6 +501,21 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 			// Generate a new WAL entry and credential
 			output.WALID = ""
+		case wal.CredentialType != input.Role.CredentialType:
+			// The role's credential_type changed after the WAL was written.
+			// Rolling forward with a mismatched type would send the wrong
+			// credential to the database, so discard the WAL and generate a
+			// fresh credential matching the current role configuration.
+			b.Logger().Warn("discarding WAL with mismatched credential type",
+				"role", input.RoleName, "WAL ID", output.WALID,
+				"wal_credential_type", wal.CredentialType,
+				"role_credential_type", input.Role.CredentialType)
+			if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
+				b.Logger().Warn("failed to delete WAL with mismatched credential type", "error", err, "WAL ID", output.WALID)
+			}
+
+			// Generate a new WAL entry and credential
+			output.WALID = ""
 		case wal.CredentialType == v5.CredentialTypePassword:
 			// Roll forward by using the credential in the existing WAL entry
 			updateReq.CredentialType = v5.CredentialTypePassword
@@ -494,6 +543,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			RoleName:          input.RoleName,
 			Username:          input.Role.StaticAccount.Username,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
+			CredentialType:    input.Role.CredentialType,
 		}
 
 		switch input.Role.CredentialType {
@@ -521,6 +571,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 			// Set new credential in WAL entry and update user request
 			walEntry.NewPublicKey = public
+			walEntry.NewPrivateKey = private
 			updateReq.CredentialType = v5.CredentialTypeRSAPrivateKey
 			updateReq.PublicKey = &v5.ChangePublicKey{
 				NewPublicKey: public,
@@ -538,7 +589,27 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		b.Logger().Debug("writing WAL", "role", input.RoleName, "WAL ID", output.WALID)
 	}
 
-	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
+	timeoutCtx, cancel := context.WithTimeout(ctx, staticUpdateUserTimeout)
+	defer cancel()
+	updateUserTimeoutErr := errors.New("timeout exceeded during UpdateUser")
+
+	done := make(chan error, 1)
+
+	go func() {
+		_, e := dbi.database.UpdateUser(timeoutCtx, updateReq, false)
+		done <- e
+	}()
+
+	select {
+	case err = <-done:
+	case <-timeoutCtx.Done():
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		} else {
+			err = updateUserTimeoutErr
+		}
+	}
+
 	if err != nil {
 		b.CloseIfShutdown(dbi, err)
 		if usedCredentialFromPreviousRotation {
@@ -547,11 +618,11 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 				b.Logger().Warn("failed to delete WAL", "error", err, "WAL ID", output.WALID)
 			}
 
-			// Generate a new WAL entry and credential for next attempt
 			output.WALID = ""
 		}
 		return output, fmt.Errorf("error setting credentials: %w", err)
 	}
+
 	modified = true
 
 	// static user password successfully updated in external system

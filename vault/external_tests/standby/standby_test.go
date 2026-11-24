@@ -47,7 +47,6 @@ func Test_Echo_Duration_Skew(t *testing.T) {
 			opts.Logger = logger
 			conf.DisablePerformanceStandby = !perfstandby
 			cluster := vault.NewTestCluster(t, conf, opts)
-			defer cluster.Cleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()

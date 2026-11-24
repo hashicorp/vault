@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Form from 'vault/forms/form';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
-import { commonFields, getPayload } from './shared';
+import { DestinationType } from 'sync/utils/constants';
+import CreateDestinationForm from './create-destination';
 
 import type { SystemWriteSyncDestinationsGhNameRequest } from '@hashicorp/vault-client-typescript';
 
@@ -14,10 +14,10 @@ type GhFormData = SystemWriteSyncDestinationsGhNameRequest & {
   name: string;
 };
 
-export default class GcpSmForm extends Form<GhFormData> {
+export default class GhForm extends CreateDestinationForm<GhFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
-      commonFields.name,
+      this.commonFields.name,
       new FormField('repository_owner', 'string', {
         subText:
           'Github organization or username that owns the repository. If empty, Vault will use the GITHUB_REPOSITORY_OWNER environment variable if configured.',
@@ -37,12 +37,15 @@ export default class GcpSmForm extends Form<GhFormData> {
         noCopy: true,
       }),
     ]),
-    new FormFieldGroup('Advanced configuration', [commonFields.granularity, commonFields.secretNameTemplate]),
+    new FormFieldGroup('Advanced configuration', [
+      this.commonFields.granularity,
+      this.commonFields.secretNameTemplate,
+    ]),
   ];
 
   toJSON() {
     const formState = super.toJSON();
-    const data = getPayload<GhFormData>('gh', this.data, this.isNew);
+    const data = this.getPayload<GhFormData>(DestinationType.Gh, this.data, this.isNew);
     return { ...formState, data };
   }
 }

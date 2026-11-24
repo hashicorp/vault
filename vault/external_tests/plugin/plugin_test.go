@@ -5,22 +5,27 @@ package plugin_test
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	lplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 // logicalVersionMap is a map of version to test plugin
@@ -59,7 +64,6 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			core := cluster.Cores[0]
 
@@ -72,6 +76,18 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 			}
 			if resp == nil {
 				t.Fatalf("bad: response should not be nil")
+			}
+
+			req = logical.TestRequest(t, logical.CreateOperation, "mock-0/config")
+			req.ClientToken = core.Client.Token()
+			resp, err = core.HandleRequest(namespace.RootContext(testCtx), req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			wspost := req.ResponseState()
+			if constants.IsEnterprise {
+				require.NotZero(t, wspost.ReplicatedIndex)
+				require.NotZero(t, wspost.LocalIndex)
 			}
 
 			// Seal the cluster
@@ -117,7 +133,6 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			core := cluster.Cores[0]
 
@@ -147,9 +162,6 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 				if core.Sealed() {
 					t.Fatal("should not be sealed")
 				}
-				// Wait for active so post-unseal takes place
-				// If it fails, it means unseal process failed
-				vault.TestWaitActive(t, core.Core)
 			}
 		})
 	}
@@ -175,7 +187,6 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			core := cluster.Cores[0]
 
@@ -235,7 +246,6 @@ func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			core := cluster.Cores[0]
 
@@ -295,7 +305,6 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			core := cluster.Cores[0]
 
@@ -374,7 +383,6 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			core := cluster.Cores[0]
 
@@ -434,7 +442,6 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			// Seal the cluster
 			cluster.EnsureCoresSealed(t)
@@ -548,7 +555,6 @@ func testSystemBackend_PluginReload(t *testing.T, path string, reqData map[strin
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
 			cluster := testSystemBackendMock(t, 1, 2, backendType, tc.pluginVersion)
-			defer cluster.Cleanup()
 
 			core := cluster.Cores[0]
 			client := core.Client
@@ -595,7 +601,6 @@ func testSystemBackend_PluginReload(t *testing.T, path string, reqData map[strin
 
 func TestSystemBackend_PluginReload_WarningIfNoneReloaded(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 2, logical.TypeLogical, "v5")
-	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
 	client := core.Client
@@ -630,7 +635,7 @@ func TestSystemBackend_PluginReload_WarningIfNoneReloaded(t *testing.T) {
 func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType logical.BackendType, pluginVersion string) *vault.TestCluster {
 	t.Helper()
 	pluginDir := corehelpers.MakeTestPluginDir(t)
-	coreConfig := &vault.CoreConfig{
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": plugin.Factory,
 		},
@@ -638,18 +643,15 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 			"plugin": plugin.Factory,
 		},
 		PluginDirectory: pluginDir,
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc:        vaulthttp.Handler,
+	}, &vault.TestClusterOptions{
 		KeepStandbysSealed: true,
 		NumCores:           numCores,
 		TempDir:            pluginDir,
-	})
-	cluster.Start()
+	}, teststorage.InmemBackendSetup)
+
+	cluster := vault.NewTestCluster(t, conf, opts)
 
 	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
 	env := []string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}
@@ -707,11 +709,8 @@ func TestSystemBackend_Plugin_Env(t *testing.T) {
 		NumCores:    1,
 		TempDir:     pluginDir,
 	})
-	cluster.Start()
-	t.Cleanup(cluster.Cleanup)
 
 	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
 	key := t.Name() + "_FOO"
@@ -756,6 +755,146 @@ func TestSystemBackend_Plugin_Env(t *testing.T) {
 	}
 	if resp == nil || resp.Data["key"] != osValue {
 		t.Fatal(resp)
+	}
+}
+
+// TestSystemBackend_PluginCatalog_ReadVersionedOnly verifies the behavior when
+// a user runs 'vault plugin info <type> <name>' without specifying -version:
+//   - 1 version registered  → auto-select it, return plugin info with a warning
+//   - 2+ versions registered → error listing all available versions
+//   - 0 versions registered  → silent 404 (nil, nil), same as any unregistered plugin
+func TestSystemBackend_PluginCatalog_ReadVersionedOnly(t *testing.T) {
+	t.Parallel()
+
+	// MakeTestPluginDir creates a real temp directory on disk.
+	// Vault requires plugin binaries to live inside PluginDirectory.
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+
+	// NewTestCluster starts a full in-memory Vault with a real HTTP listener —
+	// same as "vault server -dev" but automated. NumCores:1 = single node.
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+		TempDir:     pluginDir,
+	})
+	defer cluster.Cleanup()
+
+	// core.Client is a pre-configured api.Client pointed at the cluster —
+	// the same type the CLI uses when you run vault commands.
+	client := cluster.Cores[0].Client
+
+	// Create a real empty file in pluginDir to stand in as the plugin binary.
+	// Vault checks that the command path exists within PluginDirectory.
+	pluginFile, err := os.CreateTemp(pluginDir, "test-versioned-plugin")
+	if err != nil {
+		t.Fatalf("failed to create test plugin file: %v", err)
+	}
+	pluginFile.Close()
+	pluginName := "test-versioned-plugin"
+	pluginCommand := filepath.Base(pluginFile.Name())
+	// hex.EncodeToString just needs to produce a valid hex string for registration.
+	fakeSHA := hex.EncodeToString([]byte("fake-sha"))
+
+	// --- Case: 1 version registered — should auto-select and warn ---
+
+	// Register one versioned entry (no unversioned entry).
+	// Equivalent to: vault plugin register -version=v1.2.3 secret <name>
+	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    pluginName,
+		Type:    api.PluginTypeSecrets,
+		Version: "v1.2.3",
+		Command: pluginCommand,
+		SHA256:  fakeSHA,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error registering versioned plugin: %v", err)
+	}
+
+	// Read without -version — should succeed and include a warning.
+	// We use client.Logical().Read() instead of client.Sys().GetPlugin() here
+	// because the typed GetPluginResponse does not expose Warnings; the raw
+	// Secret response does.
+	// Equivalent to: vault plugin info secret <name>
+	secret, err := client.Logical().Read("sys/plugins/catalog/secret/" + pluginName)
+	if err != nil {
+		t.Fatalf("expected auto-select to succeed, got error: %v", err)
+	}
+	if secret == nil {
+		t.Fatal("expected non-nil response for auto-selected plugin")
+	}
+	if secret.Data["version"] != "v1.2.3" {
+		t.Errorf("expected auto-selected version v1.2.3, got %q", secret.Data["version"])
+	}
+	// Assert the warning is present so the user knows a version was auto-selected.
+	if len(secret.Warnings) == 0 {
+		t.Error("expected a warning about auto-selected version, got none")
+	} else if !strings.Contains(secret.Warnings[0], "v1.2.3") {
+		t.Errorf("expected warning to mention v1.2.3, got: %q", secret.Warnings[0])
+	}
+
+	// --- Case: 2+ versions registered — should error listing both ---
+
+	// Register a second version.
+	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    pluginName,
+		Type:    api.PluginTypeSecrets,
+		Version: "v1.3.0",
+		Command: pluginCommand,
+		SHA256:  fakeSHA,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error registering second version: %v", err)
+	}
+
+	// Read without -version — should error listing both versions.
+	_, err = client.Sys().GetPlugin(&api.GetPluginInput{
+		Name: pluginName,
+		Type: api.PluginTypeSecrets,
+	})
+	if err == nil {
+		t.Fatal("expected error with multiple versions registered, got nil")
+	}
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "v1.2.3") || !strings.Contains(errMsg, "v1.3.0") {
+		t.Errorf("expected error to list both versions, got: %q", errMsg)
+	}
+	if !strings.Contains(errMsg, "-version") {
+		t.Errorf("expected error to mention -version flag, got: %q", errMsg)
+	}
+
+	// --- Case: 0 versions registered — plugin does not exist at all ---
+
+	// Deregister both versioned entries so nothing is left.
+	err = client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    pluginName,
+		Type:    api.PluginTypeSecrets,
+		Version: "v1.2.3",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error deregistering v1.2.3: %v", err)
+	}
+	err = client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    pluginName,
+		Type:    api.PluginTypeSecrets,
+		Version: "v1.3.0",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error deregistering v1.3.0: %v", err)
+	}
+
+	// Read without -version — should return a 404 (nil, nil from the server),
+	// same as any other unregistered plugin. Must not contain "Available versions".
+	_, err = client.Sys().GetPlugin(&api.GetPluginInput{
+		Name: pluginName,
+		Type: api.PluginTypeSecrets,
+	})
+	if err == nil {
+		t.Fatal("expected 404 error for non-existent plugin, got nil")
+	}
+	if strings.Contains(err.Error(), "Available versions") {
+		t.Errorf("expected no 'Available versions' in not-found error, got: %q", err.Error())
 	}
 }
 

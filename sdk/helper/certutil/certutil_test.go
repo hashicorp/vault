@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -48,6 +49,8 @@ func TestCertBundleConversion(t *testing.T) {
 		refreshEC8CertBundleWithChain(),
 		refreshEd255198CertBundle(),
 		refreshEd255198CertBundleWithChain(),
+		refreshMLDSACertBundle(),
+		refreshMLDSACertBundleWithChain(),
 	}
 
 	for i, cbut := range cbuts {
@@ -119,6 +122,8 @@ func TestCertBundleParsing(t *testing.T) {
 		refreshEC8CertBundleWithChain(),
 		refreshEd255198CertBundle(),
 		refreshEd255198CertBundleWithChain(),
+		refreshMLDSACertBundle(),
+		refreshMLDSACertBundleWithChain(),
 	}
 
 	for i, cbut := range cbuts {
@@ -199,6 +204,10 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		if pcbut.PrivateKeyType != Ed25519PrivateKey {
 			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ed25519' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
+	case privMLDSAKeyPem:
+		if pcbut.PrivateKeyType != MLDSAPrivateKey {
+			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ml-dsa' (%v)", pcbut.PrivateKeyType, MLDSAPrivateKey)
+		}
 	default:
 		return fmt.Errorf("parsed bundle has unknown private key type")
 	}
@@ -245,6 +254,10 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		if cb.PrivateKey != privEd255198KeyPem {
 			return fmt.Errorf("bundle private key does not match")
 		}
+	case MLDSAPrivateKey:
+		if cb.PrivateKey != privMLDSAKeyPem {
+			return fmt.Errorf("bundle private key does not match")
+		}
 	default:
 		return fmt.Errorf("certBundle has unknown private key type")
 	}
@@ -274,6 +287,7 @@ func TestCSRBundleConversion(t *testing.T) {
 		refreshRSACSRBundle(),
 		refreshECCSRBundle(),
 		refreshEd25519CSRBundle(),
+		refreshMLDSACSRBundle(),
 	}
 
 	for _, csrbut := range csrbuts {
@@ -327,6 +341,10 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
 			return fmt.Errorf("parsed bundle has wrong private key type")
 		}
+	case privMLDSAKeyPem:
+		if pcsrbut.PrivateKeyType != MLDSAPrivateKey {
+			return fmt.Errorf("parsed bundle has wrong private key type")
+		}
 	default:
 		return fmt.Errorf("parsed bundle has unknown private key type")
 	}
@@ -364,6 +382,13 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		}
 		if csrb.PrivateKey != privEd255198KeyPem {
 			return fmt.Errorf("bundle ed25519 private key does not match")
+		}
+	case "ml-dsa":
+		if pcsrbut.PrivateKeyType != MLDSAPrivateKey {
+			return fmt.Errorf("bundle has wrong private key type")
+		}
+		if csrb.PrivateKey != privMLDSAKeyPem {
+			return fmt.Errorf("bundle mldsa private key does not match")
 		}
 	default:
 		return fmt.Errorf("bundle has unknown private key type")
@@ -490,6 +515,27 @@ func TestGetPublicKeySize(t *testing.T) {
 	if GetPublicKeySize(ed25519) != 256 {
 		t.Fatal("unexpected ed25519 key size")
 	}
+	mldsa44Key, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(mldsa44Key.Public()) != mldsa.MLDSA44PublicKeySize*8 {
+		t.Fatalf("unexpected mldsa key size %d", GetPublicKeySize(mldsa44Key))
+	}
+	mldsa65Key, err := mldsa.GenerateKey(mldsa.MLDSA65())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(mldsa65Key.Public()) != mldsa.MLDSA65PublicKeySize*8 {
+		t.Fatal("unexpected mldsa key size")
+	}
+	mldsa87Key, err := mldsa.GenerateKey(mldsa.MLDSA87())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(mldsa87Key.Public()) != mldsa.MLDSA87PublicKeySize*8 {
+		t.Fatal("unexpected mldsa key size")
+	}
 	// Skipping DSA as too slow
 }
 
@@ -563,6 +609,30 @@ func refreshEd25519CSRBundle() *CSRBundle {
 		CSR:        csrEd25519Pem,
 		PrivateKey: privEd255198KeyPem,
 	}
+}
+
+func refreshMLDSACSRBundle() *CSRBundle {
+	initTest.Do(setCerts)
+	return &CSRBundle{
+		CSR:        csrMLDSAPem,
+		PrivateKey: privMLDSAKeyPem,
+	}
+}
+
+func refreshMLDSACertBundle() *CertBundle {
+	initTest.Do(setCerts)
+	return &CertBundle{
+		Certificate: certMLDSAPem,
+		PrivateKey:  privMLDSAKeyPem,
+		CAChain:     []string{issuingCaChainPem[0]},
+	}
+}
+
+func refreshMLDSACertBundleWithChain() *CertBundle {
+	initTest.Do(setCerts)
+	ret := refreshMLDSACertBundle()
+	ret.CAChain = issuingCaChainPem
+	return ret
 }
 
 func refreshRSACSRBundle() *CSRBundle {
@@ -863,6 +933,68 @@ func setCerts() {
 		privEd255198KeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 	}
 
+	// MLDSA Generation
+	{
+		{
+			key, err := mldsa.GenerateKey(mldsa.MLDSA44())
+			if err != nil {
+				panic(err)
+			}
+			subjKeyID, err := GetSubjKeyID(key)
+			if err != nil {
+				panic(err)
+			}
+			certTemplate := &x509.Certificate{
+				Subject: pkix.Name{
+					CommonName: "localhost",
+				},
+				SubjectKeyId: subjKeyID,
+				DNSNames:     []string{"localhost"},
+				ExtKeyUsage: []x509.ExtKeyUsage{
+					x509.ExtKeyUsageServerAuth,
+					x509.ExtKeyUsageClientAuth,
+				},
+				KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+				SerialNumber: big.NewInt(mathrand.Int63()),
+				NotBefore:    time.Now().Add(-30 * time.Second),
+				NotAfter:     time.Now().Add(262980 * time.Hour),
+			}
+			csrTemplate := &x509.CertificateRequest{
+				Subject: pkix.Name{
+					CommonName: "localhost",
+				},
+				DNSNames: []string{"localhost"},
+			}
+			csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+			if err != nil {
+				panic(err)
+			}
+			csrPEMBlock := &pem.Block{
+				Type:  "CERTIFICATE REQUEST",
+				Bytes: csrBytes,
+			}
+			csrMLDSAPem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
+			certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, intCert, key.Public(), intKey)
+			if err != nil {
+				panic(err)
+			}
+			certPEMBlock := &pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: certBytes,
+			}
+			certMLDSAPem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+			marshaledKey, err := x509.MarshalPKCS8PrivateKey(key)
+			if err != nil {
+				panic(err)
+			}
+			keyPEMBlock := &pem.Block{
+				Type:  "PRIVATE KEY",
+				Bytes: marshaledKey,
+			}
+			privMLDSAKeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		}
+	}
+
 	issuingCaChainPem = []string{intCertPEM, caCertPEM}
 }
 
@@ -873,6 +1005,8 @@ func TestComparePublicKeysAndType(t *testing.T) {
 	eddsa2 := genEdDSA(t).Public()
 	ed25519_1, _ := genEd25519Key(t)
 	ed25519_2, _ := genEd25519Key(t)
+	mldsaKey1 := genMLDSAKey(t).Public()
+	mldsaKey2 := genMLDSAKey(t).Public()
 
 	type args struct {
 		key1Iface crypto.PublicKey
@@ -890,9 +1024,12 @@ func TestComparePublicKeysAndType(t *testing.T) {
 		{name: "EDDSA_NotEqual", args: args{key1Iface: eddsa1, key2Iface: eddsa2}, want: false, wantErr: false},
 		{name: "ED25519_Equal", args: args{key1Iface: ed25519_1, key2Iface: ed25519_1}, want: true, wantErr: false},
 		{name: "ED25519_NotEqual", args: args{key1Iface: ed25519_1, key2Iface: ed25519_2}, want: false, wantErr: false},
+		{name: "MLDSA_Equal", args: args{key1Iface: mldsaKey1, key2Iface: mldsaKey1}, want: true, wantErr: false},
+		{name: "MLDSA_NotEqual", args: args{key1Iface: mldsaKey1, key2Iface: mldsaKey2}, want: false, wantErr: false},
 		{name: "Mismatched_RSA", args: args{key1Iface: rsa1, key2Iface: ed25519_2}, want: false, wantErr: false},
 		{name: "Mismatched_EDDSA", args: args{key1Iface: ed25519_1, key2Iface: rsa1}, want: false, wantErr: false},
 		{name: "Mismatched_ED25519", args: args{key1Iface: ed25519_1, key2Iface: rsa1}, want: false, wantErr: false},
+		{name: "Mismatched_MLDSA", args: args{key1Iface: mldsaKey1, key2Iface: rsa1}, want: false, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1242,6 +1379,15 @@ func genEd25519Key(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
 	return key, priv
 }
 
+func genMLDSAKey(t *testing.T) *mldsa.PrivateKey {
+	key, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return key
+}
+
 var (
 	initTest           sync.Once
 	privRSA8KeyPem     string
@@ -1256,4 +1402,7 @@ var (
 	privEC8KeyPem      string
 	certECPem          string
 	issuingCaChainPem  []string
+	csrMLDSAPem        string
+	certMLDSAPem       string
+	privMLDSAKeyPem    string
 )

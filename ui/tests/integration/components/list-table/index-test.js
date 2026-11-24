@@ -1,0 +1,507 @@
+/**
+ * Copyright IBM Corp. 2016, 2025
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
+import { click, fillIn, find, findAll, render, triggerKeyEvent, waitFor } from '@ember/test-helpers';
+import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
+
+const MOCK_DATA = [
+  { island: 'Maldives', visit_length: 5, trip_date: '2025-06-22T00:00:00.000Z' },
+  { island: 'Bora Bora', visit_length: 7, trip_date: '2025-03-15T00:00:00.000Z' },
+  { island: 'Fiji', visit_length: 10, trip_date: '2025-09-08T00:00:00.000Z' },
+  { island: 'Santorini', visit_length: 4, trip_date: '2026-04-10T00:00:00.000Z' },
+  { island: 'Maui', visit_length: 8, trip_date: '2026-01-18T00:00:00.000Z' },
+  { island: 'Seychelles', visit_length: 6, trip_date: '2025-12-03T00:00:00.000Z' },
+];
+module('Integration | Component | list-table', function (hooks) {
+  setupRenderingTest(hooks);
+
+  hooks.beforeEach(async function () {
+    this.data = MOCK_DATA.map((item) => ({ ...item }));
+    this.onSelectionChange = undefined;
+    this.selectionKeyField = undefined;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true, isSortable: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+      { key: 'popupMenu', label: 'Action' },
+    ];
+
+    this.renderComponent = async () => {
+      return render(hbs`
+          <ListTable
+            @columns={{this.columns}}
+            @data={{this.data}}
+            @selectionKeyField={{this.selectionKeyField}}
+            @onSelectionChange={{this.onSelectionChange}}
+            @hasResizableColumns={{this.hasResizableColumns}}
+          >
+            <:customTableItem as |itemData|>
+              <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />
+            </:customTableItem>
+
+            <:popupMenu as |rowData|>
+              <Hds::Dropdown as |D|>
+              <D.ToggleButton @text="Menu" data-test-popup-menu-trigger />
+              <D.Title @text={{rowData.island}} />
+              <D.Description @text="Sample text" />
+              <D.Interactive @route="components" @icon="trash" @color="critical">Delete</D.Interactive>
+              </Hds::Dropdown>
+            </:popupMenu>
+
+          </ListTable>`);
+    };
+  });
+
+  test('it renders and paginates data', async function (assert) {
+    await this.renderComponent();
+    assert.dom('input[type="checkbox"]').doesNotExist('table is not selectable by default');
+    assert.dom(GENERAL.paginationInfo).hasText(`1–6 of ${this.data.length}`);
+    // Default is 10, so change to something else to test pagination
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+    assert.dom(GENERAL.paginationInfo).hasText(`1–5 of ${this.data.length}`);
+    assert.dom(GENERAL.tableRow()).exists({ count: 5 }, 'only 5 rows render');
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText(`6–6 of ${this.data.length}`);
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only 1 row renders on second page');
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Seychelles', 'second page has expected row');
+  });
+
+  test('it sorts table data across pages', async function (assert) {
+    // Default is 10, so change to 5 so we have multiple pages with 6 items
+    await this.renderComponent();
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+
+    const secondColumnSortButton = GENERAL.tableColumnHeaderSortButton(2, {
+      isAdvanced: true,
+    });
+    // Click to sort ascending by island
+    await click(secondColumnSortButton);
+
+    const expectedPage1 = ['Santorini', 'Maldives', 'Seychelles', 'Bora Bora', 'Maui'];
+    expectedPage1.forEach((value, idx) => {
+      assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `page 1, row ${idx} is ${value}`);
+    });
+
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Fiji', 'page 2 has last sorted item');
+
+    // Click again to sort descending
+    await click(GENERAL.prevPage);
+    await click(secondColumnSortButton);
+
+    const expectedDescPage1 = ['Fiji', 'Maui', 'Bora Bora', 'Seychelles', 'Maldives'];
+    expectedDescPage1.forEach((value, idx) => {
+      assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `desc page 1, row ${idx} is ${value}`);
+    });
+
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Santorini', 'desc page 2 has last sorted item');
+  });
+
+  test('it does not render popup menu if @columns does not include a popupMenu key', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom(GENERAL.menuTrigger).doesNotExist();
+  });
+
+  test('columns are resizable by default', async function (assert) {
+    this.hasResizableColumns = undefined;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 2 }, 'it renders resize sliders by default');
+  });
+
+  test('columns are resizable when @hasResizableColumns is true', async function (assert) {
+    this.hasResizableColumns = true;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 2 });
+  });
+
+  test('columns are not resizable when @hasResizableColumns is explicitly false', async function (assert) {
+    this.hasResizableColumns = false;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').doesNotExist('resize sliders do not exist');
+  });
+
+  test('fr column widths are scaled and other widths are passed through', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', width: '2fr' },
+      { key: 'trip_date', label: 'Date trip starts', width: '200px' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 3 }, 'columns are resizable');
+    assert.strictEqual(
+      find('.hds-advanced-table').style.gridTemplateColumns,
+      '100fr 200fr 200px 10%',
+      'missing and fr widths are scaled while px and % widths are unchanged'
+    );
+  });
+
+  test('the table stays full width after resizing into the actions column', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    const headerCellsWidth = () =>
+      findAll('.hds-advanced-table__thead .hds-advanced-table__th').reduce(
+        (sum, th) => sum + th.offsetWidth,
+        0
+      );
+
+    for (let i = 0; i < 10; i++) {
+      await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+    }
+    const [islandWidth, actionsWidth] = find('.hds-advanced-table').style.gridTemplateColumns.split(' ');
+    assert.notStrictEqual(islandWidth, '100fr', 'resized column shrinks');
+    assert.notStrictEqual(actionsWidth, '10%', 'actions column takes the freed width');
+    const tableWidth = find('.hds-advanced-table').clientWidth;
+    assert.true(Math.abs(headerCellsWidth() - tableWidth) <= 2, 'table fills its container');
+  });
+
+  ['Islands', 'Actions'].forEach((resetLabel) => {
+    test(`resetting the ${resetLabel} column after a resize restores every column to its original width`, async function (assert) {
+      this.columns = [
+        { key: 'island', label: 'Islands' },
+        { key: 'popupMenu', label: 'Actions', width: '10%' },
+      ];
+      await this.renderComponent();
+      const gridColumns = () => find('.hds-advanced-table').style.gridTemplateColumns.split(' ');
+
+      for (let i = 0; i < 10; i++) {
+        await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+      }
+      assert.notDeepEqual(gridColumns(), ['100fr', '10%'], 'columns are resized');
+
+      await click(`[aria-label="Additional actions for ${resetLabel}"]`);
+      await click('[data-test-context-option-key="reset-column-width"]');
+      assert.deepEqual(gridColumns(), ['100fr', '10%'], 'both columns are back to their original widths');
+
+      await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+      assert.notDeepEqual(gridColumns(), ['100fr', '10%'], 'columns can be resized again after a reset');
+    });
+  });
+
+  test('resetting a column restores every column on a selectable table', async function (assert) {
+    this.selectionKeyField = 'island';
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'trip_date', label: 'Date trip starts' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    const gridColumns = () => find('.hds-advanced-table').style.gridTemplateColumns.trim().split(/\s+/);
+    const originalColumns = gridColumns();
+
+    for (let i = 0; i < 10; i++) {
+      await triggerKeyEvent('[aria-label="Resize Islands column"]', 'keydown', 'ArrowRight');
+    }
+    assert.notDeepEqual(gridColumns(), originalColumns, 'columns are resized');
+
+    await click('[aria-label="Additional actions for Islands"]');
+    await click('[data-test-context-option-key="reset-column-width"]');
+    assert.deepEqual(gridColumns(), originalColumns, 'every column is back to its original width');
+  });
+
+  test('it stringifies object and array values for non-custom columns', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'trip_details', label: 'Trip details' },
+      { key: 'tags', label: 'Tags' },
+    ];
+    this.data = [
+      {
+        island: 'Maldives',
+        trip_details: { hotel: 'Atoll Inn', nights: 5 },
+        tags: ['beach', 'snorkel'],
+      },
+    ];
+
+    await this.renderComponent();
+    assert.dom(GENERAL.tableData(0, 'trip_details')).hasText('{ "hotel": "Atoll Inn", "nights": 5 }');
+    assert.dom(GENERAL.tableData(0, 'tags')).hasText('[ "beach", "snorkel" ]');
+  });
+
+  test('it does not render popup menu if parent does not yield one', async function (assert) {
+    await render(hbs`
+          <ListTable
+            @columns={{this.columns}}
+            @data={{this.data}}
+            @selectionKeyField={{this.selectionKeyField}}
+            @onSelectionChange={{this.onSelectionChange}}
+          />`);
+    assert.dom(GENERAL.menuTrigger).doesNotExist();
+  });
+
+  test('it sorts table data by a sortable column', async function (assert) {
+    await this.renderComponent();
+    await click(GENERAL.icon('swap-vertical'));
+    const expectedOrder = ['Bora Bora', 'Fiji', 'Maldives', 'Maui', 'Santorini', 'Seychelles'];
+    expectedOrder.forEach((island, idx) => {
+      assert.dom(GENERAL.tableData(idx, 'island')).hasText(island);
+    });
+  });
+
+  test('action column renders provided yield block with popup menu', async function (assert) {
+    await this.renderComponent();
+    assert.dom(GENERAL.menuTrigger).exists({ count: this.data.length }, 'popup trigger exists for each item');
+    await click(`${GENERAL.tableRow(2)} ${GENERAL.menuTrigger}`);
+    assert.dom('li').hasText(this.data[2].island, 'popup menu renders relevant row data');
+  });
+
+  test('selectable checkboxes render and are selectable when selectionKeyField is provided', async function (assert) {
+    this.selectionKeyField = 'island';
+    const count = this.data.length + 1;
+    this.onSelectionChange = sinon.spy();
+    await this.renderComponent();
+    assert
+      .dom('input[type="checkbox"]')
+      .exists({ count }, 'it renders a checkbox for each row plus the header to select all');
+    assert
+      .dom(`${GENERAL.tableRow(0)} input[type="checkbox"]`)
+      .hasAttribute(
+        'aria-label',
+        `Select row ${this.data[0][this.selectionKeyField]}`,
+        'selection aria label suffix uses selectionKeyField in value'
+      );
+    await click(`${GENERAL.tableRow(0)} input[type="checkbox"]`);
+    await click(`${GENERAL.tableRow(2)} input[type="checkbox"]`);
+    assert.true(this.onSelectionChange.calledTwice, 'onSelectionChange is called twice');
+    const [callbackArgs] = this.onSelectionChange.lastCall.args;
+    const { selectionKey, selectedRowsKeys, selectableRowsStates } = callbackArgs;
+    const lastItemSelected = this.data[2];
+    assert.strictEqual(selectionKey, lastItemSelected.island, 'selectionKey is last selected row');
+    assert.propEqual(selectedRowsKeys, ['Maldives', 'Fiji'], 'callback passes selectedRowKeys');
+    const expectedRowStates = [
+      { selectionKey: 'Maldives', isSelected: true },
+      { selectionKey: 'Bora Bora', isSelected: false },
+      { selectionKey: 'Fiji', isSelected: true },
+      { selectionKey: 'Santorini', isSelected: false },
+      { selectionKey: 'Maui', isSelected: false },
+      { selectionKey: 'Seychelles', isSelected: false },
+    ];
+    assert.propEqual(selectableRowsStates, expectedRowStates, 'callback contains selectableRowsStates');
+  });
+
+  test('it is still selectable when selection callback is not provided', async function (assert) {
+    this.selectionKeyField = 'island';
+    await this.renderComponent();
+    assert.dom('input[type="checkbox"]').exists({ count: this.data.length + 1 });
+    const firstRowCheckbox = '[data-test-table-row="0"] input[type="checkbox"]';
+    await click(firstRowCheckbox);
+    assert.dom(firstRowCheckbox).isChecked('row checkbox can be toggled without @onSelectionChange');
+  });
+
+  test('custom item renders provided yield block with customTableItem for a column has customTableItem set to true', async function (assert) {
+    await this.renderComponent();
+    assert
+      .dom(`${GENERAL.tableData(0, 'visit_length')} .hds-badge-count`)
+      .hasText('5', 'custom table item renders yielded badge');
+  });
+
+  test('customTableItem yields row data, column definition, and resolved value for multiple custom columns', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', customTableItem: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    this.data = [
+      { island: 'Maldives', visit_length: 5, trip_date: '2025-06-22T00:00:00.000Z', status: 'confirmed' },
+      { island: 'Bora Bora', visit_length: 7, trip_date: '2025-03-15T00:00:00.000Z', status: 'pending' },
+    ];
+
+    await render(hbs`
+      <ListTable @columns={{this.columns}} @data={{this.data}}>
+        <:customTableItem as |row column value|>
+          {{#if (eq column.key "island")}}
+            <Hds::Link::Inline
+              @route="components"
+              @color="secondary"
+              class="has-text-weight-semibold"
+              data-test-link-to={{row.island}}
+            >{{row.island}}</Hds::Link::Inline>
+          {{/if}}
+          {{#if (eq column.key "visit_length")}}
+            <Hds::Badge @text={{value}} @type="outlined" data-test-badge={{value}} />
+          {{/if}}
+        </:customTableItem>
+      </ListTable>
+    `);
+    assert
+      .dom(`${GENERAL.tableData(0, 'island')} ${GENERAL.linkTo('Maldives')}`)
+      .exists()
+      .hasText('Maldives', 'island renders as custom link using row data');
+    assert
+      .dom(`${GENERAL.tableData(0, 'visit_length')} ${GENERAL.badge('5')}`)
+      .exists()
+      .hasText('5', 'visit_length renders as custom badge using resolved value');
+    assert.dom(`${GENERAL.tableData(1, 'island')} ${GENERAL.linkTo('Bora Bora')}`).hasText('Bora Bora');
+    assert.dom(`${GENERAL.tableData(1, 'visit_length')} ${GENERAL.badge('7')}`).hasText('7');
+    assert
+      .dom(GENERAL.tableData(0, 'trip_date'))
+      .hasText('2025-06-22T00:00:00.000Z', 'non-custom column renders value directly');
+  });
+
+  test('it shows first page data and correct metadata when navigated page exceeds new data bounds', async function (assert) {
+    const moreData = [
+      { island: 'Tahiti', visit_length: 12, trip_date: '2025-05-10T00:00:00.000Z' },
+      { island: 'Barbados', visit_length: 6, trip_date: '2025-08-25T00:00:00.000Z' },
+      { island: 'Cyprus', visit_length: 9, trip_date: '2026-03-12T00:00:00.000Z' },
+      { island: 'Jamaica', visit_length: 7, trip_date: '2025-11-05T00:00:00.000Z' },
+    ];
+    this.data = [...MOCK_DATA, ...moreData];
+    await this.renderComponent();
+
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText(`6–10 of ${this.data.length}`, 'navigated to page 2');
+
+    // Replace data with fewer items than current page offset such that page 2 no longer exists
+    this.set('data', [
+      { island: 'Palawan', visit_length: 9, trip_date: '2025-11-14T00:00:00.000Z' },
+      { island: 'Mykonos', visit_length: 3, trip_date: '2026-02-28T00:00:00.000Z' },
+    ]);
+
+    await waitFor(GENERAL.paginationInfo);
+    assert
+      .dom(GENERAL.paginationInfo)
+      .hasText(
+        `1–2 of ${this.data.length}`,
+        'falls back to page 1 when current page exceeds new data bounds'
+      );
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Palawan', 'first page data is shown after fallback');
+  });
+
+  test('it resets pagination when data changes', async function (assert) {
+    const moreData = [
+      { island: 'Tahiti', visit_length: 12, trip_date: '2025-05-10T00:00:00.000Z' },
+      { island: 'Barbados', visit_length: 6, trip_date: '2025-08-25T00:00:00.000Z' },
+      { island: 'Cyprus', visit_length: 9, trip_date: '2026-03-12T00:00:00.000Z' },
+      { island: 'Jamaica', visit_length: 7, trip_date: '2025-11-05T00:00:00.000Z' },
+      { island: 'Crete', visit_length: 11, trip_date: '2026-06-18T00:00:00.000Z' },
+      { island: 'Aruba', visit_length: 5, trip_date: '2025-10-14T00:00:00.000Z' },
+    ];
+    this.data = [...MOCK_DATA, ...moreData];
+    await this.renderComponent();
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText(`11–12 of ${this.data.length}`, 'it navigates to next page');
+    // Changing the @data arg should trigger an update and reset pagination
+    this.set('data', [
+      { island: 'Palawan', visit_length: 9, trip_date: '2025-11-14T00:00:00.000Z' },
+      { island: 'Mykonos', visit_length: 3, trip_date: '2026-02-28T00:00:00.000Z' },
+    ]);
+
+    // There's a workaround using next() from @ember/runloop because the Hds::Pagination::Numbered component
+    // doesn't re-render when @currentPage updates. When that's fixed at the source we should be able to remove waitFor
+    await waitFor(GENERAL.paginationInfo);
+    assert.dom(GENERAL.paginationInfo).hasText(`1–2 of ${this.data.length}`);
+    assert.dom(GENERAL.paginationSizeSelector).hasValue('10', 'page selector is unchanged when data updates');
+  });
+
+  test('it should render expandable rows', async function (assert) {
+    // Using different columns/dataset here to test expanding rows
+    // because expandable (nested) rows cannot be sortable!
+    this.columns = [
+      { key: 'region', label: 'Region', isExpandable: true },
+      { key: 'destinations_count', label: 'Destinations' },
+      { key: 'best_season', label: 'Best season' },
+    ];
+
+    const frenchPolynesiaChild1 = {
+      region: 'Bora Bora',
+      destinations_count: '1 island',
+      best_season: 'May–Oct',
+    };
+
+    const southeastAsiaChild1 = {
+      region: 'Bali',
+      destinations_count: '1 island',
+      best_season: 'Apr–Oct',
+    };
+
+    const southeastAsiaChild2 = {
+      region: 'Komodo',
+      destinations_count: '1 island',
+      best_season: 'Apr–Aug',
+    };
+
+    this.data = [
+      {
+        region: 'French Polynesia',
+        destinations_count: '118 islands',
+        best_season: 'May–Oct',
+        children: [frenchPolynesiaChild1],
+      },
+      {
+        region: 'Southeast Asia',
+        destinations_count: '2 islands',
+        best_season: 'Apr–Oct',
+        children: [southeastAsiaChild1, southeastAsiaChild2],
+      },
+    ];
+
+    await this.renderComponent();
+    assert.dom(GENERAL.tableDataNested(1, 'region')).isNotVisible('nested row is initially hidden');
+    await click(GENERAL.tableExpandableColumn(0, 'region'));
+    assert.dom(GENERAL.tableDataNested(1, 'region')).isVisible('nested row is visible when expanded');
+    assert
+      .dom(GENERAL.tableDataNested(1, 'region'))
+      .hasText(frenchPolynesiaChild1.region, 'child destination renders');
+    assert
+      .dom(GENERAL.tableDataNested(1, 'destinations_count'))
+      .hasText(frenchPolynesiaChild1.destinations_count, 'child destination count renders');
+    assert
+      .dom(GENERAL.tableDataNested(1, 'best_season'))
+      .hasText(frenchPolynesiaChild1.best_season, 'child best season renders');
+    await click(GENERAL.tableExpandableColumn(0, 'region'));
+    assert.dom(GENERAL.tableDataNested(1, 'region')).isNotVisible('nested row hidden when collapsed');
+
+    // Expand a parent row with two children
+    await click(GENERAL.tableExpandableColumn(2, 'region'));
+    assert
+      .dom(GENERAL.tableDataNested(3, 'region'))
+      .isVisible('first child of second parent is visible')
+      .hasText(southeastAsiaChild1.region, 'first child renders correct region');
+    assert
+      .dom(GENERAL.tableDataNested(4, 'region'))
+      .isVisible('second child of second parent is visible')
+      .hasText(southeastAsiaChild2.region, 'second child renders correct region');
+  });
+
+  test('it hides pagination when @hidePagination is true', async function (assert) {
+    await render(hbs`
+      <ListTable @columns={{this.columns}} @data={{this.data}} @hidePagination={{true}} />
+    `);
+
+    assert.dom(GENERAL.pagination).doesNotExist('pagination is not rendered when @hidePagination is true');
+    assert
+      .dom(GENERAL.tableRow())
+      .exists({ count: this.data.length }, 'all rows are rendered without pagination');
+  });
+});

@@ -88,3 +88,19 @@ func TestBackendConfig() *BackendConfig {
 
 	return bc
 }
+
+// TestCertificateCounter is a test helper that captures every CertCount passed
+// to AddCount via its Record field, accumulating them with Add.  It also
+// satisfies CertificateCounter so it can be passed wherever a real counter is
+// expected.
+type TestCertificateCounter struct {
+	Record CertCount
+}
+
+func (c *TestCertificateCounter) AddCount(p CertCount) {
+	c.Record.Add(p)
+}
+
+func (c *TestCertificateCounter) Increment() CertCountIncrementer {
+	return NewCertCountIncrementer(c)
+}

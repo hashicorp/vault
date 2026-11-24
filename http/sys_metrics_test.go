@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
 	"github.com/hashicorp/vault/vault"
 )
 

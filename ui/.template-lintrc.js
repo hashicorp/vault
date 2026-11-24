@@ -10,7 +10,6 @@ module.exports = {
 
   rules: {
     'no-action': 'off',
-    'require-input-label': 'off',
     'no-array-prototype-extensions': 'off',
     // from bump to ember-template-lint@6.0.0
     'no-builtin-form-components': 'off',

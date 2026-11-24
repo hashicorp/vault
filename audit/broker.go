@@ -12,11 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
-	nshelper "github.com/hashicorp/vault/helper/namespace"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/internal/observability/event"
+	nshelper "github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

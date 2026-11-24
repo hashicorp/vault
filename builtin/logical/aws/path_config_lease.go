@@ -6,6 +6,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -36,15 +37,29 @@ func pathConfigLease(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathLeaseRead,
+				Summary:  "Return the default lease configuration for generated credentials.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "lease-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"lease":     {Type: framework.TypeString, Description: "Default lease duration for credentials."},
+							"lease_max": {Type: framework.TypeString, Description: "Maximum lease duration for credentials."},
+						},
+					}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathLeaseWrite,
+				Summary:  "Configure the default lease for generated credentials.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "lease",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 		},
@@ -106,6 +121,10 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSLeaseConfigWrite, map[string]interface{}{
+		"lease":     lease.String(),
+		"lease_max": leaseMax.String(),
+	})
 	return nil, nil
 }
 
@@ -117,6 +136,11 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 	if lease == nil {
 		return nil, nil
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSLeaseConfigRead, map[string]interface{}{
+		"lease":     lease.Lease.String(),
+		"lease_max": lease.LeaseMax.String(),
+	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{

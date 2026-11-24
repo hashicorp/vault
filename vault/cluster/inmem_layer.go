@@ -41,10 +41,11 @@ type InmemLayer struct {
 // provided address.
 func NewInmemLayer(addr string, logger log.Logger) *InmemLayer {
 	return &InmemLayer{
-		addr:        addr,
-		logger:      logger,
-		stopped:     atomic.NewBool(false),
-		stopCh:      make(chan struct{}),
+		addr:    addr,
+		logger:  logger,
+		stopped: atomic.NewBool(false),
+		stopCh:  make(chan struct{}),
+
 		peers:       make(map[string]*InmemLayer),
 		servConns:   make(map[string][]net.Conn),
 		clientConns: make(map[string][]net.Conn),
@@ -311,6 +312,11 @@ func (l *InmemLayer) Close() error {
 
 	l.DisconnectAll()
 	close(l.stopCh)
+
+	l.l.Lock()
+	l.listener.Close()
+	l.listener = nil
+	l.l.Unlock()
 	return nil
 }
 

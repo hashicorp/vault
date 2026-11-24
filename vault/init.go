@@ -12,8 +12,8 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/pgpkeys"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/seal"
@@ -160,6 +160,10 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
 	if err := c.entCheckLicenseInit(); err != nil {
+		return nil, err
+	}
+
+	if err := c.ValidateMultiSealConfig(ctx, true); err != nil {
 		return nil, err
 	}
 
@@ -365,9 +369,20 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	activeCtx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
-	if err := c.postUnseal(activeCtx, ctxCancel, standardUnsealStrategy{}); err != nil {
+	c.activeContext = activeCtx
+	c.activeContextCancelFunc.Store(ctxCancel)
+
+	if err := c.postUnseal(c.activeContext, standardUnsealStrategy{}); err != nil {
 		c.logger.Error("post-unseal setup failed during init", "error", err)
 		return nil, err
+	}
+
+	if c.OperatorNamespacePath() != "" {
+		c.logger.Trace("creating operator namespace", "path", c.OperatorNamespacePath())
+		_, err := createNamespace(namespace.RootContext(ctx), c, namespace.Canonicalize(c.OperatorNamespacePath()), nil)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create operator namespace: %w", err)
+		}
 	}
 
 	// Save the configuration regardless, but only generate a key if it's not
@@ -441,6 +456,23 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	return results, nil
+}
+
+// ValidateMultiSealConfig is an utility method for verifying SealGenerationInfo.
+// Its purpose is to read the existing SealGenerationInfo from storage, if any,
+// and to determine whether there are partially wrapped paths.
+// Argument onInit indicates whether Vault is being initialized and thus creating
+// the initial barrier seal.
+func (c *Core) ValidateMultiSealConfig(ctx context.Context, onInit bool) error {
+	existingSgi, err := PhysicalSealGenInfo(ctx, c.PhysicalAccess())
+	if err != nil {
+		return fmt.Errorf("error reading existing seal generation info from storage: %w", err)
+	}
+	hasPartiallyWrappedPaths, err := HasPartiallyWrappedPaths(ctx, c.PhysicalAccess())
+	if err != nil {
+		return fmt.Errorf("cannot determine whether partially wrapped entries in storage: %w", err)
+	}
+	return seal.ValidateMultiSealGenerationInfo(onInit, c.seal.GetAccess().GetSealGenerationInfo(), existingSgi, hasPartiallyWrappedPaths)
 }
 
 // UnsealWithStoredKeys performs auto-unseal using stored keys. An error

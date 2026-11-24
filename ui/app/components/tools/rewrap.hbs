@@ -3,16 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Rewrap Token
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header
+  @title="Rewrap token"
+  @description="Migrate a wrapped secret to a new token to extend its lifetime without exposing the underlying secret data."
+>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.rewrappedToken}}
-  <div class="box is-sideless is-fullwidth is-marginless">
+  <div class="box is-fullwidth is-marginless">
     <div class="field">
       <label class="is-label">Rewrapped token</label>
       <Hds::Copy::Snippet
@@ -28,7 +29,7 @@
   </div>
 {{else}}
   <form {{on "submit" this.handleSubmit}}>
-    <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="box is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="rewrap" />
       <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field">

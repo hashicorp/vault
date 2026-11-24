@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
@@ -93,6 +93,38 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       this.transitionStub.calledOnceWith('vault.cluster.secrets.backend.ldap.roles.role.details'),
       'Transitions to correct route on done'
     );
+  });
+
+  test('it should render "Never" for last Vault rotation when a static role has not been rotated', async function (assert) {
+    const staticCreds = {
+      type: 'static',
+      username: 'foobar',
+      password: 'secret',
+      rotation_period: 0,
+      ttl: 0,
+    };
+    // Vault returns Go's zero time for a static role that has never been rotated.
+    const neverRotated = [
+      ['zero time', '0001-01-01T00:00:00Z'],
+      ['null', null],
+      ['missing', undefined],
+    ];
+
+    for (const [description, lastVaultRotation] of neverRotated) {
+      this.creds = { ...staticCreds, last_vault_rotation: lastVaultRotation };
+
+      await render(
+        hbs`<Page::Role::Credentials @credentials={{this.creds}} @breadcrumbs={{this.breadcrumbs}} />`,
+        { owner: this.engine }
+      );
+
+      assert
+        .dom(GENERAL.infoRowLabel('Last Vault rotation'))
+        .exists(`Last Vault rotation row renders when value is ${description}`);
+      assert
+        .dom(GENERAL.infoRowValue('Last Vault rotation'))
+        .hasText('Never', `Last Vault rotation renders Never when value is ${description}`);
+    }
   });
 
   test('it should render fields for dynamic role', async function (assert) {

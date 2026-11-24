@@ -15,6 +15,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -26,7 +27,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
 	"reflect"
 	"slices"
 	"sort"
@@ -36,9 +36,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"
@@ -51,6 +51,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -259,6 +260,41 @@ func TestPKI_DeviceCert(t *testing.T) {
 	if notAfter != "9999-12-31T23:59:59Z" {
 		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
 	}
+}
+
+// TestPKI_NotAfterRespectsRoleMaxTTL tests that the not_after time is respected and does not exceed the role's max_ttl.
+func TestPKI_NotAfterRespectsRoleMaxTTL(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+		"ttl":         "3h",
+	})
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+		"allowed_domains":    "example.com",
+		"allow_bare_domains": true,
+		"max_ttl":            "1h",
+	})
+	require.NoError(t, err)
+
+	now := time.Now()
+	// Issue a certificate with a requested not_after time that exceeds the role's max_ttl.
+	resp, err := CBWrite(b, s, "issue/example", map[string]interface{}{
+		"common_name": "example.com",
+		"not_after":   now.Add(2 * time.Hour).Format(time.RFC3339),
+	})
+	require.NoError(t, err)
+
+	var certBundle certutil.CertBundle
+	err = mapstructure.Decode(resp.Data, &certBundle)
+	require.NoError(t, err)
+
+	parsedCertBundle, err := certBundle.ToParsedCertBundle()
+	require.NoError(t, err)
+
+	require.WithinDuration(t, now.Add(time.Hour), parsedCertBundle.Certificate.NotAfter, 5*time.Second)
 }
 
 func TestBackend_InvalidParameter(t *testing.T) {
@@ -936,7 +972,7 @@ func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int)
 
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
-			Country:      []string{"MyCountry"},
+			Country:      []string{"MC"},
 			PostalCode:   []string{"MyPostalCode"},
 			SerialNumber: "MySerialNumber",
 			CommonName:   "my@example.com",
@@ -1561,10 +1597,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// Country tests
 	{
-		roleVals.Country = []string{"foo"}
+		roleVals.Country = []string{"jp"}
 		addTests(getCountryCheck(roleVals))
 
-		roleVals.Country = []string{"foo", "bar"}
+		roleVals.Country = []string{"us", "ca"}
 		addTests(getCountryCheck(roleVals))
 	}
 	// OU tests
@@ -2414,9 +2450,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 
 	// Now check signing a certificate using the not_after input using the Y10K value
+	// Note that we do not specify the role in the sign-verbatim request, so the role's max TTL does not apply
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "sign-verbatim/test",
+		Path:      "sign-verbatim",
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"csr":       pemCSR,
@@ -3646,8 +3683,6 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
@@ -3771,8 +3806,6 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
@@ -3904,8 +3937,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Mount PKI.
@@ -3995,6 +4027,8 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"issuer_ref":                         "default",
 		"cn_validations":                     []interface{}{"email", "hostname"},
 		"allowed_user_ids":                   []interface{}{},
+		"csr_extra_names_oids":               []interface{}{},
+		"parameter_set":                      "",
 	}
 
 	if issuing.MetadataPermitted {
@@ -4152,8 +4186,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
@@ -5633,8 +5666,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Mount PKI.
@@ -6726,11 +6758,13 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "robot")
 
-	// 6. Use a glob.
+	// 6. Use a glob; also enable csr_extra_names_oids so the sign/ sub-test below
+	// can read the userID from the CSR subject.
 	resp, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
-		"allowed_user_ids": "human*",
-		"key_type":         "ec",
-		"use_csr_sans":     true, // setup for further testing.
+		"allowed_user_ids":     "human*",
+		"csr_extra_names_oids": certutil.SubjectPilotUserIDAttributeOID.String(),
+		"key_type":             "ec",
+		"use_csr_sans":         true, // setup for further testing.
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed setting up role")
 
@@ -6803,6 +6837,148 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
 }
 
+// TestCsrExtraNamesOIDsOnSignEndpoint verifies csr_extra_names_oids behaviour on
+// the REST sign/:role endpoint for the userID OID.
+//
+// Cases covered:
+//   - OID listed + value permitted by allowed_user_ids → userID appears in cert
+//   - OID listed + value NOT permitted by allowed_user_ids → request rejected
+//   - OID not listed → userID silently dropped (current behaviour preserved)
+func TestCsrExtraNamesOIDsOnSignEndpoint(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Vault Root CA",
+		"key_type":    "ec",
+		"ttl":         "7200h",
+	})
+	require.NoError(t, err)
+
+	userIDOID := certutil.SubjectPilotUserIDAttributeOID
+
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{Type: userIDOID, Value: "alice"},
+			},
+		},
+	}
+	_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+	// 1. OID listed, value permitted — userID must appear in the issued cert.
+	resp, err := CBWrite(b, s, "roles/with-oid", map[string]interface{}{
+		"allow_any_name":       true,
+		"allowed_user_ids":     "alice",
+		"csr_extra_names_oids": userIDOID.String(),
+		"key_type":             "ec",
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/with-oid", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected sign to succeed")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "alice")
+
+	// 2. OID listed, value NOT permitted — request must be rejected.
+	resp, err = CBWrite(b, s, "roles/restricted", map[string]interface{}{
+		"allow_any_name":       true,
+		"allowed_user_ids":     "bob",
+		"csr_extra_names_oids": userIDOID.String(),
+		"key_type":             "ec",
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/restricted", map[string]interface{}{
+		"csr": csrPem,
+	})
+	require.Error(t, err, "expected rejection for disallowed userID")
+	require.True(t, resp.IsError())
+	require.Contains(t, resp.Data["error"].(string), "is not allowed by this role")
+
+	// 3. OID NOT listed — userID from the CSR must be silently dropped.
+	// The sign still succeeds; the userID is simply not present in the cert.
+	resp, err = CBWrite(b, s, "roles/no-oid", map[string]interface{}{
+		"allow_any_name":   true,
+		"allowed_user_ids": "alice",
+		"key_type":         "ec",
+		// csr_extra_names_oids deliberately omitted
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/no-oid", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected sign to succeed even without OID listed")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "" /* dropped — OID not in csr_extra_names_oids */)
+}
+
+// TestCsrExtraNamesOIDsUnrelatedOID verifies that a non-userID OID listed in
+// csr_extra_names_oids passes through to the issued certificate, and that an
+// OID not in the list is silently dropped.
+//
+// OIDs are under the id-on arc (1.3.6.1.5.5.7.13) following the convention
+// used for test OIDs in this package.
+func TestCsrExtraNamesOIDsUnrelatedOID(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Vault Root CA",
+		"key_type":    "ec",
+		"ttl":         "7200h",
+	})
+	require.NoError(t, err)
+
+	// Test OIDs under the id-on arc (1.3.6.1.5.5.7.13).
+	listedOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 1}
+	unlistedOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 2}
+
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{Type: listedOID, Value: "listed-value"},
+				{Type: unlistedOID, Value: "unlisted-value"},
+			},
+		},
+	}
+	_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+	resp, err := CBWrite(b, s, "roles/custom-oid", map[string]interface{}{
+		"allow_any_name":       true,
+		"csr_extra_names_oids": listedOID.String(), // only the first OID
+		"key_type":             "ec",
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/custom-oid", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected sign to succeed")
+
+	cert := parseCert(t, resp.Data["certificate"].(string))
+
+	var foundListed, foundUnlisted bool
+	for _, attr := range cert.Subject.Names {
+		switch {
+		case attr.Type.Equal(listedOID):
+			foundListed = true
+			require.Equal(t, "listed-value", attr.Value, "listed OID value mismatch")
+		case attr.Type.Equal(unlistedOID):
+			foundUnlisted = true
+		}
+	}
+	require.True(t, foundListed, "listed OID must appear in issued certificate subject")
+	require.False(t, foundUnlisted, "unlisted OID must NOT appear in issued certificate subject")
+}
+
 // TestStandby_Operations test proper forwarding for PKI requests from a standby node to the
 // active node within a cluster.
 func TestStandby_Operations(t *testing.T) {
@@ -6812,8 +6988,6 @@ func TestStandby_Operations(t *testing.T) {
 		},
 	}, nil, teststorage.InmemBackendSetup)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	standbyCores := testhelpers.DeriveStandbyCores(t, cluster)
@@ -7042,8 +7216,7 @@ func TestProperAuthing(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 	token := client.Token()
 
@@ -7084,6 +7257,7 @@ func TestProperAuthing(t *testing.T) {
 	serial := resp.Data["serial_number"].(string)
 	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
 	acmeKeyId := "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="
+	caKeyUUID := "deadbeef-cafe-4000-8000-000000000000"
 	paths := map[string]pathAuthChecker{
 		"acme/mgmt/account/keyid/":               shouldBeAuthed,
 		"acme/mgmt/account/keyid/" + acmeKeyId:   shouldBeAuthed,
@@ -7175,6 +7349,7 @@ func TestProperAuthing(t *testing.T) {
 		"keys/generate/exported":                 shouldBeAuthed,
 		"keys/generate/kms":                      shouldBeAuthed,
 		"keys/import":                            shouldBeAuthed,
+		"keys/" + caKeyUUID + "/export":          shouldBeAuthed,
 		"ocsp":                                   shouldBeUnauthedWriteOnly,
 		"ocsp/dGVzdAo=":                          shouldBeUnauthedReadList,
 		"revoke":                                 shouldBeAuthed,
@@ -7294,6 +7469,9 @@ func TestProperAuthing(t *testing.T) {
 		}
 		if strings.Contains(raw_path, "external-policy/") && strings.Contains(raw_path, "{policy}") {
 			raw_path = strings.ReplaceAll(raw_path, "{policy}", "a-policy")
+		}
+		if strings.Contains(raw_path, "{ca_key_uuid}") {
+			raw_path = strings.ReplaceAll(raw_path, "{ca_key_uuid}", caKeyUUID)
 		}
 
 		raw_path = entProperAuthingPathReplacer(raw_path)
@@ -7766,8 +7944,8 @@ func TestIssuance_DeltaCRLDistributionPoint(t *testing.T) {
 		"-text",
 		"-in", filePath,
 	}
-	out, err := exec.Command(opensslCmd, args...).CombinedOutput()
-	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+
+	out := runOpenSSL(t, log, opensslCmd, args)
 	require.Regexp(t, `\s+X509v3 Freshest CRL:\s+Full Name:\s+URI:http://example.com/crl/delta\s+Full Name:\s+URI:http://backup\.example\.com/crl/delta`, string(out))
 }
 
@@ -7898,4 +8076,463 @@ func TestIssuance_ValidityPeriodContainedByCA(t *testing.T) {
 			})
 		})
 	}
+}
+
+// TestBackend_SignIntermediate_IgnoresCSR_BasicConstraint verifies that when signing an intermediate CSR,
+// with use_csr_values set to true, we ignore the CSR's Basic constraint extension as we do
+// not properly support max_path_length.
+func TestBackend_SignIntermediate_IgnoresCSR_BasicConstraint(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate root CA with max_path_length of 2
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name":     "Root CA",
+		"ttl":             "180h",
+		"max_path_length": 2,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Generate private key for CSR
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed to generate private key")
+
+	bcExt, err := certutil.CreateBasicConstraintExtension(true, 5)
+	require.NoError(t, err, "failed to create basic constraint extension")
+
+	// Create CSR template
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "Intermediate CA",
+		},
+		ExtraExtensions: []pkix.Extension{bcExt},
+	}
+
+	// Create the CSR
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privateKey)
+	require.NoError(t, err, "failed to create CSR")
+
+	csrPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrDER,
+	})
+
+	// Sign the intermediate CSR
+	signParams := map[string]interface{}{
+		"csr":            string(csrPEM),
+		"common_name":    "Intermediate CA",
+		"use_csr_values": true,
+		"ttl":            "87600h",
+	}
+
+	resp, err = CBWrite(b, s, "root/sign-intermediate", signParams)
+	require.NoError(t, err, "failed to sign intermediate")
+	require.NotNil(t, resp, "expected response")
+	require.NotEmpty(t, resp.Data["certificate"], "expected certificate in response")
+
+	// Parse the signed certificate
+	certPEM := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certPEM))
+	require.NotNil(t, block, "failed to decode certificate PEM")
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err, "failed to parse certificate")
+
+	// Verify Basic Constraints extension exists and is critical
+	hasBasicConstraints := false
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			hasBasicConstraints = true
+			require.True(t, ext.Critical, "Basic Constraints should be marked as critical")
+			isCA, maxPathLen, err := certutil.ParseBasicConstraintExtension(ext)
+			require.NoError(t, err, "failed to parse Basic Constraints extension")
+			require.True(t, isCA, "Basic Constraints should be marked as CA")
+			require.Equal(t, 1, maxPathLen, "max_path_length should be set to 1, root of 2-1")
+			break
+		}
+	}
+	require.True(t, hasBasicConstraints, "certificate should have Basic Constraints extension")
+}
+
+// TestBackend_IDNWithWildcards_CommonName tests IDNA conversion and wildcard validation
+// in the Common Name (CN) field using both /issue and /sign endpoints.
+func TestBackend_IDNWithWildcards_CommonName(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate root CA
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root CA",
+		"ttl":         "40h",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Create a role that allows wildcards and any name
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":              true,
+		"allow_wildcard_certificates": true,
+		"enforce_hostnames":           true,
+		"max_ttl":                     "2h",
+		"key_type":                    "ec",
+	})
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name           string
+		commonName     string
+		expectDNSNames []string
+		expectError    bool
+	}{
+		{
+			name:           "ASCII wildcard in CN",
+			commonName:     "*.example.com",
+			expectDNSNames: []string{"*.example.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - German umlaut",
+			commonName:     "*.müller.com",
+			expectDNSNames: []string{"*.xn--mller-kva.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - Japanese",
+			commonName:     "*.日本.com",
+			expectDNSNames: []string{"*.xn--wgv71a.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - Chinese",
+			commonName:     "*.中国.com",
+			expectDNSNames: []string{"*.xn--fiqs8s.com"},
+		},
+		{
+			name:           "IDN with wildcard in CN - Arabic",
+			commonName:     "*.مثال.com",
+			expectDNSNames: []string{"*.xn--mgbh0fb.com"},
+		},
+		{
+			name:           "IDN with multiple labels and wildcard",
+			commonName:     "*.subdomain.müller.com",
+			expectDNSNames: []string{"*.subdomain.xn--mller-kva.com"},
+		},
+		// Invalid hostname test cases
+		{
+			name:        "Invalid - wildcard not in leftmost position",
+			commonName:  "sub.*.example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - multiple wildcards",
+			commonName:  "*.*.example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - wildcard in IDN not in leftmost position",
+			commonName:  "sub.*.müller.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - empty label in hostname",
+			commonName:  "example..com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label starting with hyphen",
+			commonName:  "-example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label ending with hyphen",
+			commonName:  "example-.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label too long (>63 chars)",
+			commonName:  "*.verylonglabelverylonglabelverylonglabelverylonglabelverylonglabel.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - hostname starting with dot",
+			commonName:  ".example.com",
+			expectError: true,
+		},
+	}
+
+	for _, useCSR := range []bool{false, true} {
+		testType := "issue"
+		if useCSR {
+			testType = "sign"
+		}
+		t.Run(testType, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					var resp *logical.Response
+					var err error
+
+					if useCSR {
+						// Generate a CSR with the test common name
+						csrTemplate := &x509.CertificateRequest{
+							Subject: pkix.Name{
+								CommonName: tc.commonName,
+							},
+						}
+						_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+						resp, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+							"csr": csrPem,
+						})
+					} else {
+						// Use direct issue
+						resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+							"common_name": tc.commonName,
+						})
+					}
+
+					if tc.expectError {
+						require.Error(t, err, "expected error for test case: %s", tc.name)
+						return
+					}
+
+					require.NoError(t, err, "unexpected error for test case: %s", tc.name)
+					require.NotNil(t, resp, "response should not be nil for test case: %s", tc.name)
+					require.NotNil(t, resp.Data["certificate"], "certificate should be present for test case: %s", tc.name)
+
+					// Parse the certificate to verify DNS names
+					certPEM := resp.Data["certificate"].(string)
+					block, _ := pem.Decode([]byte(certPEM))
+					require.NotNil(t, block, "failed to decode PEM for test case: %s", tc.name)
+
+					cert, err := x509.ParseCertificate(block.Bytes)
+					require.NoError(t, err, "failed to parse certificate for test case: %s", tc.name)
+
+					// Verify DNS names match expected (order may vary, so use ElementsMatch)
+					require.ElementsMatch(t, tc.expectDNSNames, cert.DNSNames,
+						"DNS names mismatch for test case: %s\nExpected: %v\nGot: %v",
+						tc.name, tc.expectDNSNames, cert.DNSNames)
+				})
+			}
+		})
+	}
+}
+
+// TestBackend_IDNWithWildcards_AltNames tests IDNA conversion and wildcard validation
+// in the alternative names field using both /issue and /sign endpoints.
+func TestBackend_IDNWithWildcards_AltNames(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate root CA
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root CA",
+		"ttl":         "40h",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Create a role that allows wildcards and any name
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":              true,
+		"allow_subdomains":            true,
+		"allow_glob_domains":          true,
+		"allow_wildcard_certificates": true,
+		"enforce_hostnames":           true,
+		"max_ttl":                     "2h",
+		"key_type":                    "ec",
+	})
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name           string
+		commonName     string
+		altNames       string
+		expectDNSNames []string
+		expectError    bool
+	}{
+		{
+			name:           "ASCII wildcard in alt_names",
+			commonName:     "example.com",
+			altNames:       "*.test.com",
+			expectDNSNames: []string{"example.com", "*.test.com"},
+		},
+		{
+			name:           "Mixed ASCII and IDN with wildcards in alt_names",
+			commonName:     "example.com",
+			altNames:       "*.example.com,*.müller.de",
+			expectDNSNames: []string{"example.com", "*.example.com", "*.xn--mller-kva.de"},
+		},
+		{
+			name:           "Multiple IDN domains with wildcards in alt_names",
+			commonName:     "example.com",
+			altNames:       "*.日本.com,*.中国.cn",
+			expectDNSNames: []string{"example.com", "*.xn--wgv71a.com", "*.xn--fiqs8s.cn"},
+		},
+		{
+			name:           "Complex IDN with multiple subdomains and wildcard",
+			commonName:     "example.com",
+			altNames:       "*.api.v2.müller.com",
+			expectDNSNames: []string{"example.com", "*.api.v2.xn--mller-kva.com"},
+		},
+		{
+			name:           "IDN with trailing dot and wildcard",
+			commonName:     "example.com",
+			altNames:       "*.müller.com.",
+			expectDNSNames: []string{"example.com", "*.xn--mller-kva.com."},
+		},
+		{
+			name:           "Invalid - wildcard in alt_names not in leftmost position",
+			commonName:     "example.com",
+			altNames:       "sub*.test.com",
+			expectDNSNames: []string{"example.com", "sub*.test.com"},
+		},
+		// Invalid hostname test cases
+		{
+			name:        "Invalid - wildcard in alt_names not in leftmost position",
+			commonName:  "example.com",
+			altNames:    "sub*.test.com,sub.*.test.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - multiple wildcards in alt_names",
+			commonName:  "example.com",
+			altNames:    "*.*.müller.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - wildcard in IDN not in leftmost position",
+			commonName:  "example.com",
+			altNames:    "sub.*.müller.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - empty label in hostname",
+			commonName:  "example.com",
+			altNames:    "example..com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label starting with hyphen",
+			commonName:  "example.com",
+			altNames:    "-example.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label ending with hyphen",
+			commonName:  "example.com",
+			altNames:    "example-.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - label too long (>63 chars)",
+			commonName:  "example.com",
+			altNames:    "*.verylonglabelverylonglabelverylonglabelverylonglabelverylonglabel.com",
+			expectError: true,
+		},
+		{
+			name:        "Invalid - hostname starting with dot",
+			commonName:  "example.com",
+			altNames:    ".example.com",
+			expectError: true,
+		},
+	}
+
+	for _, useCSR := range []bool{false, true} {
+		testType := "issue"
+		if useCSR {
+			testType = "sign"
+		}
+		t.Run(testType, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					var resp *logical.Response
+					var err error
+
+					if useCSR {
+						// Generate a CSR with the test common name and alt names
+						// Note: CSRs include DNS SANs in the request, and they must be in Punycode (ASCII)
+						var dnsNames []string
+						for _, name := range strings.Split(tc.altNames, ",") {
+							if name == "" {
+								continue
+							}
+							// CSRs require ASCII (Punycode) SANs. Unicode 16 IDNA rules
+							// reject trailing dots, so strip and restore around conversion.
+							fqdn := strings.HasSuffix(name, ".")
+							out, err := idna.ToASCII(strings.TrimSuffix(name, "."))
+							if err != nil {
+								// Conversion failed; use the original so Vault can reject it.
+								dnsNames = append(dnsNames, name)
+							} else {
+								if fqdn {
+									out += "."
+								}
+								dnsNames = append(dnsNames, out)
+							}
+						}
+
+						csrTemplate := &x509.CertificateRequest{
+							Subject: pkix.Name{
+								CommonName: tc.commonName,
+							},
+							DNSNames: dnsNames,
+						}
+						_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+						resp, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+							"csr": csrPem,
+						})
+					} else {
+						// Use direct issue
+						resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+							"common_name": tc.commonName,
+							"alt_names":   tc.altNames,
+						})
+					}
+
+					if tc.expectError {
+						require.Error(t, err, "expected error for test case: %s", tc.name)
+						return
+					}
+
+					require.NoError(t, err, "unexpected error for test case: %s", tc.name)
+					require.NotNil(t, resp, "response should not be nil for test case: %s", tc.name)
+					require.NotNil(t, resp.Data["certificate"], "certificate should be present for test case: %s", tc.name)
+
+					// Parse the certificate to verify DNS names
+					certPEM := resp.Data["certificate"].(string)
+					block, _ := pem.Decode([]byte(certPEM))
+					require.NotNil(t, block, "failed to decode PEM for test case: %s", tc.name)
+
+					cert, err := x509.ParseCertificate(block.Bytes)
+					require.NoError(t, err, "failed to parse certificate for test case: %s", tc.name)
+
+					// Verify DNS names match expected (order may vary, so use ElementsMatch)
+					require.ElementsMatch(t, tc.expectDNSNames, cert.DNSNames,
+						"DNS names mismatch for test case: %s\nExpected: %v\nGot: %v",
+						tc.name, tc.expectDNSNames, cert.DNSNames)
+				})
+			}
+		})
+	}
+}
+
+func stringSliceContainsAny(sl []string, substr string) bool {
+	return slices.ContainsFunc(sl, func(s string) bool { return strings.Contains(s, substr) })
+}
+
+func nilFunction(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
+	return nil, nil
+}
+
+// TestBackend_MetricsWrapManagesNilResp validates that when wrapping a function that returns nil, nil (no error, no
+// response), we pass on the lack of error and lack of response (and don't panic).
+func TestBackend_MetricsWrapManagesNilResp(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	req := &logical.Request{Storage: s}
+	fieldData := &framework.FieldData{Schema: map[string]*framework.FieldSchema{}, Raw: map[string]interface{}{}}
+
+	wrappedFunc := b.metricsWrap("huh", roleOptional, nilFunction)
+	resp, err := wrappedFunc(context.Background(), req, fieldData)
+	require.NoError(t, err)
+	require.Nil(t, resp)
 }

@@ -10,20 +10,10 @@
       @onChange={{this.updateStanzas}}
       @onDelete={{fn this.deleteStanza stanza}}
       @stanza={{stanza}}
+      @renderValidations={{@renderValidations}}
       class="has-bottom-margin-m"
     />
   {{/each}}
 
   <Hds::Button @icon="plus" @text="Add rule" @color="secondary" {{on "click" this.addStanza}} data-test-button="Add rule" />
 </div>
-
-<Hds::Separator @spacing="0" />
-
-<Hds::Accordion @size="medium" as |A|>
-  <A.Item data-test-accordion="Automation snippets">
-    <:toggle>Automation snippets</:toggle>
-    <:content>
-      <CodeGenerator::AutomationSnippets @snippets={{this.snippets}} />
-    </:content>
-  </A.Item>
-</Hds::Accordion>

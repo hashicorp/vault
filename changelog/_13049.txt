@@ -1,0 +1,3 @@
+```release-note:improvement
+consumption-billing: Enabled `sys/billing/overview` endpoint in admin namespace.
+```

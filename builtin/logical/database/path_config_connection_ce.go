@@ -145,9 +145,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			Config:           config.ConnectionDetails,
 			VerifyConnection: config.VerifyConnection,
 		}
-		initResp, err := dbw.Initialize(ctx, initReq)
+		// verify_connection can perform a live handshake here, so bound how long
+		// Vault waits before failing the write and releasing the caller.
+		initResp, err := b.initializeConnection(ctx, dbw, initReq)
 		if err != nil {
-			dbw.Close()
+			b.closeDatabaseWrapperAfterInitError(dbw, err)
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 		config.ConnectionDetails = initResp.Config
@@ -222,6 +224,12 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 					resp.AddWarning("Password found in connection_url, use a templated url to enable root rotation and prevent read access to password information.")
 				}
 			}
+		}
+
+		// Warn if a custom username_template references untrusted DisplayName
+		// without bounding its length via truncate.
+		if w := displayNameTemplateWarning(config.ConnectionDetails); w != "" {
+			resp.AddWarning(w)
 		}
 
 		// If using a legacy DB plugin and set the `password_policy` field, send a warning to the user indicating
@@ -365,6 +373,11 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		delete(config.ConnectionDetails, "service_account_json")
 
 		resp := &logical.Response{}
+
+		// Warn if a username_template references untrusted DisplayName without bounding its length via truncate.
+		if w := displayNameTemplateWarning(config.ConnectionDetails); w != "" {
+			resp.AddWarning(w)
+		}
 		if dbi, err := b.GetConnectionSkipVerify(ctx, req.Storage, name); err == nil {
 			config.RunningPluginVersion = dbi.runningPluginVersion
 			if config.PluginVersion != "" && config.PluginVersion != config.RunningPluginVersion {

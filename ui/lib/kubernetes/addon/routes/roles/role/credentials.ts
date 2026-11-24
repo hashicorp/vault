@@ -32,6 +32,8 @@ export default class KubernetesRoleCredentialsRoute extends Route {
 
     const { currentPath } = this.secretMountPath;
     controller.breadcrumbs = [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'overview' },
       { label: 'Roles', route: 'roles', model: currentPath },
       { label: resolvedModel.roleName, route: 'roles.role.details' },

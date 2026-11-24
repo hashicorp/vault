@@ -1,0 +1,3 @@
+```release-note:improvement
+core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+```

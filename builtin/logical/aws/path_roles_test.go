@@ -4,7 +4,6 @@
 package aws
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"strconv"
@@ -12,7 +11,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 const adminAccessPolicyARN = "arn:aws:iam::aws:policy/AdministratorAccess"
@@ -22,9 +23,11 @@ func TestBackend_PathListRoles(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -43,13 +46,15 @@ func TestBackend_PathListRoles(t *testing.T) {
 
 	for i := 1; i <= 10; i++ {
 		roleReq.Path = "roles/testrole" + strconv.Itoa(i)
-		resp, err = b.HandleRequest(context.Background(), roleReq)
+		resp, err = b.HandleRequest(t.Context(), roleReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: role creation failed. resp:%#v\n err:%v", resp, err)
 		}
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	require.Equal(t, 10, or.NumObservationsByType(ObservationTypeAWSRoleWrite))
+
+	resp, err = b.HandleRequest(t.Context(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
 		Storage:   config.StorageView,
@@ -62,7 +67,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 		t.Fatalf("failed to list all 10 roles")
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(t.Context(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles/",
 		Storage:   config.StorageView,
@@ -225,9 +230,10 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -244,20 +250,25 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      roleData,
 	}
-	resp, err := b.HandleRequest(context.Background(), request)
+	resp, err := b.HandleRequest(t.Context(), request)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: role creation failed. resp:%#v\nerr:%v", resp, err)
 	}
+
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeAWSRoleWrite))
 
 	request = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + roleName,
 		Storage:   config.StorageView,
 	}
-	resp, err = b.HandleRequest(context.Background(), request)
+	resp, err = b.HandleRequest(t.Context(), request)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: reading role failed. resp:%#v\nerr:%v", resp, err)
 	}
+
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeAWSRoleRead))
+
 	if resp.Data["credential_type"] != iamUserCred {
 		t.Errorf("bad: expected credential_type of %s, got %s instead", iamUserCred, resp.Data["credential_type"])
 	}
@@ -269,9 +280,11 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -286,7 +299,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      roleData,
 	}
-	resp, err := b.HandleRequest(context.Background(), request)
+	resp, err := b.HandleRequest(t.Context(), request)
 	if err == nil && (resp == nil || !resp.IsError()) {
 		t.Fatalf("bad: expected role creation to fail due to bad credential_type, but it didn't. resp:%#v\nerr:%v", resp, err)
 	}
@@ -297,10 +310,12 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 		"permissions_boundary_arn": "arn:aws:notiam::aws:policy/FooBar",
 	}
 	request.Data = roleData
-	resp, err = b.HandleRequest(context.Background(), request)
+	resp, err = b.HandleRequest(t.Context(), request)
 	if err == nil && (resp == nil || !resp.IsError()) {
 		t.Fatalf("bad: expected role creation to fail due to malformed permissions_boundary_arn, but it didn't. resp:%#v\nerr:%v", resp, err)
 	}
+
+	require.Equal(t, 0, or.NumObservationsByType(ObservationTypeAWSRoleWrite))
 }
 
 func TestValidateAWSManagedPolicy(t *testing.T) {
@@ -507,4 +522,50 @@ func TestRoleEntryValidationFederationTokenCred(t *testing.T) {
 	if roleEntry.validate() == nil {
 		t.Errorf("bad: invalid roleEntry with unrecognized PermissionsBoundary %#v passed validation", roleEntry)
 	}
+}
+
+// TestRoleWriteObservationMetadata verifies that when a role is created, an observation
+// is recorded with the correct metadata.
+func TestRoleWriteObservationMetadata(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	or := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = or
+
+	b := Backend(config)
+	if err := b.Setup(t.Context(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	roleName := "test_observation_role"
+	roleData := map[string]interface{}{
+		"credential_type": assumedRoleCred,
+		"role_arns":       []string{"arn:aws:iam::123456789012:role/TestRole"},
+		"default_sts_ttl": 3600,
+		"max_sts_ttl":     7200,
+	}
+
+	request := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + roleName,
+		Storage:   config.StorageView,
+		Data:      roleData,
+	}
+
+	resp, err := b.HandleRequest(t.Context(), request)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: role creation failed. resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Verify observation was recorded
+	require.Equal(t, 1, or.NumObservationsByType(ObservationTypeAWSRoleWrite))
+
+	// Get the observation and verify metadata
+	observations := or.ObservationsByType(ObservationTypeAWSRoleWrite)
+	require.Len(t, observations, 1)
+
+	observation := observations[0]
+	require.NotNil(t, observation.Data)
+	require.Equal(t, roleName, observation.Data["role_name"])
+	require.Equal(t, []string{assumedRoleCred}, observation.Data["credential_types"])
 }

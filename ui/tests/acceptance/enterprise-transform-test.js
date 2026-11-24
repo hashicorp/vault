@@ -16,7 +16,7 @@ import transformationsPage from 'vault/tests/pages/secrets/backend/transform/tra
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
 import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
-import { runCmd } from '../helpers/commands';
+import { mountEngineCmd, runCmd } from '../helpers/commands';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -62,6 +62,62 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     return login();
   });
 
+  for (const { tab, prefix } of [
+    { tab: 'Transformations', prefix: '' },
+    { tab: 'Roles', prefix: 'role/' },
+    { tab: 'Templates', prefix: 'template/' },
+    { tab: 'Alphabets', prefix: 'alphabet/' },
+  ]) {
+    test(`it filters Transform ${tab.toLowerCase()} by name`, async function (assert) {
+      const backend = `transform-${uuidv4()}`;
+      const filterInput = '[data-test-component="navigate-input"]';
+      const matchingItem = SES.secretLink(`${prefix}test-item`);
+      const otherItem = SES.secretLink(`${prefix}other-item`);
+      await runCmd(mountEngineCmd('transform', backend));
+
+      try {
+        for (const name of ['test-item', 'other-item']) {
+          await runCmd(`write ${backend}/alphabet/${name} alphabet=abcdefg`);
+          await runCmd(`write ${backend}/template/${name} type=regex pattern="([a-g]+)" alphabet=${name}`);
+          await runCmd(
+            `write ${backend}/transformations/masking/${name} template=${name} masking_character=X allowed_roles=${name}`
+          );
+          await runCmd(`write ${backend}/role/${name} transformations=${name}`);
+        }
+        await visit(`/vault/secrets-engines/${backend}/list`);
+        await click(GENERAL.secretTab(tab));
+        assert.dom(matchingItem).exists('The matching item appears before filtering');
+        assert.dom(otherItem).exists('The other item appears before filtering');
+
+        await fillIn(filterInput, 'test-item');
+        assert.dom(matchingItem).exists('An exact name match remains visible');
+        assert.dom(otherItem).doesNotExist('Nonmatching items are hidden');
+
+        await fillIn(filterInput, 'OTHER');
+        assert.dom(otherItem).exists('Partial matching is case-insensitive');
+        assert.dom(matchingItem).doesNotExist('The previous match is no longer visible');
+
+        await fillIn(filterInput, 'missing-item');
+        assert.dom(SES.secretLink()).doesNotExist('No items appear for an unmatched filter');
+        assert
+          .dom(GENERAL.emptyStateTitle)
+          .includesText(`There are no ${tab.toLowerCase()} matching "missing-item".`);
+
+        if (tab === 'Templates' || tab === 'Alphabets') {
+          await fillIn(filterInput, 'BUILTIN');
+          assert.dom('[data-test-view-only-list-item]').exists('Built-in items can also be filtered');
+          assert.dom(SES.secretLink()).doesNotExist('Custom items do not match the built-in filter');
+        }
+
+        await fillIn(filterInput, '');
+        assert.dom(matchingItem).exists('Clearing the filter restores the matching item');
+        assert.dom(otherItem).exists('Clearing the filter restores the other item');
+      } finally {
+        await runCmd(`delete sys/mounts/${backend}`);
+      }
+    });
+  }
+
   test('it transitions to list route after mount success', async function (assert) {
     assert.expect(1);
     const engine = engineDisplayData('transform');
@@ -69,7 +125,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
-    await mountBackend(engine.type, engine.type);
+    await mountBackend(engine.type, engine.type, true);
 
     assert.strictEqual(
       currentRouteName(),
@@ -90,19 +146,20 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets-engines/${backend}/list`,
       'mounts and redirects to the transformations list page'
     );
-    assert.ok(transformationsPage.isEmpty, 'renders empty state');
+    assert.ok(GENERAL.emptyStateTitle, 'renders empty state');
     assert
-      .dom('.active[data-test-secret-list-tab="Transformations"]')
+      .dom(`.active${GENERAL.secretTab('Transformations')}`)
       .exists('Has Transformations tab which is active');
-    assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
-    assert.dom('[data-test-secret-list-tab="Templates"]').exists('Has Templates tab');
-    assert.dom('[data-test-secret-list-tab="Alphabets"]').exists('Has Alphabets tab');
+    assert.dom(GENERAL.secretTab('Roles')).exists('Has Roles tab');
+    assert.dom(GENERAL.secretTab('Templates')).exists('Has Templates tab');
+    assert.dom(GENERAL.secretTab('Alphabets')).exists('Has Alphabets tab');
   });
 
   test('it can create a transformation and add itself to the role attached', async function (assert) {
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
     await click(GENERAL.cardContainer('transform'));
+    await click(GENERAL.button('next'));
     await fillIn(GENERAL.inputByAttr('path'), backend);
     await click(GENERAL.submitButton);
     const transformationName = 'foo';
@@ -142,7 +199,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets-engines/${backend}/show/${transformationName}`,
       'redirects to show transformation page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
+    await click(GENERAL.breadcrumbLink(backend));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${backend}/list`,
@@ -154,16 +211,16 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const roleName = 'my-role';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     // create transformation without role
     await newTransformation(backend, 'a-transformation', true);
-    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
+    await click(GENERAL.breadcrumbLink(backend));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${backend}/list`,
       'Links back to list view from breadcrumb'
     );
-    await click('[data-test-secret-list-tab="Roles"]');
+    await click(GENERAL.secretTab('Roles'));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${backend}/list?tab=role`,
@@ -186,7 +243,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets-engines/${backend}/show/role/${roleName}`,
       'redirects to show role page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
+    await click(GENERAL.breadcrumbLink(backend));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${backend}/list?tab=role`,
@@ -198,26 +255,26 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const roleName = 'role-test';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     const transformation = await newTransformation(backend, 'b-transformation', true);
     await newRole(backend, roleName);
     await transformationsPage.visitShow({ backend, id: transformation });
     await settled();
-    assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
+    assert.dom(GENERAL.infoRowValue('Allowed roles')).hasText(roleName);
   });
 
   test('it shows a message if an update fails after save', async function (assert) {
     const roleName = 'role-remove';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     // Create transformation
     const transformation = await newTransformation(backend, 'c-transformation', true);
     // create role
     await newRole(backend, roleName);
     await settled();
     await transformationsPage.visitShow({ backend, id: transformation });
-    assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
+    assert.dom(GENERAL.infoRowValue('Allowed roles')).hasText(roleName);
     // Edit transformation
     await click('[data-test-edit-link]');
     assert.dom('#transformation-edit-modal').exists('Confirmation modal appears');
@@ -230,17 +287,17 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     // remove role
     await settled();
-    await click('#allowed_roles [data-test-selected-list-button="delete"]');
+    await click(`#allowed_roles ${GENERAL.searchSelect.removeSelected}`);
 
     await click(GENERAL.submitButton);
-    assert.dom('.flash-message.is-info').exists('Shows info message since role could not be updated');
+    assert.dom(GENERAL.flashMessage).exists('Shows info message since role could not be updated');
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${backend}/show/${transformation}`,
       'Correctly links to show page for secret'
     );
     assert
-      .dom('[data-test-row-value="Allowed roles"]')
+      .dom(GENERAL.infoRowValue('Allowed roles'))
       .doesNotExist('Allowed roles are no longer on the transformation');
   });
 
@@ -248,8 +305,8 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const templateName = 'my-template';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
-    await click('[data-test-secret-list-tab="Templates"]');
+    await mountBackend('transform', backend, true);
+    await click(GENERAL.secretTab('Templates'));
 
     assert.strictEqual(
       currentURL(),
@@ -283,15 +340,15 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       'Links to template edit page'
     );
     await settled();
-    assert.dom('[data-test-input="name"]').hasAttribute('readonly');
+    assert.dom(GENERAL.inputByAttr('name')).hasAttribute('readonly');
   });
 
   test('it allows creation and edit of an alphabet', async function (assert) {
     const alphabetName = 'vowels-only';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
-    await click('[data-test-secret-list-tab="Alphabets"]');
+    await mountBackend('transform', backend, true);
+    await click(GENERAL.secretTab('Alphabets'));
 
     assert.strictEqual(
       currentURL(),
@@ -312,8 +369,8 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets-engines/${backend}/show/alphabet/${alphabetName}`,
       'redirects to show alphabet page after submit'
     );
-    assert.dom('[data-test-row-value="Name"]').hasText(alphabetName);
-    assert.dom('[data-test-row-value="Alphabet"]').hasText('aeiou');
+    assert.dom(GENERAL.infoRowValue('Name')).hasText(alphabetName);
+    assert.dom(GENERAL.infoRowValue('Alphabet')).hasText('aeiou');
     await alphabetsPage.editLink();
     await settled();
     assert.strictEqual(
@@ -321,6 +378,6 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets-engines/${backend}/edit/alphabet/${alphabetName}`,
       'Links to alphabet edit page'
     );
-    assert.dom('[data-test-input="name"]').hasAttribute('readonly');
+    assert.dom(GENERAL.inputByAttr('name')).hasAttribute('readonly');
   });
 });

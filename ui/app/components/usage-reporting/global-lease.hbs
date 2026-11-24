@@ -1,0 +1,79 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container data-test-vault-reporting-global-lease @hasBorder={{true}} class="ssu-global-lease" ...attributes>
+  <UsageReporting::Base::TitleRow
+    @title="Global lease count quota"
+    @description={{this.description}}
+    @linkText="Documentation"
+    @linkIcon="docs-link"
+    @linkUrl={{this.linkUrl}}
+    @linkTarget="_blank"
+  />
+
+  {{#if this.hasData}}
+    <Hds::Text::Display
+      @size="300"
+      @weight="medium"
+      class="ssu-global-lease__percentage-text"
+      data-test-vault-reporting-global-lease-percentage-text
+    >
+      {{this.percentage}}%
+    </Hds::Text::Display>
+
+    {{#if this.alert}}
+      <Hds::Alert
+        data-test-vault-reporting-global-lease-alert
+        class="ssu-global-lease__alert"
+        @type="compact"
+        @color={{this.alert.color}}
+        as |A|
+      >
+        <A.Description>{{this.alert.description}}</A.Description>
+      </Hds::Alert>
+    {{/if}}
+
+    <div class="ssu-global-lease__progress-wrapper" data-test-vault-reporting-global-lease-meter-chart>
+      <Clients::Charts::CarbonChart
+        @chartData={{this.chartData}}
+        @chartOptions={{this.chartOptions}}
+        @chartType={{this.chartType}}
+      />
+
+      <Hds::Text::Display
+        @size="200"
+        @weight="semibold"
+        class="ssu-global-lease__percentage-status"
+        data-test-vault-reporting-global-lease-count-text
+      >
+        {{this.formattedCount}}
+      </Hds::Text::Display>
+
+    </div>
+  {{else}}
+    <Hds::ApplicationState data-test-vault-reporting-global-lease-empty-state class="ssu-global-lease__empty-state" as |A|>
+      {{#if (has-block "empty")}}
+        {{yield A to="empty"}}
+      {{else}}
+        <A.Body
+          data-test-vault-reporting-global-lease-empty-state-description
+          @text="Lease quotas enforce limits on active secrets and tokens. It's recommended to enable this to protect stability for this Vault cluster."
+        />
+
+        <A.Footer as |F|>
+          <F.LinkStandalone
+            data-test-vault-reporting-global-lease-empty-state-link
+            @icon="docs-link"
+            @iconPosition="trailing"
+            @text="Global lease count quota"
+            @href="https://developer.hashicorp.com/vault/tutorials/operations/resource-quotas#global-default-lease-count-quota"
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+        </A.Footer>
+      {{/if}}
+    </Hds::ApplicationState>
+  {{/if}}
+</Hds::Card::Container>

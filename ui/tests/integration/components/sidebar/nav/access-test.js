@@ -4,11 +4,10 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const renderComponent = () => {
   return render(hbs`
@@ -22,22 +21,14 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    setRunOptions({
-      rules: {
-        // This is an issue with Hds::AppHeader::HomeLink
-        'aria-prohibited-attr': { enabled: false },
-        // TODO: fix use Dropdown on user-menu
-        'nested-interactive': { enabled: false },
-      },
-    });
+    this.owner.lookup('service:currentCluster').setCluster({ name: 'vault' });
   });
 
   test('it should render nav headings', async function (assert) {
-    const headings = ['Authentication', 'Access Control', 'Organization', 'Administration'];
+    const headings = ['Access control', 'Authentication', 'Organization'];
 
     stubFeaturesAndPermissions(this.owner);
     await renderComponent();
-
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: headings.length }, 'Correct number of headings render');
@@ -61,18 +52,20 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
   test('it should render nav links', async function (assert) {
     const links = [
       'Back to main navigation',
-      'Authentication Methods',
-      'Multi-Factor Authentication',
-      'OIDC Provider',
-      'Control Groups',
+      'ACL policies',
+      'Role governing policies',
+      'Endpoint governing policies',
+      'Approval workflow',
+      'Leases',
+      'Authentication methods',
+      'Multi-factor authentication',
+      'OIDC provider',
       'Namespaces',
       'Groups',
       'Entities',
-      'Leases',
     ];
     stubFeaturesAndPermissions(this.owner);
     await renderComponent();
-
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: links.length }, 'Correct number of links render');

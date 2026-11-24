@@ -1,0 +1,3 @@
+```release-note:improvement
+core/seal (enterprise): Make it possible for new nodes to join a cluster configured with Seal High Availability.
+```

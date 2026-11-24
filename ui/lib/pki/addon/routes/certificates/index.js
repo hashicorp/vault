@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { getCliMessage } from 'pki/routes/overview';
-import { PkiListCertsListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListCertsListEnum } from '@hashicorp/vault-client-typescript';
 import { paginate } from 'core/utils/paginate-list';
 
 @withConfig()
@@ -33,7 +33,7 @@ export default class PkiCertificatesIndexRoute extends Route {
       const page = Number(params.page) || 1;
       const { keys: certificates } = await this.api.secrets.pkiListCerts(
         this.secretMountPath.currentPath,
-        PkiListCertsListEnum.TRUE
+        SecretsApiPkiListCertsListEnum.TRUE
       );
       model.certificates = paginate(certificates, { page });
     } catch (e) {

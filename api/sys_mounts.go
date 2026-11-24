@@ -245,6 +245,7 @@ type TuneMountConfigInput struct {
 	TrimRequestTrailingSlashes *bool                       `json:"trim_request_trailing_slashes,omitempty" mapstructure:"trim_request_trailing_slashes"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName *string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	SealWrap   *bool   `json:"seal_wrap"`
 }
 
 type TuneUserLockoutConfigInput struct {
@@ -396,7 +397,7 @@ type MountInput struct {
 	Description           string            `json:"description"`
 	Config                MountConfigInput  `json:"config"`
 	Local                 bool              `json:"local"`
-	SealWrap              bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
+	SealWrap              bool              `json:"seal_wrap"`
 	ExternalEntropyAccess bool              `json:"external_entropy_access" mapstructure:"external_entropy_access"`
 	Options               map[string]string `json:"options"`
 
@@ -426,6 +427,7 @@ type MountConfigInput struct {
 	TrimRequestTrailingSlashes *bool                   `json:"trim_request_trailing_slashes,omitempty" mapstructure:"trim_request_trailing_slashes"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	SealWrap   *bool  `json:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 type MountOutput struct {

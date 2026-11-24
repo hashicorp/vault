@@ -1,0 +1,7 @@
+```release-note:bug
+auth/aws: fix bug where rotation and wif config updates were not persisted to storage
+```
+```release-note:improvement
+sdk: add WIF and rotation helpers for checking if params were updated to allow
+the consumer to know when changes need to be persisted to storage
+```

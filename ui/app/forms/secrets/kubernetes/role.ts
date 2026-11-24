@@ -44,7 +44,8 @@ export default class KubernetesRoleForm extends Form<KubernetesRoleFormData> {
         full: ['service_account_name', 'kubernetes_role_name'],
       }[pref];
       props.forEach((prop) => {
-        delete this.data[prop as keyof typeof this.data];
+        // if the prop is deleted it will not be serialized in the payload and the previous value will remain unchanged on the backend
+        (this.data[prop as keyof KubernetesRoleFormData] as string) = '';
       });
     }
     this._generationPreference = pref;

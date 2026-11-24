@@ -27,6 +27,7 @@ import type { ValidationMap } from 'vault/vault/app-types';
 interface Args {
   model: Record<string, unknown>;
   renderGroup?: string;
+  openLabel?: string;
   onChange?: (value: string) => void;
   onKeyUp?: (value: string) => void;
   modelValidations?: ValidationMap;

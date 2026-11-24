@@ -21,11 +21,6 @@ func TestUnwrapping_Raw_Body(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
 	// Mount a k/v backend, version 2

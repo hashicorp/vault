@@ -3,28 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      {{#if @model.isNew}}
-        <Hds::Breadcrumb::Item @text="Scopes" @route="vault.cluster.access.oidc.scopes" />
-      {{else}}
-        <Hds::Breadcrumb::Item
-          @text="Details"
-          @route="vault.cluster.access.oidc.scopes.scope.details"
-          @model={{@model.name}}
-        />
-      {{/if}}
-      <Hds::Breadcrumb::Item @text="{{if @model.isNew 'Create' 'Edit'}} Scope" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-oidc-scope-title>
-      {{if @model.isNew "Create" "Edit"}}
-      Scope
-    </h1>
-  </p.levelLeft>
-  <p.levelRight>
+<Page::Header @title="{{if @form.isNew 'Create' 'Edit'}} Scope">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
     <Hds::Button
       @text="How to write JSON template for scopes"
       @icon="bulb"
@@ -32,8 +15,8 @@
       {{on "click" (fn (mut this.showTemplateModal))}}
       data-test-oidc-scope-example
     />
-  </p.levelRight>
-</PageHeader>
+  </:actions>
+</Page::Header>
 
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -41,13 +24,11 @@
       Providers may reference a set of scopes to make specific identity information available as claims
     </p>
     <MessageError @errorMessage={{this.errorBanner}} />
-    {{#each @model.formFields as |field|}}
-      <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
-    {{/each}}
+    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} />
   </div>
   <div class="has-top-margin-l has-bottom-margin-l">
     <Hds::Button
-      @text={{if @model.isNew "Create" "Update"}}
+      @text={{if @form.isNew "Create" "Update"}}
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}
@@ -58,7 +39,7 @@
       @color="secondary"
       class="has-left-margin-s"
       disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" @onCancel}}
       data-test-oidc-scope-cancel
     />
   </div>
@@ -81,9 +62,10 @@
       <Hds::CodeBlock @value={{this.exampleTemplate}} @language="ruby" @hasCopyButton={{true}} />
       <p class="has-top-margin-m">
         The full list of template parameters can be found
-        <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
-          here.
-        </DocLink>
+        <Hds::Link::Inline
+          @href={{doc-link "/vault/docs/concepts/oidc-provider#scopes"}}
+          @isHrefExternal={{true}}
+        >here.</Hds::Link::Inline>
       </p>
     </M.Body>
     <M.Footer as |F|>

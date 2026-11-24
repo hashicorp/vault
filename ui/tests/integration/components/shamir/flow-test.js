@@ -8,107 +8,83 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import Service from '@ember/service';
-import { run } from '@ember/runloop';
-import { reject, resolve } from 'rsvp';
-import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir-selectors';
-
-const licenseError = { httpStatus: 500, errors: ['failed because licensing is in an invalid state'] };
-const response = {
-  progress: 1,
-  required: 3,
-  complete: false,
-};
-
-const adapter = {
-  foo() {
-    return resolve(response);
-  },
-  responseWithErrors() {
-    return reject({ httpStatus: 400, errors: ['something is wrong', 'seriously wrong'] });
-  },
-  responseWithLicense() {
-    return reject(licenseError);
-  },
-};
-
-const storeStub = Service.extend({
-  adapterFor() {
-    return adapter;
-  },
-});
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
 
 // Checks that the correct data were passed around happens in the integration test
 // this one is checking that things happen at the right time
 module('Integration | Component | shamir/flow', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.server.put('/sys/unseal', () => ({
+      sealed: false,
+      t: this.threshold,
+      n: this.threshold,
+      progress: 1,
+    }));
+
     this.keyPart = 'some-key-partition';
-    run(() => {
-      this.owner.unregister('service:store');
-      this.owner.register('service:store', storeStub);
-      this.storeService = this.owner.lookup('service:store');
-    });
+    this.progress = 0;
+    this.threshold = 3;
+    this.updateProgress = sinon.spy();
+    this.checkComplete = sinon.stub().returns(false);
+    this.onSuccess = sinon.spy();
+
+    this.renderComponent = () =>
+      render(hbs`
+        <Shamir::Flow
+          @action="unseal"
+          @threshold={{this.threshold}}
+          @progress={{this.progress}}
+          @updateProgress={{this.updateProgress}}
+          @checkComplete={{this.checkComplete}}
+          @onShamirSuccess={{this.onSuccess}}
+        />`);
   });
 
   test('it sends data to the passed action and calls updateProgress', async function (assert) {
-    const updateSpy = sinon.spy();
-    const completeSpy = sinon.spy();
-    this.set('updateProgress', updateSpy);
-    this.set('checkComplete', () => false);
-    this.set('onSuccess', completeSpy);
-    this.set('progress', 0);
+    await this.renderComponent();
 
-    await render(hbs`
-      <Shamir::Flow
-        @action="foo"
-        @threshold={{3}}
-        @progress={{this.progress}}
-        @updateProgress={{this.updateProgress}}
-        @checkComplete={{this.checkComplete}}
-        @onShamirSuccess={{this.onSuccess}}
-      />`);
+    await fillIn(GENERAL.inputByAttr('shamir-key'), this.keyPart);
+    await click(GENERAL.submitButton);
 
-    await fillIn(SHAMIR_FORM.input, this.keyPart);
-    await click(SHAMIR_FORM.submitButton);
-
-    assert.ok(completeSpy.notCalled, 'onShamirSuccess was not called');
-    assert.ok(updateSpy.calledOnce, 'updateProgress was called');
+    assert.true(this.onSuccess.notCalled, 'onShamirSuccess was not called');
+    assert.true(this.updateProgress.calledOnce, 'updateProgress was called');
     // Default shamir flow expects the updated values to be passed
     // in from parent model, so this approximates the update happening
     // from a side effect of the updateProgress call
     this.set('progress', 2);
     // Pretend the next call will mean completion
-    this.set('checkComplete', () => true);
+    this.checkComplete.returns(true);
     await settled();
 
-    await fillIn(SHAMIR_FORM.input, this.keyPart);
-    await click(SHAMIR_FORM.submitButton);
+    await fillIn(GENERAL.inputByAttr('shamir-key'), this.keyPart);
+    await click(GENERAL.submitButton);
 
-    assert.ok(completeSpy.calledOnce, 'onShamirSuccess was called');
-    assert.ok(updateSpy.calledTwice, 'updateProgress was called again');
+    assert.true(this.onSuccess.calledOnce, 'onShamirSuccess was called');
+    assert.true(this.updateProgress.calledTwice, 'updateProgress was called again');
   });
 
-  test('it shows the error when adapter fails with 400 httpStatus', async function (assert) {
+  test('it shows the error when request fails with 400 status', async function (assert) {
     assert.expect(3);
-    const updateSpy = sinon.spy();
-    const completeSpy = sinon.spy();
-    this.set('updateProgress', updateSpy);
-    this.set('checkComplete', completeSpy);
-    await render(hbs`
-      <Shamir::Flow
-        @action="response-with-errors"
-        @threshold={{3}}
-        @progress={{2}}
-        @updateProgress={{this.updateProgress}}
-        @checkComplete={{this.checkComplete}}
-      />`);
 
-    await fillIn(SHAMIR_FORM.input, this.keyPart);
-    await click(SHAMIR_FORM.submitButton);
-    assert.dom(SHAMIR_FORM.error).exists({ count: 2 }, 'renders errors');
-    assert.ok(completeSpy.notCalled, 'checkComplete was not called');
-    assert.ok(updateSpy.notCalled, 'updateProgress was not called');
+    this.progress = 2;
+    this.server.put('/sys/unseal', () => {
+      return new Response(
+        400,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({ errors: ['something is wrong', 'seriously wrong'] })
+      );
+    });
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('shamir-key'), this.keyPart);
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.messageError).exists({ count: 2 }, 'renders errors');
+    assert.true(this.checkComplete.notCalled, 'checkComplete was not called');
+    assert.true(this.updateProgress.notCalled, 'updateProgress was not called');
   });
 });

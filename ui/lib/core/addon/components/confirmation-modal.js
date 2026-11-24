@@ -6,6 +6,10 @@ import Component from '@glimmer/component';
 
 /**
  * @module ConfirmationModal
+ * @deprecated Use `ConfirmModal` with `@confirmText` instead. `ConfirmModal` provides the same
+ * type-to-confirm behaviour in a TypeScript component with proper accessibility support
+ * (warning shown on failed attempt rather than a disabled button).
+ *
  * ConfirmationModal components wrap the Hds::Modal component to present a critical (red) type-to-confirm modal
  * which require the user to type something to confirm the action.
  * They are used for extremely destructive actions that require extra consideration before confirming.

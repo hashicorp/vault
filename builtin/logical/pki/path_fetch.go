@@ -40,6 +40,11 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Description: `Revocation time RFC 3339 formatted`,
 				Required:    false,
 			},
+			"revocation_reason": {
+				Type:        framework.TypeInt,
+				Description: `Revocation reason code: RFC 5280 formatted`,
+				Required:    false,
+			},
 			"issuer_id": {
 				Type:        framework.TypeString,
 				Description: `ID of the issuer`,
@@ -275,6 +280,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	var revocationTime int64
 	var revocationIssuerId string
 	var revocationTimeRfc3339 string
+	var revocationReason int
 	var authorityKeyId []byte
 
 	response = &logical.Response{
@@ -476,6 +482,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		if !revInfo.RevocationTimeUTC.IsZero() {
 			revocationTimeRfc3339 = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
 		}
+		revocationReason = revInfo.ReasonCode
 	}
 
 reply:
@@ -515,6 +522,7 @@ reply:
 		response.Data["certificate"] = string(certificate)
 		response.Data["revocation_time"] = revocationTime
 		response.Data["revocation_time_rfc3339"] = revocationTimeRfc3339
+		response.Data["revocation_reason"] = revocationReason
 		if len(authorityKeyId) > 0 {
 			response.Data["authority_key_id"] = certutil.GetHexFormatted(authorityKeyId, ":")
 		}

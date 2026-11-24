@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -166,5 +166,14 @@ module('Unit | Util | validators', function (hooks) {
 
     check('my string');
     assert.false(isNonString, 'returns false when value is letters');
+  });
+
+  test('it should validate max duration', function (assert) {
+    assert.true(validators.maxDuration(''), 'Valid when value is empty');
+    assert.true(validators.maxDuration('0s'), 'Valid when value is zero');
+    assert.true(validators.maxDuration('9223372036s'), 'Valid at the maximum Vault accepts');
+    assert.true(validators.maxDuration('106751d'), 'Valid at the largest whole number of days');
+    assert.false(validators.maxDuration('9223372037s'), 'Invalid one second over the maximum');
+    assert.false(validators.maxDuration('863999999913600s'), 'Invalid for 9999999999 days');
   });
 });

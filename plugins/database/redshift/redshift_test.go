@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	thutils "github.com/hashicorp/vault/sdk/helper/testhelpers/utils"
 	"github.com/stretchr/testify/require"
@@ -391,6 +392,72 @@ func TestRedshift_DeleteUser(t *testing.T) {
 	dbtesting.AssertClose(t, db)
 }
 
+// TestRedshift_DeleteUser_DefaultRevoke_QuotesLiteral_PreventsInjection verifies
+// that the default revoke path quotes the username as a SQL string literal and
+// does not execute injected SQL.
+func TestRedshift_DeleteUser_DefaultRevoke_QuotesLiteral_PreventsInjection(t *testing.T) {
+	if os.Getenv(vaultACC) != "1" {
+		t.SkipNow()
+	}
+
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
+
+	connURL, url, _, _, err := redshiftEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := newRedshift()
+	dbtesting.AssertInitialize(t, db, dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	})
+	defer dbtesting.AssertClose(t, db)
+
+	victimPassword := "SuperSecretPa55word!"
+	victimResp := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "victim",
+			RoleName:    "test",
+		},
+		Statements: dbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Password:   victimPassword,
+		Expiration: time.Now().Add(1 * time.Hour),
+	})
+	victimUsername := victimResp.Username
+	t.Cleanup(func() {
+		dropRedshiftUser(t, connURL, victimUsername)
+	})
+
+	if err := testCredsExist(t, url, victimUsername, victimPassword); err != nil {
+		t.Fatalf("Could not connect with victim credentials: %s", err)
+	}
+
+	maliciousUsername := fmt.Sprintf(`decoy'); DROP USER %s; --`, dbutil.QuoteIdentifier(victimUsername))
+	createQuotedRedshiftUser(t, connURL, maliciousUsername, victimPassword)
+	t.Cleanup(func() {
+		dropRedshiftUser(t, connURL, maliciousUsername)
+	})
+
+	require.True(t, redshiftUserExists(t, connURL, maliciousUsername), "malicious decoy user should exist before delete")
+
+	_, err = db.DeleteUser(context.Background(), dbplugin.DeleteUserRequest{
+		Username:   maliciousUsername,
+		Statements: dbplugin.Statements{Commands: []string{}},
+	})
+	require.NoError(t, err)
+
+	require.True(t, redshiftUserExists(t, connURL, victimUsername), "victim user should still exist after deleting the malicious decoy user")
+	require.False(t, redshiftUserExists(t, connURL, maliciousUsername), "malicious decoy user should be deleted")
+	if err := testCredsExist(t, url, victimUsername, victimPassword); err != nil {
+		t.Fatalf("Victim credentials should remain valid after decoy deletion: %s", err)
+	}
+}
+
 func testCredsExist(t testing.TB, url, username, password string) error {
 	t.Helper()
 
@@ -401,6 +468,54 @@ func testCredsExist(t testing.TB, url, username, password string) error {
 	}
 	defer db.Close()
 	return db.Ping()
+}
+
+func redshiftUserExists(t testing.TB, connURL, username string) bool {
+	t.Helper()
+
+	db, err := sql.Open("pgx", connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var exists bool
+	err = db.QueryRowContext(context.Background(), "SELECT exists (SELECT usename FROM pg_user WHERE usename=$1);", username).Scan(&exists)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return exists
+}
+
+func createQuotedRedshiftUser(t testing.TB, connURL, username, password string) {
+	t.Helper()
+
+	db, err := sql.Open("pgx", connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("CREATE USER %s WITH PASSWORD %s;", dbutil.QuoteIdentifier(username), quoteLiteral(password))
+	if _, err := db.ExecContext(context.Background(), query); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func dropRedshiftUser(t testing.TB, connURL, username string) {
+	t.Helper()
+
+	db, err := sql.Open("pgx", connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("DROP USER IF EXISTS %s;", dbutil.QuoteIdentifier(username))
+	if _, err := db.ExecContext(context.Background(), query); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRedshift_DefaultUsernameTemplate(t *testing.T) {
@@ -506,6 +621,45 @@ func TestRedshift_CustomUsernameTemplate(t *testing.T) {
 	dbtesting.AssertClose(t, db)
 }
 
+// TestQuoteLiteral verifies SQL string-literal quoting behavior for Redshift revoke statements.
+// This is important to prevent SQL injection in the default revocation path, which
+// does not use parameterized queries and instead relies on proper quoting of the username.
+func TestQuoteLiteral(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "plain value",
+			input:    "alice",
+			expected: "'alice'",
+		},
+		{
+			name:     "single quote is escaped",
+			input:    "o'reilly",
+			expected: "'o''reilly'",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "''",
+		},
+		{
+			name:     "value is truncated at null byte",
+			input:    "abc\x00def",
+			expected: "'abc'",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := quoteLiteral(tc.input)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
 const testRedshiftRole = `
 CREATE USER "{{name}}" WITH PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; 
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
@@ -547,10 +701,10 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 	t.Helper()
 
 	db, err := sql.Open("pgx", connURL)
-	defer db.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer db.Close()
 
 	// Start a transaction
 	ctx := context.Background()

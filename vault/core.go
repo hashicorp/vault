@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -28,12 +29,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v4"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -44,14 +45,16 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
+	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/osutil"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/helper/trace"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/osutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -62,6 +65,8 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/billing"
+	"github.com/hashicorp/vault/vault/cert_count"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/observations"
@@ -69,7 +74,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 )
@@ -115,6 +120,14 @@ const (
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
+
+	// maxPendingMFAPerEntity, maxPendingMFAPerSourceIP and maxPendingMFAGlobal
+	// cap the number of live (unexpired) pending MFA entries per entity, per
+	// source IP and across the whole queue. They are hard-coded for now;
+	// making them configurable is planned as a follow-up.
+	maxPendingMFAPerEntity   = 100
+	maxPendingMFAPerSourceIP = 1000
+	maxPendingMFAGlobal      = 100000
 
 	// defaultMaxTOTPValidateAttempts is the default value for the number
 	// of failed attempts to validate a request subject to TOTP MFA. If the
@@ -272,6 +285,21 @@ type Core struct {
 	// the generate-root process simply to talk to the new follower cluster.
 	devToken string
 
+	// enableUnauthRekey controls whether rekey endpoints are registered as
+	// unauthenticated endpoints (true) or as authenticated sys backend
+	// endpoints (false, default).
+	enableUnauthRekey *atomic.Bool
+
+	// enableUnauthGenerateRoot controls whether generate-root endpoints are registered as
+	// unauthenticated endpoints (true) or as authenticated sys backend
+	// endpoints (false, default).
+	enableUnauthGenerateRoot *atomic.Bool
+
+	// enableUnauthDROperationToken controls whether DR operation token endpoints are registered as
+	// unauthenticated endpoints (true) or as authenticated sys backend
+	// endpoints (false, default).
+	enableUnauthDROperationToken *atomic.Bool
+
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
@@ -289,9 +317,6 @@ type Core struct {
 
 	// serviceRegistration is the ServiceRegistration network
 	serviceRegistration sr.ServiceRegistration
-
-	// hcpLinkStatus is a string describing the status of HCP link connection
-	hcpLinkStatus HCPLinkStatus
 
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
@@ -406,6 +431,11 @@ type Core struct {
 	// out into the configured audit backends
 	auditBroker *audit.Broker
 
+	// auditConfigFailed is set to true when at least one audit device is configured but all
+	// failed to initialize (setupAudits returned errLoadAuditFailed, or invalidateAuditTable
+	// failed to enable a replicated device).
+	auditConfigFailed atomic.Bool
+
 	// auditedHeaders is used to configure which http headers
 	// can be output in the audit logs
 	auditedHeaders *audit.HeadersConfig
@@ -427,6 +457,9 @@ type Core struct {
 	// the rotation manager handles periodic rotation of credentials
 	rotationManager *RotationManager
 
+	// the healthCheck manager handles all health check operations
+	healthCheckManager *HealthCheckManager
+
 	// rollback manager is used to run rollbacks periodically
 	rollback *RollbackManager
 
@@ -444,6 +477,18 @@ type Core struct {
 	// activityLogLock protects the activityLog and activityLogConfig
 	activityLogLock sync.RWMutex
 
+	// consumptionBilling is used to track use case consumption-based billing metrics
+	consumptionBilling *billing.ConsumptionBilling
+
+	// consumptionBillingLock protects the consumptionBilling struct
+	consumptionBillingLock sync.RWMutex
+
+	// billingConfigLock protects billing configuration reads and writes
+	billingConfigLock sync.RWMutex
+
+	// consumptionBillingSubView is the sub-view of the system barrier view that is used to store consumption billing metrics
+	consumptionBillingSubView *BarrierView
+
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
@@ -454,7 +499,10 @@ type Core struct {
 	// inFlightReqMap is used to store info about in-flight requests
 	inFlightReqData *InFlightRequests
 
-	// mfaResponseAuthQueue is used to cache the auth response per request ID
+	// mfaResponseAuthQueue caches the first-factor auth response for each
+	// pending MFA login request. It is nil after teardownLoginMFA, so access it
+	// under mfaResponseAuthQueueLock via PopMFAResponseAuthByID and
+	// SaveMFAResponseAuth, which handle the nil case.
 	mfaResponseAuthQueue     *LoginMFAPriorityQueue
 	mfaResponseAuthQueueLock sync.Mutex
 
@@ -528,7 +576,7 @@ type Core struct {
 	// Current cluster leader values
 	clusterLeaderParams *atomic.Value
 	// Info on cluster members
-	clusterPeerClusterAddrsCache *cache.Cache
+	clusterPeerClusterAddrsCache *ttlcache.Cache[string, nodeHAConnectionInfo]
 	// The context for the client
 	rpcClientConnContext context.Context
 	// The function for canceling the client connection
@@ -574,6 +622,10 @@ type Core struct {
 
 	// pluginFilePermissions is the permissions of the plugin files and directory
 	pluginFilePermissions int
+
+	// devPluginPGPKey is either a raw PGP public key or a path to a PGP public
+	// key file to use for plugin signature verification in dev mode.
+	devPluginPGPKey string
 
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *plugincatalog.PluginCatalog
@@ -645,6 +697,8 @@ type Core struct {
 	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
 	// holds the lock for modifying pendingRaftPeers
 	pendingRaftPeersLock sync.RWMutex
+	// Limits the number of concurrent retrying raft join background workers.
+	raftJoinRetryLimiter chan struct{}
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value
@@ -671,6 +725,8 @@ type Core struct {
 	// activityLogConfig contains override values for the activity log
 	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
+
+	billingConfig billing.BillingConfig
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -701,6 +757,9 @@ type Core struct {
 
 	// disableSSCTokens is used to disable server side consistent token creation/usage
 	disableSSCTokens bool
+
+	// denySlashInTemplatedPolicyPaths controls whether "/" is denied in templated policy paths
+	denySlashInTemplatedPolicyPaths bool
 
 	// versionHistory is a map of vault versions to VaultVersion. The
 	// VaultVersion.TimestampInstalled when the version will denote when the version
@@ -757,6 +816,32 @@ type Core struct {
 
 	// reportingScanDirectory is where the files emitted by /sys/reporting/scan go.
 	reportingScanDirectory string
+
+	// certCountManager keeps track of issued and stored PKI certificate counts for
+	// billing purposes.
+	certCountManager cert_count.CertificateCountManager
+
+	certCountConsumerJobInterval time.Duration
+
+	agentRegistry               *AgentRegistry
+	administrativeNamespacePath string
+	operatorNamespacePath       string
+
+	// synctest disables the short sleep when an ALPN handler is to be
+	// stopped, giving time for RPC requests to drain.  It also means that we
+	// don't sleep during polling to see whether a cache expiry goroutine is
+	// started.
+	synctest bool
+
+	// SecureHubManager holds information regarding the node's connection to the secure hub.
+	// It will be initialized to a no-op structure on CE. Access it through
+	// GetSecureHubManager/SetSecureHubManager, which take secureHubManagerLock.
+	SecureHubManager *SecureHubManager
+
+	// secureHubManagerLock protects the SecureHubManager pointer. It does not
+	// protect the manager's own in-memory state, which is guarded by the
+	// manager's internal locks.
+	secureHubManagerLock sync.RWMutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -872,6 +957,11 @@ type CoreConfig struct {
 	PluginDirectory string
 	PluginTmpdir    string
 
+	// DevPluginPGPKey is either a raw PGP public key or a path to a PGP public
+	// key file to use for plugin signature verification in dev mode. This allows
+	// testing enterprise plugins with custom signatures without rebuilding Vault.
+	DevPluginPGPKey string
+
 	PluginFileUid int
 
 	PluginFilePermissions int
@@ -907,6 +997,11 @@ type CoreConfig struct {
 	// Activity log controls
 	ActivityLogConfig ActivityLogCoreConfig
 
+	// BillingConfig contains override values for billing
+	BillingConfig billing.BillingConfig
+
+	CertCountConsumerJobInterval time.Duration
+
 	// number of workers to use for lease revocation in the expiration manager
 	NumExpirationWorkers int
 
@@ -937,6 +1032,9 @@ type CoreConfig struct {
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
 
+	// OperatorNamespacePath is used to configure the operator namespace path.
+	OperatorNamespacePath string
+
 	// ObservationSystemConfig is the config for the Observation System
 	ObservationSystemConfig *observations.ObservationSystemConfig
 
@@ -949,6 +1047,20 @@ type CoreConfig struct {
 
 	// ReportingScanDirectory is where files generated by /sys/reporting/scan will go.
 	ReportingScanDirectory string
+
+	// EnableUnauthenticatedAccess is a list of endpoint names that should be
+	// accessible without authentication, despite them being by default authenticated.
+	// These aren't the actual paths to endpoints, but rather specific values that
+	// identify groups of endpoints, e.g. "rekey" refers to the sys/rekey/* endpoints.
+	EnableUnauthenticatedAccess []string
+
+	// DenySlashInTemplatedPolicyPaths controls whether "/" is denied in templated policy paths
+	// When true, "/" in template output will cause an error
+	// When false (default), "/" is allowed
+	DenySlashInTemplatedPolicyPaths bool
+
+	// Synctest should be true when running within a synctest.Test bubble.
+	Synctest bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1015,6 +1127,16 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	if conf.RawConfig == nil {
 		conf.RawConfig = new(server.Config)
 	}
+	// Ensure SharedConfig exists so promoted fields are accessible.
+	if conf.RawConfig.SharedConfig == nil {
+		conf.RawConfig.SharedConfig = new(configutil.SharedConfig)
+	}
+	// Backfill AdministrativeNamespacePath into RawConfig when callers (e.g.
+	// tests) set it only on CoreConfig. RawConfig is the live-reloadable source
+	// of truth read by AdministrativeNamespacePath(), so it must be populated.
+	if conf.RawConfig.AdministrativeNamespacePath == "" && conf.AdministrativeNamespacePath != "" {
+		conf.RawConfig.AdministrativeNamespacePath = conf.AdministrativeNamespacePath
+	}
 
 	// secureRandomReader cannot be nil
 	if conf.SecureRandomReader == nil {
@@ -1073,66 +1195,76 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		logger:               conf.Logger.Named("core"),
 		logLevel:             conf.LogLevel,
 
-		defaultLeaseTTL:                conf.DefaultLeaseTTL,
-		maxLeaseTTL:                    conf.MaxLeaseTTL,
-		removeIrrevocableLeaseAfter:    conf.RemoveIrrevocableLeaseAfter,
-		sentinelTraceDisabled:          conf.DisableSentinelTrace,
-		cachingDisabled:                conf.DisableCache,
-		clusterName:                    conf.ClusterName,
-		clusterNetworkLayer:            conf.ClusterNetworkLayer,
-		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
-		enableMlock:                    !conf.DisableMlock,
-		rawEnabled:                     conf.EnableRaw,
-		introspectionEnabled:           conf.EnableIntrospection,
-		shutdownDoneCh:                 new(atomic.Value),
-		replicationState:               new(uint32),
-		localClusterPrivateKey:         new(atomic.Value),
-		localClusterCert:               new(atomic.Value),
-		localClusterParsedCert:         new(atomic.Value),
-		activeNodeReplicationState:     new(uint32),
-		keepHALockOnStepDown:           new(uint32),
-		replicationFailure:             new(uint32),
-		disablePerfStandby:             true,
-		activeContextCancelFunc:        new(atomic.Value),
-		allLoggers:                     conf.AllLoggers,
-		builtinRegistry:                conf.BuiltinRegistry,
-		neverBecomeActive:              new(uint32),
-		clusterLeaderParams:            new(atomic.Value),
-		metricsHelper:                  conf.MetricsHelper,
-		metricSink:                     conf.MetricSink,
-		secureRandomReader:             conf.SecureRandomReader,
-		rawConfig:                      new(atomic.Value),
-		recoveryMode:                   conf.RecoveryMode,
-		postUnsealStarted:              new(uint32),
-		raftInfo:                       new(atomic.Value),
-		raftJoinDoneCh:                 make(chan struct{}),
-		clusterHeartbeatInterval:       clusterHeartbeatInterval,
-		activityLogConfig:              conf.ActivityLogConfig,
-		keyRotateGracePeriod:           new(int64),
-		numExpirationWorkers:           conf.NumExpirationWorkers,
-		raftFollowerStates:             raft.NewFollowerStates(),
-		disableAutopilot:               conf.DisableAutopilot,
-		allowAuditLogPrefixing:         conf.AllowAuditLogPrefixing,
-		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
-		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
-		mountMigrationTracker:          &sync.Map{},
-		disableSSCTokens:               conf.DisableSSCTokens,
-		effectiveSDKVersion:            effectiveSDKVersion,
-		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
-		experiments:                    conf.Experiments,
-		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
-		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
-		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
-		numRollbackWorkers:             conf.NumRollbackWorkers,
-		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
-		WellKnownRedirects:             NewWellKnownRedirects(),
-		detectDeadlocks:                detectDeadlocks,
-		echoDuration:                   uberAtomic.NewDuration(0),
-		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
-		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
-		rpcLastSuccessfulHeartbeat:     new(atomic.Value),
-		reportingScanDirectory:         conf.ReportingScanDirectory,
+		defaultLeaseTTL:                 conf.DefaultLeaseTTL,
+		maxLeaseTTL:                     conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:     conf.RemoveIrrevocableLeaseAfter,
+		sentinelTraceDisabled:           conf.DisableSentinelTrace,
+		cachingDisabled:                 conf.DisableCache,
+		clusterName:                     conf.ClusterName,
+		clusterNetworkLayer:             conf.ClusterNetworkLayer,
+		clusterPeerClusterAddrsCache:    ttlcache.New[string, nodeHAConnectionInfo](ttlcache.WithTTL[string, nodeHAConnectionInfo](3 * clusterHeartbeatInterval)),
+		enableMlock:                     !conf.DisableMlock,
+		rawEnabled:                      conf.EnableRaw,
+		introspectionEnabled:            conf.EnableIntrospection,
+		shutdownDoneCh:                  new(atomic.Value),
+		replicationState:                new(uint32),
+		localClusterPrivateKey:          new(atomic.Value),
+		localClusterCert:                new(atomic.Value),
+		localClusterParsedCert:          new(atomic.Value),
+		activeNodeReplicationState:      new(uint32),
+		keepHALockOnStepDown:            new(uint32),
+		replicationFailure:              new(uint32),
+		disablePerfStandby:              true,
+		activeContextCancelFunc:         new(atomic.Value),
+		allLoggers:                      conf.AllLoggers,
+		builtinRegistry:                 conf.BuiltinRegistry,
+		neverBecomeActive:               new(uint32),
+		clusterLeaderParams:             new(atomic.Value),
+		metricsHelper:                   conf.MetricsHelper,
+		metricSink:                      conf.MetricSink,
+		secureRandomReader:              conf.SecureRandomReader,
+		rawConfig:                       new(atomic.Value),
+		recoveryMode:                    conf.RecoveryMode,
+		postUnsealStarted:               new(uint32),
+		raftInfo:                        new(atomic.Value),
+		raftJoinDoneCh:                  make(chan struct{}),
+		raftJoinRetryLimiter:            make(chan struct{}, raftMaxConcurrentRetryJoins),
+		clusterHeartbeatInterval:        clusterHeartbeatInterval,
+		activityLogConfig:               conf.ActivityLogConfig,
+		billingConfig:                   conf.BillingConfig,
+		keyRotateGracePeriod:            new(int64),
+		numExpirationWorkers:            conf.NumExpirationWorkers,
+		raftFollowerStates:              raft.NewFollowerStates(),
+		disableAutopilot:                conf.DisableAutopilot,
+		allowAuditLogPrefixing:          conf.AllowAuditLogPrefixing,
+		enableResponseHeaderHostname:    conf.EnableResponseHeaderHostname,
+		enableResponseHeaderRaftNodeID:  conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:           &sync.Map{},
+		disableSSCTokens:                conf.DisableSSCTokens,
+		effectiveSDKVersion:             effectiveSDKVersion,
+		userFailedLoginInfo:             make(map[FailedLoginUser]*FailedLoginInfo),
+		experiments:                     conf.Experiments,
+		pendingRemovalMountsAllowed:     conf.PendingRemovalMountsAllowed,
+		expirationRevokeRetryBase:       conf.ExpirationRevokeRetryBase,
+		rollbackMountPathMetrics:        conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
+		numRollbackWorkers:              conf.NumRollbackWorkers,
+		impreciseLeaseRoleTracking:      conf.ImpreciseLeaseRoleTracking,
+		WellKnownRedirects:              NewWellKnownRedirects(),
+		detectDeadlocks:                 detectDeadlocks,
+		echoDuration:                    uberAtomic.NewDuration(0),
+		activeNodeClockSkewMillis:       uberAtomic.NewInt64(0),
+		periodicLeaderRefreshInterval:   conf.PeriodicLeaderRefreshInterval,
+		rpcLastSuccessfulHeartbeat:      new(atomic.Value),
+		reportingScanDirectory:          conf.ReportingScanDirectory,
+		enableUnauthRekey:               new(atomic.Bool),
+		enableUnauthGenerateRoot:        new(atomic.Bool),
+		enableUnauthDROperationToken:    new(atomic.Bool),
+		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
+		certCountConsumerJobInterval:    conf.CertCountConsumerJobInterval,
+		synctest:                        conf.Synctest,
 	}
+
+	c.certCountManager = cert_count.InitCertificateCountManager(c.logger, c.certCountConsumerJobInterval)
 
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -1161,13 +1293,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 	c.clusterAddr.Store(conf.ClusterAddr)
-	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	c.activeContextCancelFunc.Store(context.CancelFunc(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
-
-	c.hcpLinkStatus = HCPLinkStatus{
-		lock:             sync.RWMutex{},
-		ConnectionStatus: "disconnected",
-	}
 
 	c.raftInfo.Store((*raftInformation)(nil))
 
@@ -1275,7 +1402,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// For recovery mode we've now configured enough to return early.
 	if c.recoveryMode {
-		checkResult, err := c.checkForSealMigration(context.Background(), conf.UnwrapSeal)
+		checkResult, _, err := c.checkForSealMigration(context.Background(), conf.UnwrapSeal)
 		if err != nil {
 			return nil, fmt.Errorf("error checking if a seal migration is needed: %w", err)
 		}
@@ -1305,6 +1432,25 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.pluginFilePermissions = conf.PluginFilePermissions
 	}
 
+	if conf.DevPluginPGPKey != "" {
+		// Check if it's a raw PGP key or a file path
+		if strings.HasPrefix(strings.TrimSpace(conf.DevPluginPGPKey), "-----BEGIN PGP PUBLIC KEY BLOCK-----") {
+			// It's a raw PGP key, use it directly
+			c.devPluginPGPKey = conf.DevPluginPGPKey
+		} else {
+			// It's a file path, validate and convert to absolute path
+			c.devPluginPGPKey, err = filepath.Abs(conf.DevPluginPGPKey)
+			if err != nil {
+				return nil, fmt.Errorf("core setup failed, could not verify dev plugin PGP key path: %w", err)
+			}
+
+			// Validate file exists at startup
+			if _, err := os.Stat(c.devPluginPGPKey); err != nil {
+				return nil, fmt.Errorf("core setup failed, dev plugin PGP key file does not exist: %w", err)
+			}
+		}
+	}
+
 	// Create secondaries (this will only impact Enterprise versions of Vault)
 	c.createSecondaries(conf.Logger)
 
@@ -1319,7 +1465,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Logical backends
-	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
+	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger)
 
 	// Credentials backends
 	c.configureCredentialsBackends(conf.CredentialBackends, conf.Logger)
@@ -1375,6 +1521,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
+	// Initialize SecureHubManager after barrier is set up
+	c.SetSecureHubManager(NewSecureHubManager(c))
+
 	// Events
 	eventsLogger := conf.Logger.Named("events")
 	c.allLoggers = append(c.allLoggers, eventsLogger)
@@ -1412,6 +1561,19 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
 	c.licenseReloadCh = conf.LicenseReload
+
+	// Check if endpoints are in the EnableUnauthenticatedAccess list
+	for _, endpoint := range conf.EnableUnauthenticatedAccess {
+		switch endpoint {
+		case "rekey":
+			c.enableUnauthRekey.Store(true)
+		case "generate-root":
+			c.enableUnauthGenerateRoot.Store(true)
+		case "generate-operation-token":
+			c.enableUnauthDROperationToken.Store(true)
+		}
+	}
+
 	return c, nil
 }
 
@@ -1506,7 +1668,7 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 
 // configureLogicalBackends configures the Core with the ability to create
 // logical backends for various types.
-func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, logger log.Logger, adminNamespacePath string) {
+func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, logger log.Logger) {
 	logicalBackends := make(map[string]logical.Factory, len(backends))
 
 	for k, f := range backends {
@@ -1554,9 +1716,21 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 		return idStore, nil
 	}
 
+	logicalBackends[mountTypeAgentRegistry] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		agentRegistryLogger := logger.Named("agent_registry")
+		c.AddLogger(agentRegistryLogger)
+
+		agentRegistry, err := NewAgentRegistry(c, config, agentRegistryLogger)
+		if err != nil {
+			return nil, fmt.Errorf("error creating agent registry: %w", err)
+		}
+
+		return agentRegistry, nil
+	}
+
 	c.logicalBackends = logicalBackends
 
-	c.addExtraLogicalBackends(adminNamespacePath)
+	c.addExtraLogicalBackends()
 }
 
 // handleVersionTimeStamps stores the current version at the current time to
@@ -1734,7 +1908,7 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 		return fmt.Errorf("can't perform a seal migration while joining a raft cluster")
 	}
 	if !migrate && c.migrationInfo != nil {
-		done, err := c.sealMigrated(ctx)
+		done, _, err := c.sealMigrated(ctx)
 		if err != nil {
 			return fmt.Errorf("error checking to see if seal is migrated: %w", err)
 		}
@@ -1770,6 +1944,10 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 		return nil
 	}
 
+	if err := c.ValidateMultiSealConfig(ctx, false); err != nil {
+		return err
+	}
+
 	sealToUse := c.seal
 	if migrate {
 		c.logger.Info("unsealing using migration seal")
@@ -1794,15 +1972,25 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 	if c.isRaftUnseal() {
 		return c.unsealWithRaft(combinedKey)
 	}
+	if !migrate {
+		defer memzero(combinedKey)
+	}
 	masterKey, err := c.unsealKeyToMasterKeyPreUnseal(ctx, sealToUse, combinedKey)
 	if err != nil {
 		return err
 	}
+	defer memzero(masterKey)
 	return c.unsealInternal(ctx, masterKey)
 }
 
 func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	ctx := context.Background()
+	zeroCombinedKey := true
+	defer func() {
+		if zeroCombinedKey {
+			memzero(combinedKey)
+		}
+	}()
 
 	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
@@ -1835,9 +2023,14 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 		// Reset the state
 		c.raftInfo.Store((*raftInformation)(nil))
 	}
+	zeroCombinedKey = false
 
 	go func() {
 		var masterKey []byte
+		defer func() {
+			memzero(combinedKey)
+			memzero(masterKey)
+		}()
 		keyringFound := false
 
 		// Wait until we at least have the keyring before we attempt to
@@ -1966,26 +2159,28 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 // For the auto->auto same seal migration scenario, it will return false even
 // if the preceding conditions are true but we cannot decrypt the master key
 // in storage using the configured seal.
-func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
+// When no error is returned, returns a string that gives more information about
+// why the bool return value is set as it is.
+func (c *Core) sealMigrated(ctx context.Context) (bool, string, error) {
 	sealMigDone := c.sealMigrationDone.Load()
 	if sealMigDone != nil && !sealMigDone.IsZero() {
-		return true, nil
+		return true, "sealMigrationDone nonzero", nil
 	}
 
 	existBarrierSealConfig, existRecoverySealConfig, err := c.PhysicalSealConfigs(ctx)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 
 	if !c.seal.BarrierSealConfigType().IsSameAs(existBarrierSealConfig.Type) {
-		return false, nil
+		return false, "barrier seal config type in seal matches what's in storage", nil
 	}
 	if c.seal.RecoveryKeySupported() && !SealConfigTypeRecovery.IsSameAs(existRecoverySealConfig.Type) {
-		return false, nil
+		return false, "recovery seal config type in seal matches what's in storage", nil
 	}
 
 	if c.seal.BarrierSealConfigType() != c.migrationInfo.seal.BarrierSealConfigType() {
-		return true, nil
+		return true, "barrier seal config type in seal doesn't match what's in storage", nil
 	}
 
 	// The above checks can handle the auto->shamir and shamir->auto
@@ -1997,13 +2192,13 @@ func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
 
 	switch {
 	case len(keys) > 0 && err == nil:
-		return true, nil
+		return true, "seal has stored keys", nil
 	case len(keysMig) > 0 && errMig == nil:
-		return false, nil
+		return false, "migration seal has stored keys", nil
 	case errors.Is(err, &ErrDecrypt{}) && errors.Is(errMig, &ErrDecrypt{}):
-		return false, fmt.Errorf("decrypt error, neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
+		return false, "", fmt.Errorf("decrypt error, neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
 	default:
-		return false, fmt.Errorf("neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
+		return false, "", fmt.Errorf("neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
 	}
 }
 
@@ -2015,17 +2210,17 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		return c.migrateMultiSealConfig(ctx)
 	}
 
-	ok, err := c.sealMigrated(ctx)
+	ok, info, err := c.sealMigrated(ctx)
 	if err != nil {
 		return fmt.Errorf("error checking if seal is migrated or not: %w", err)
 	}
 
 	if ok {
-		c.logger.Info("migration is already performed")
+		c.logger.Info("migration is already performed", "info", info)
 		return nil
 	}
 
-	c.logger.Info("seal migration initiated")
+	c.logger.Info("seal migration initiated", "info", info)
 
 	switch {
 	case c.migrationInfo.seal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
@@ -2082,6 +2277,11 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.unsealKey); err != nil {
 			return fmt.Errorf("error setting new recovery key information: %w", err)
 		}
+		// migrationInfo.unsealKey is single-use and is repopulated by a new migrate
+		// unseal flow if migration is retried; clear it now to reduce key material
+		// residency in process memory.
+		memzero(c.migrationInfo.unsealKey)
+		c.migrationInfo.unsealKey = nil
 
 		// Generate a new master key
 		newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
@@ -2158,8 +2358,15 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 			return err
 		}
 
+		if cancelIface := c.activeContextCancelFunc.Load(); cancelIface != nil {
+			if cancel, _ := cancelIface.(context.CancelFunc); cancel != nil {
+				cancel()
+			}
+		}
 		ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
-		if err := c.postUnseal(ctx, ctxCancel, standardUnsealStrategy{}); err != nil {
+		c.activeContext = ctx
+		c.activeContextCancelFunc.Store(ctxCancel)
+		if err := c.postUnseal(ctx, standardUnsealStrategy{}); err != nil {
 			c.logger.Error("post-unseal setup failed", "error", err)
 			c.barrier.Seal()
 			c.logger.Warn("vault is sealed")
@@ -2172,7 +2379,27 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 		}
 
 		c.standby = false
+
+		c.entStartSecureHubConnect(ctx)
 	} else {
+		// Populate the metric sink cluster name from the barrier now that it is
+		// unsealed. This ensures standby nodes emit metrics with the correct
+		// cluster label even when the cluster name was auto-generated.
+		if err := c.loadCluster(ctx); err != nil {
+			// A warn is sufficient here since this is a best-effort enrichment of metric
+			// labels on a standby node. Aborting the unseal over this is unnecessary.
+			c.logger.Warn("failed to load cluster info for standby metrics", "error", err)
+		}
+
+		// Validate configured audit devices before entering the standby loop
+		// We also skip DR secondaries because they don't set up audit device until promotion
+		if !c.IsDRSecondary() {
+			err := c.validateAuditDevices(ctx)
+			if err != nil {
+				c.logger.Error("audit device validation failed; this node will remain a non-voter until the issue is resolved", "error", err)
+			}
+		}
+
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.manualStepDownCh = make(chan struct{}, 1)
@@ -2592,6 +2819,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupCensusManager(ctx); err != nil {
 			return err
 		}
+		if err := c.setupConsumptionBilling(ctx); err != nil {
+			return err
+		}
 	} else {
 		brokerLogger := logger.Named("audit")
 		broker, err := audit.NewBroker(brokerLogger)
@@ -2668,6 +2898,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		Tmpdir:               c.containerPluginTmpdir,
 		EnableMlock:          c.enableMlock,
 		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
+		PluginPGPKey:         c.devPluginPGPKey,
 	})
 	if err != nil {
 		return err
@@ -2712,6 +2943,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
 		},
+		func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2734,8 +2969,20 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.setupExpiration(expireLeaseStrategyFairsharing)
 		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupOAuthTokenDenylist(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.migrateProfilesByIssuerIndex(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupOAuthResourceServerConfigManager(ctx)
+		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupHealthCheckManager()
 		})
 		setupFunctions = append(setupFunctions, c.loadAudits)
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
@@ -2744,6 +2991,7 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			if c.identityStore == nil {
 				return nil
 			}
+			c.identityStore.startEntityMetadataLoad(ctx)
 			return c.identityStore.loadArtifacts(ctx, isActive)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
@@ -2757,6 +3005,16 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			if c.agentRegistry == nil {
+				return nil
+			}
+			return c.agentRegistry.loadArtifacts(ctx, isActive)
 		})
 	}
 
@@ -2849,7 +3107,7 @@ func (c *Core) handleMultisealRewrapping(ctx context.Context, logger log.Logger)
 // allowing any user operations. This allows us to setup any state that
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
-func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc, unsealer UnsealStrategy) (retErr error) {
+func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr error) {
 	if stopTrace := c.tracePostUnsealIfEnabled(); stopTrace != nil {
 		defer stopTrace()
 	}
@@ -2859,13 +3117,8 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// Clear any out
 	c.postUnsealFuncs = nil
 
-	// Create a new request context
-	c.activeContext = ctx
-	c.activeContextCancelFunc.Store(ctxCancelFunc)
-
 	defer func() {
 		if retErr != nil {
-			ctxCancelFunc()
 			_ = c.preSeal()
 		}
 	}()
@@ -2954,15 +3207,20 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
-	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
+	c.loginMFABackend.usedCodes = ttlcache.New[string, any]()
+	cache.Start(ctx, c.loginMFABackend.usedCodes, !c.synctest)
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
-		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+		c.systemBackend.mfaBackend.usedCodes = ttlcache.New[string, any]()
+		cache.Start(ctx, c.systemBackend.mfaBackend.usedCodes, !c.synctest)
 	}
+	cache.Start(ctx, c.clusterPeerClusterAddrsCache, !c.synctest)
+
 	if c.systemBackend != nil {
 		// all mounts need to be initialized before activity log reporting
 		// starts, which happens in the post-unseal functions above.
 		sysActivityLogReporting(c.systemBackend)
 	}
+
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -3014,9 +3272,13 @@ func (c *Core) preSeal() error {
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 
-	// Clear any rekey progress
+	// Clear any rekey progress. rekeyLock guards these fields against
+	// concurrent readers such as the secure hub cluster state worker, which is
+	// not stopped until entPreSeal runs.
+	c.rekeyLock.Lock()
 	c.barrierRekeyConfig = nil
 	c.recoveryRekeyConfig = nil
+	c.rekeyLock.Unlock()
 
 	if c.metricsCh != nil {
 		close(c.metricsCh)
@@ -3069,6 +3331,11 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, err)
 	}
 
+	if c.identityStore != nil {
+		c.identityStore.stopEntityMetadataLoad()
+		c.identityStore.stopSCIMDeletingClientCleanup()
+	}
+
 	if c.autoRotateCancel != nil {
 		c.autoRotateCancel()
 		c.autoRotateCancel = nil
@@ -3084,8 +3351,12 @@ func (c *Core) preSeal() error {
 	}
 
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
-		c.systemBackend.mfaBackend.usedCodes = nil
+		if c.systemBackend.mfaBackend.usedCodes != nil {
+			c.systemBackend.mfaBackend.usedCodes.Stop()
+			c.systemBackend.mfaBackend.usedCodes = nil
+		}
 	}
+	c.clusterPeerClusterAddrsCache.Stop()
 	if err := c.teardownLoginMFA(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
 	}
@@ -3225,16 +3496,16 @@ const (
 	sealMigrationCheckDoNotAjust
 )
 
-func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (sealMigrationCheckResult, error) {
+func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (sealMigrationCheckResult, string, error) {
 	existBarrierSealConfig, _, err := c.PhysicalSealConfigs(ctx)
 	if err != nil {
-		return sealMigrationCheckError, fmt.Errorf("Error checking for existing seal: %s", err)
+		return sealMigrationCheckError, "", fmt.Errorf("Error checking for existing seal: %s", err)
 	}
 
 	// If we don't have an existing config or if it's the deprecated auto seal
 	// which needs an upgrade, skip out
 	if existBarrierSealConfig == nil || existBarrierSealConfig.Type == WrapperTypeHsmAutoDeprecated.String() {
-		return sealMigrationCheckSkip, nil
+		return sealMigrationCheckSkip, "no seal config or deprecated", nil
 	}
 
 	if unwrapSeal == nil {
@@ -3248,28 +3519,28 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 		case storedType == configuredType:
 			// We have the same barrier type and the unwrap seal is nil so we're not
 			// migrating from same to same, IOW we assume it's not a migration.
-			return sealMigrationCheckDoNotAjust, nil
+			return sealMigrationCheckDoNotAjust, "same barrier and unwrap seal is nil", nil
 		case configuredType == SealConfigTypeShamir:
 			// The stored barrier config is not shamir, there is no disabled seal
 			// in config, and either no configured seal (which equates to Shamir)
 			// or an explicitly configured Shamir seal.
-			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
+			return sealMigrationCheckError, "", fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
 				existBarrierSealConfig.Type)
 		case storedType == SealConfigTypeShamir:
 			// The configured seal is not Shamir, the stored seal config is Shamir.
 			// This is a migration away from Shamir.
 
-			return sealMigrationCheckAdjust, nil
+			return sealMigrationCheckAdjust, "configured seal is not shamir and stored seal config is", nil
 		case configuredType == SealConfigTypeMultiseal && c.IsMultisealEnabled():
 			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
 
-			return sealMigrationCheckDoNotAjust, nil
+			return sealMigrationCheckDoNotAjust, "single non-shamir to multiseal", nil
 		case configuredType == SealConfigTypeMultiseal:
 			// The configured seal is multiseal and we know the stored type is not shamir, thus
 			// we are going from auto seal to multiseal.
-			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
+			return sealMigrationCheckError, "", fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
 				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		case storedType == SealConfigTypeMultiseal:
 			// The stored type is multiseal and we know the type the configured type is not shamir,
@@ -3278,12 +3549,12 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
 
-			return sealMigrationCheckDoNotAjust, nil
+			return sealMigrationCheckDoNotAjust, "multiseal to autoseal", nil
 		default:
 			// We know at this point that there is a configured non-Shamir seal,
 			// that it does not match the stored non-Shamir seal config, and that
 			// there is no explicitly disabled seal stanza.
-			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
+			return sealMigrationCheckError, "", fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
 				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		}
 	} else {
@@ -3291,9 +3562,9 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 		// in the config and disabled.
 
 		if unwrapSeal.BarrierSealConfigType() == SealConfigTypeShamir {
-			return sealMigrationCheckError, errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
+			return sealMigrationCheckError, "", errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
 		}
-		return sealMigrationCheckDoNotAjust, nil
+		return sealMigrationCheckDoNotAjust, "unchanged", nil
 	}
 }
 
@@ -3319,7 +3590,7 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	ctx := context.Background()
 
-	checkResult, err := c.checkForSealMigration(ctx, unwrapSeal)
+	checkResult, _, err := c.checkForSealMigration(ctx, unwrapSeal)
 	if err != nil {
 		return err
 	}
@@ -3603,7 +3874,7 @@ func (c *Core) IsSealMigrated(lock bool) bool {
 		c.stateLock.RLock()
 		defer c.stateLock.RUnlock()
 	}
-	done, _ := c.sealMigrated(context.Background())
+	done, _, _ := c.sealMigrated(context.Background())
 	return done
 }
 
@@ -3764,13 +4035,23 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
-// administrativeNamespacePath returns the configured administrative namespace path.
-func (c *Core) administrativeNamespacePath() string {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return ""
+// AdministrativeNamespacePath returns the configured administrative namespace path.
+// It reads from rawConfig so that a live SIGHUP / SetConfig update is reflected immediately.
+// Falls back to the cached field when rawConfig has not been populated (e.g. in unit tests
+// that construct a bare Core without going through NewCore).
+func (c *Core) AdministrativeNamespacePath() string {
+	if conf := c.rawConfig.Load(); conf != nil {
+		return conf.(*server.Config).AdministrativeNamespacePath
 	}
-	return conf.(*server.Config).AdministrativeNamespacePath
+	return c.administrativeNamespacePath
+}
+
+// OperatorNamespacePath returns the configured operator namespace path. If set,
+// this namespace will be created if it doesn't exist, and operator APIs will
+// only be available in the configured path. An empty path means that operator
+// APIs will remain in the root namespace, as normal.
+func (c *Core) OperatorNamespacePath() string {
+	return c.operatorNamespacePath
 }
 
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env
@@ -3881,9 +4162,10 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 	}
 
 	qmFlags := &quotas.ManagerFlags{
-		IsPerfStandby: isPerfStandby,
-		IsDRSecondary: c.IsDRSecondary(),
-		IsNewInstall:  c.IsNewInstall(ctx),
+		IsPerfStandby:         isPerfStandby,
+		IsDRSecondary:         c.IsDRSecondary(),
+		IsNewInstall:          c.IsNewInstall(ctx),
+		OperatorNamespacePath: c.operatorNamespacePath,
 	}
 
 	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
@@ -4046,6 +4328,14 @@ type MFACachedAuthResponse struct {
 	SelfEnrollmentMFASecret *selfEnrollmentPendingMFASecret
 }
 
+// isExpired reports whether the cached first-factor authentication has outlived
+// ttl at the given time. An entry is expired at exactly TimeOfStorage + ttl. A
+// zero TimeOfStorage is treated as expired, so an entry that was never given a
+// storage time is rejected rather than accepted.
+func (r *MFACachedAuthResponse) isExpired(ttl time.Duration, now time.Time) bool {
+	return !now.Before(r.TimeOfStorage.Add(ttl))
+}
+
 // selfEnrollmentPendingMFASecret holds information about a TOTP Login MFA secret
 // that has been generated during a login request with self-enrollment enabled.
 // This secret is temporarily stored in memory until the user successfully
@@ -4059,6 +4349,9 @@ type selfEnrollmentPendingMFASecret struct {
 	Key string
 }
 
+// setupCachedMFAResponseAuth initializes the MFA auth response queue and
+// starts a goroutine that, every 5 seconds, removes expired entries in
+// bounded batches until the active context is cancelled.
 func (c *Core) setupCachedMFAResponseAuth() {
 	c.mfaResponseAuthQueueLock.Lock()
 	c.mfaResponseAuthQueue = NewLoginMFAPriorityQueue()
@@ -4247,20 +4540,52 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 	return lockedAliasesCount, nil
 }
 
-// PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
-// it returns the cached auth response or an error
+// PopMFAResponseAuthByID removes the entry with the given request ID from the
+// mfaResponseAuthQueue and returns the cached auth response. It returns
+// (nil, nil) if the queue is not initialized, the ID is not found, or the
+// entry has expired. The expiry check is needed because background cleanup
+// removes expired entries in bounded batches, so an expired entry can still be
+// in the queue. An expired entry is removed from the queue and not returned.
 func (c *Core) PopMFAResponseAuthByID(reqID string) (*MFACachedAuthResponse, error) {
 	c.mfaResponseAuthQueueLock.Lock()
 	defer c.mfaResponseAuthQueueLock.Unlock()
-	return c.mfaResponseAuthQueue.PopByKey(reqID)
+
+	if c.mfaResponseAuthQueue == nil {
+		return nil, nil
+	}
+
+	resp, err := c.mfaResponseAuthQueue.PopByKey(reqID)
+	if err != nil || resp == nil {
+		return nil, err
+	}
+
+	if resp.isExpired(defaultMFAAuthResponseTTL, time.Now()) {
+		return nil, nil
+	}
+	return resp, nil
 }
 
 // SaveMFAResponseAuth pushes an MFACachedAuthResponse to the mfaResponseAuthQueue.
-// it returns an error in case of failure
+// The per-entity, per-source-IP and global pending limits apply, including when
+// re-pushing an entry after a failed validation. A rejection returns an
+// *mfaPendingLimitError and increments the core.mfa.pending_rejected metric,
+// labeled with the scope that was full. It returns an error if the queue is not
+// initialized, for example after teardownLoginMFA has run, or if the push fails.
 func (c *Core) SaveMFAResponseAuth(respAuth *MFACachedAuthResponse) error {
 	c.mfaResponseAuthQueueLock.Lock()
 	defer c.mfaResponseAuthQueueLock.Unlock()
-	return c.mfaResponseAuthQueue.Push(respAuth)
+
+	if c.mfaResponseAuthQueue == nil {
+		return errors.New("login MFA response queue is not initialized")
+	}
+	err := c.mfaResponseAuthQueue.Push(respAuth)
+	var limitErr *mfaPendingLimitError
+	if errors.As(err, &limitErr) {
+		metrics.IncrCounterWithLabels([]string{"core", "mfa", "pending_rejected"}, 1,
+			[]metrics.Label{{Name: "scope", Value: limitErr.scope}})
+		c.Logger().Debug("rejected pending MFA entry: limit reached", "scope", limitErr.scope)
+	}
+	return err
 }
 
 type InFlightRequests struct {
@@ -4384,6 +4709,32 @@ func (c *Core) ReloadIntrospectionEndpointEnabled() {
 	c.introspectionEnabled = conf.(*server.Config).EnableIntrospectionEndpoint
 }
 
+func (c *Core) ReloadEnableUnauthenticatedAccess() {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+
+	// Check which endpoints are in the EnableUnauthenticatedAccess list
+	enableRekey := false
+	enableGenerateRoot := false
+	enableDROperationToken := false
+	for _, endpoint := range conf.(*server.Config).EnableUnauthenticatedAccess {
+		switch endpoint {
+		case "rekey":
+			enableRekey = true
+		case "generate-root":
+			enableGenerateRoot = true
+		case "generate-operation-token":
+			enableDROperationToken = true
+		}
+	}
+
+	c.enableUnauthRekey.Store(enableRekey)
+	c.enableUnauthGenerateRoot.Store(enableGenerateRoot)
+	c.enableUnauthDROperationToken.Store(enableDROperationToken)
+}
+
 type PeerNode struct {
 	Hostname                    string        `json:"hostname"`
 	APIAddress                  string        `json:"api_address"`
@@ -4401,7 +4752,7 @@ type PeerNode struct {
 func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	var nodes []PeerNode
 	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
-		info := item.Object.(nodeHAConnectionInfo)
+		info := item.Value()
 		var hostname, apiAddr string
 
 		// nodeInfo can be nil if there's a node with a much older version in
@@ -4477,10 +4828,24 @@ func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint str
 func (c *Core) DetermineRoleFromLoginRequestFromReader(ctx context.Context, mountPoint string, reader io.Reader, conn *logical.Connection, header http.Header) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-	data := make(map[string]interface{})
-	err := jsonutil.DecodeJSONFromReader(reader, &data)
-	if err != nil {
+
+	body, err := io.ReadAll(reader)
+	if err != nil || len(bytes.TrimSpace(body)) == 0 {
 		return ""
+	}
+
+	data := make(map[string]interface{})
+	jsonErr := jsonutil.DecodeJSONFromReader(bytes.NewReader(body), &data)
+	// We weren't able to decode the body as JSON, try parsing as form-data now.
+	if jsonErr != nil {
+		form, formErr := url.ParseQuery(string(body))
+		if formErr != nil {
+			return ""
+		}
+		data = make(map[string]interface{}, len(form))
+		for k, v := range form {
+			data[k] = strings.Join(v, ",")
+		}
 	}
 	return c.doResolveRoleLocked(ctx, mountPoint, data, conn, header)
 }
@@ -4511,7 +4876,7 @@ func (c *Core) doResolveRoleLocked(ctx context.Context, mountPoint string, data 
 		req.Headers = filteredHeaders(headers, passthroughRequestHeaders, deniedPassthroughRequestHeaders)
 	}
 	resp, err := be.HandleRequest(ctx, req)
-	if err != nil || resp.Data["role"] == nil {
+	if err != nil || resp == nil || resp.Data == nil || resp.Data["role"] == nil {
 		return ""
 	}
 
@@ -4554,7 +4919,7 @@ func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Reque
 		Data:       req.Data,
 		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
 	})
-	if err != nil || resp.Auth.Alias == nil {
+	if err != nil || resp == nil || resp.Auth == nil || resp.Auth.Alias == nil {
 		return "", nil
 	}
 	return resp.Auth.Alias.Name, nil
@@ -4642,29 +5007,6 @@ func (c *Core) SetGroupPolicyApplicationMode(ctx context.Context, mode string) e
 		Key:   coreGroupPolicyApplicationPath,
 		Value: json,
 	})
-}
-
-type HCPLinkStatus struct {
-	lock             sync.RWMutex
-	ConnectionStatus string `json:"hcp_link_status,omitempty"`
-	ResourceIDOnHCP  string `json:"resource_ID_on_hcp,omitempty"`
-}
-
-func (c *Core) SetHCPLinkStatus(status, resourceID string) {
-	c.hcpLinkStatus.lock.Lock()
-	defer c.hcpLinkStatus.lock.Unlock()
-	c.hcpLinkStatus.ConnectionStatus = status
-	c.hcpLinkStatus.ResourceIDOnHCP = resourceID
-}
-
-func (c *Core) GetHCPLinkStatus() (string, string) {
-	c.hcpLinkStatus.lock.RLock()
-	defer c.hcpLinkStatus.lock.RUnlock()
-
-	status := c.hcpLinkStatus.ConnectionStatus
-	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
-
-	return status, resourceID
 }
 
 // IsExperimentEnabled is true if the experiment is enabled in the core.
@@ -4867,4 +5209,28 @@ var errRemovedHANode = errors.New("node has been removed from the HA cluster")
 
 func (c *Core) CoreNumber() int {
 	return c.coreNumber
+}
+
+func (c *Core) GetEnableUnauthRekey() bool {
+	return c.enableUnauthRekey.Load()
+}
+
+func (c *Core) SetEnableUnauthRekey(val bool) {
+	c.enableUnauthRekey.Store(val)
+}
+
+func (c *Core) GetEnableUnauthGenerateRoot() bool {
+	return c.enableUnauthGenerateRoot.Load()
+}
+
+func (c *Core) SetEnableUnauthGenerateRoot(val bool) {
+	c.enableUnauthGenerateRoot.Store(val)
+}
+
+func (c *Core) GetEnableUnauthDROperationToken() bool {
+	return c.enableUnauthDROperationToken.Load()
+}
+
+func (c *Core) SetEnableUnauthDROperationToken(val bool) {
+	c.enableUnauthDROperationToken.Store(val)
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -21,11 +22,17 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (exported bool, format string, role *issuing.RoleEntry, errorResp *logical.Response) {
+type generationParams struct {
+	exported bool
+	format   string
+	role     *issuing.RoleEntry
+}
+
+func getCAGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (params generationParams, warnings []string, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
-		exported = true
+		params.exported = true
 	case "internal":
 	case "existing":
 	case "kms":
@@ -35,20 +42,40 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		return
 	}
 
-	format = getFormat(data)
-	if format == "" {
-		errorResp = logical.ErrorResponse(
-			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
+	// PKCS#12/JKS formats are only supported for root certificate generation.
+	// For non-root operations, only a CSR is generated and PKCS#12/JKS is not a valid output format.
+	params.format = getFormat(data)
+	isKeystoreFormat := params.format == "pkcs12_bundle" || params.format == "jks_bundle"
+	if params.format == "" || (!isRoot && isKeystoreFormat) {
+		errorMsg := `the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`
+		if !isRoot {
+			errorMsg = `the "format" parameter must be "pem", "der" or "pem_bundle"`
+		}
+		errorResp = logical.ErrorResponse(errorMsg)
 		return
 	}
 
-	keyType, keyBits, err := sc.getKeyTypeAndBitsForRole(data)
+	if params.format == "pkcs12_bundle" {
+		// Cast to encoder type and validate it is a permitted value
+		_, err := validatePKCS12Encoder(data.Get("pkcs12_encoder").(string))
+		if err != nil {
+			errorResp = logical.ErrorResponse(`invalid "pkcs12_encoder" parameter: %v`, err)
+			return
+		}
+	}
+
+	keyType, keyBits, parameterSet, err := sc.getKeyTypeAndBitsForRole(data)
 	if err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 		return
 	}
 
-	role = &issuing.RoleEntry{
+	country := data.Get("country").([]string)
+	if err := validateCountry(country); err != nil {
+		warnings = append(warnings, err.Error())
+	}
+
+	role := &issuing.RoleEntry{
 		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
 		KeyType:                   keyType,
 		KeyBits:                   keyBits,
@@ -65,7 +92,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		AllowedUserIDs:            []string{"*"},
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
-		Country:                   data.Get("country").([]string),
+		Country:                   country,
 		Locality:                  data.Get("locality").([]string),
 		Province:                  data.Get("province").([]string),
 		StreetAddress:             data.Get("street_address").([]string),
@@ -73,10 +100,12 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		CNValidations:             []string{"disabled"},
 		KeyUsage:                  data.Get("key_usage").([]string),
+		ParameterSet:              certutil.ParameterSet(parameterSet),
 	}
+	params.role = role
 	*role.AllowWildcardCertificates = true
 
-	if role.KeyBits, err = certutil.ValidateDefaultOrValueKeyType(role.KeyType, role.KeyBits); err != nil {
+	if role.KeyBits, err = certutil.ValidateDefaultOrValueKeyType(role.KeyType, role.KeyBits, parameterSet); err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 	}
 
@@ -169,7 +198,7 @@ func parseCABundle(ctx context.Context, mkv managed_key.PkiManagedKeyView, bundl
 	return issuing.ParseCABundle(ctx, mkv, bundle)
 }
 
-func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (string, int, error) {
+func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (string, int, string, error) {
 	exportedStr := data.Get("exported").(string)
 	var keyType string
 	var keyBits int
@@ -180,7 +209,8 @@ func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (s
 	case "exported":
 		keyType = data.Get("key_type").(string)
 		keyBits = data.Get("key_bits").(int)
-		return keyType, keyBits, nil
+		parameterSet := data.Get(parameterSetParam).(string)
+		return keyType, keyBits, parameterSet, nil
 	}
 
 	// existing and kms types don't support providing the key_type and key_bits args.
@@ -188,19 +218,19 @@ func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (s
 	_, okKeyBits := data.Raw["key_bits"]
 
 	if okKeyType || okKeyBits {
-		return "", 0, errors.New("invalid parameter for the kms/existing path parameter, key_type nor key_bits arguments can be set in this mode")
+		return "", 0, "", errors.New("invalid parameter for the kms/existing path parameter, key_type nor key_bits arguments can be set in this mode")
 	}
 
 	var pubKey crypto.PublicKey
 	if kmsRequestedFromFieldData(data) {
 		keyId, err := getManagedKeyId(data)
 		if err != nil {
-			return "", 0, errors.New("unable to determine managed key id: " + err.Error())
+			return "", 0, "", errors.New("unable to determine managed key id: " + err.Error())
 		}
 
 		pubKeyManagedKey, err := managed_key.GetManagedKeyPublicKey(sc.Context, sc.GetPkiManagedView(), keyId)
 		if err != nil {
-			return "", 0, errors.New("failed to lookup public key from managed key: " + err.Error())
+			return "", 0, "", errors.New("failed to lookup public key from managed key: " + err.Error())
 		}
 		pubKey = pubKeyManagedKey
 	}
@@ -208,13 +238,13 @@ func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (s
 	if existingKeyRequestedFromFieldData(data) {
 		existingPubKey, err := sc.getExistingPublicKey(data)
 		if err != nil {
-			return "", 0, errors.New("failed to lookup public key from existing key: " + err.Error())
+			return "", 0, "", errors.New("failed to lookup public key from existing key: " + err.Error())
 		}
 		pubKey = existingPubKey
 	}
 
-	privateKeyType, keyBits, err := getKeyTypeAndBitsFromPublicKeyForRole(pubKey)
-	return string(privateKeyType), keyBits, err
+	privateKeyType, keyBits, parameterSet, err := getKeyTypeAndBitsFromPublicKeyForRole(pubKey)
+	return string(privateKeyType), keyBits, string(parameterSet), err
 }
 
 func (sc *storageContext) getExistingPublicKey(data *framework.FieldData) (crypto.PublicKey, error) {
@@ -233,9 +263,10 @@ func (sc *storageContext) getExistingPublicKey(data *framework.FieldData) (crypt
 	return getPublicKey(sc.Context, sc.GetPkiManagedView(), key)
 }
 
-func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.PrivateKeyType, int, error) {
+func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.PrivateKeyType, int, certutil.ParameterSet, error) {
 	var keyType certutil.PrivateKeyType
 	var keyBits int
+	var parameterSet certutil.ParameterSet
 
 	switch pubKey.(type) {
 	case *rsa.PublicKey:
@@ -245,10 +276,18 @@ func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.Pr
 		keyType = certutil.ECPrivateKey
 	case ed25519.PublicKey:
 		keyType = certutil.Ed25519PrivateKey
+	case *mldsa.PublicKey:
+		keyType = certutil.MLDSAPrivateKey
+
+		var err error
+		parameterSet, err = getMLDSAParameterSet(pubKey.(*mldsa.PublicKey))
+		if err != nil {
+			return certutil.UnknownPrivateKey, 0, "", err
+		}
 	default:
-		return certutil.UnknownPrivateKey, 0, fmt.Errorf("unsupported public key: %#v", pubKey)
+		return certutil.UnknownPrivateKey, 0, "", fmt.Errorf("unsupported public key: %#v", pubKey)
 	}
-	return keyType, keyBits, nil
+	return keyType, keyBits, parameterSet, nil
 }
 
 func (sc *storageContext) getExistingKeyFromRef(keyRef string) (*issuing.KeyEntry, error) {
@@ -260,7 +299,7 @@ func (sc *storageContext) getExistingKeyFromRef(keyRef string) (*issuing.KeyEntr
 }
 
 func existingKeyGeneratorFromBytes(key *issuing.KeyEntry) certutil.KeyGenerator {
-	return func(_ string, _ int, container certutil.ParsedPrivateKeyContainer, _ io.Reader) error {
+	return func(_ string, _ int, container certutil.ParsedPrivateKeyContainer, _ io.Reader, _ certutil.ParameterSet) error {
 		signer, _, pemBytes, err := getSignerFromKeyEntryBytes(key)
 		if err != nil {
 			return err

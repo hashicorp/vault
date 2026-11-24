@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package raft
@@ -22,14 +22,24 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/require"
 	bolt "go.etcd.io/bbolt"
 )
+
+// TestUsesRaftWAL_Uninitialized verifies WAL detection is safe before a store is opened.
+func TestUsesRaftWAL_Uninitialized(t *testing.T) {
+	t.Parallel()
+
+	backend := &RaftBackend{}
+	require.False(t, backend.UsesRaftWAL(), "an unopened store must not report WAL usage")
+}
 
 func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string)) {
 	t.Helper()
@@ -40,11 +50,11 @@ func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string
 	}{
 		{
 			name:   "use wal",
-			useWAL: "true",
+			useWAL: "raft_wal",
 		},
 		{
 			name:   "use boltdb",
-			useWAL: "false",
+			useWAL: "raft_boltdb",
 		},
 	}
 
@@ -63,11 +73,11 @@ func testBothRaftBackendsBenchmark(b *testing.B, f func(raftWALValue string)) {
 	}{
 		{
 			name:   "use wal",
-			useWAL: "true",
+			useWAL: "raft_wal",
 		},
 		{
 			name:   "use boltdb",
-			useWAL: "false",
+			useWAL: "raft_boltdb",
 		},
 	}
 
@@ -202,30 +212,140 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 	return nil
 }
 
+// TestRaft_Backend verifies storage operations and detection of the active WAL or BoltDB backend.
 func TestRaft_Backend(t *testing.T) {
 	t.Parallel()
 
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
+		require.Equal(t, useRaftWal == "raft_wal", b.UsesRaftWAL(), "WAL detection must match the opened backend")
 		physical.ExerciseBackend(t, b)
 	})
+}
+
+// TestRaft_CollectMetrics_LogStorePerNode verifies that each node reports its
+// actual opened Raft log store, including the default and BoltDB fallback.
+func TestRaft_CollectMetrics_LogStorePerNode(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		nodeID         string
+		logStore       string
+		legacyRaftWal  string
+		existingBoltDB bool
+		wantLogStore   string
+	}{
+		{
+			nodeID:       "default-node",
+			wantLogStore: "raft_wal",
+		},
+		{
+			nodeID:       "wal-node",
+			logStore:     "raft_wal",
+			wantLogStore: "raft_wal",
+		},
+		{
+			nodeID:       "boltdb-node",
+			logStore:     "raft_boltdb",
+			wantLogStore: "raft_boltdb",
+		},
+		{
+			nodeID:        "precedence-node",
+			logStore:      "raft_wal",
+			legacyRaftWal: "false",
+			wantLogStore:  "raft_wal",
+		},
+		{
+			nodeID:         "fallback-node",
+			logStore:       "raft_wal",
+			existingBoltDB: true,
+			wantLogStore:   "raft_boltdb",
+		},
+	}
+
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	sink := metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+	wantByNode := make(map[string]string, len(testCases))
+	for _, tc := range testCases {
+		conf := map[string]string{
+			"path":    t.TempDir(),
+			"node_id": tc.nodeID,
+		}
+		if tc.logStore != "" {
+			conf["log_store"] = tc.logStore
+		}
+		if tc.legacyRaftWal != "" {
+			conf["raft_wal"] = tc.legacyRaftWal
+		}
+		if tc.existingBoltDB {
+			raftBasePath := filepath.Join(conf["path"], raftState)
+			require.NoError(t, os.MkdirAll(raftBasePath, 0o777))
+			db, err := bolt.Open(filepath.Join(raftBasePath, "raft.db"), 0o777, nil)
+			require.NoError(t, err)
+			require.NoError(t, db.Close())
+		}
+
+		backendRaw, err := NewRaftBackend(conf, hclog.NewNullLogger())
+		require.NoError(t, err)
+		backend := backendRaw.(*RaftBackend)
+		t.Cleanup(func() {
+			require.NoError(t, backend.Close())
+		})
+		backend.CollectMetrics(sink)
+		wantByNode[tc.nodeID] = tc.wantLogStore
+	}
+
+	type observedLogStore struct {
+		name  string
+		value float32
+	}
+	observedByNode := make(map[string]observedLogStore, len(testCases))
+	for _, interval := range inmemSink.Data() {
+		interval.RLock()
+		for _, gauge := range interval.Gauges {
+			if gauge.Name != "raft_storage.log_store" {
+				continue
+			}
+
+			labels := make(map[string]string, len(gauge.Labels))
+			for _, label := range gauge.Labels {
+				labels[label.Name] = label.Value
+			}
+			if labels["cluster"] == "test-cluster" {
+				observedByNode[labels["peer_id"]] = observedLogStore{
+					name:  labels["log_store"],
+					value: gauge.Value,
+				}
+			}
+		}
+		interval.RUnlock()
+	}
+
+	require.Len(t, observedByNode, len(wantByNode))
+	for nodeID, wantLogStore := range wantByNode {
+		observed := observedByNode[nodeID]
+		require.Equal(t, wantLogStore, observed.name, "unexpected log_store for peer_id %q", nodeID)
+		require.Equal(t, float32(1), observed.value, "log_store gauge should be set for peer_id %q", nodeID)
+	}
 }
 
 // TestRaft_SwitchFromBoltDBToRaftWal is testing that we don't use raft-wal, even if configured to do so,
 // if there is an existing raft.db file on disk (meaning BoltDB was previously in use).
 func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
+	t.Parallel()
+
 	tmpDir := t.TempDir()
 
 	// configured to use raft-wal
 	conf := map[string]string{
 		"path":          tmpDir,
 		"trailing_logs": "100",
-		"raft_wal":      "true",
+		"log_store":     "raft_wal",
 	}
 
 	// raftBaseDir will end up looking like $tmpDir/raft
@@ -245,10 +365,14 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	backend, err := NewRaftBackend(conf, hclog.NewNullLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.False(t, backend.(*RaftBackend).UsesRaftWAL(), "existing BoltDB storage must override raft_wal=true")
+	t.Cleanup(func() {
+		require.NoError(t, backend.(*RaftBackend).Close())
+	})
 
 	// Check to see if $tmpDir/raft/raft-wal exists. It should not, because we only create that if raft-wal is in use.
 	// And since raft.db already existed, we should've skipped all the raft-wal setup code.
@@ -270,7 +394,7 @@ func TestRaft_VerifierEnabled(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs":             "100",
-			"raft_wal":                  useRaftWal,
+			"log_store":                 useRaftWal,
 			"raft_log_verifier_enabled": "true",
 		}
 
@@ -291,7 +415,7 @@ func TestRaft_Backend_LargeKey(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -326,7 +450,7 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -360,7 +484,7 @@ func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -423,7 +547,7 @@ func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -468,7 +592,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -509,7 +633,7 @@ func TestRaft_Backend_ListPrefix(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -522,7 +646,7 @@ func TestRaft_TransactionalBackend(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -545,7 +669,7 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -572,7 +696,7 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		config := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		// Create 3 raft nodes
@@ -624,7 +748,7 @@ func TestRaft_Recovery(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		// Create 4 raft nodes
@@ -737,7 +861,7 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -767,7 +891,7 @@ func TestRaft_Removed(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, raftWALValue string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      raftWALValue,
+			"log_store":     raftWALValue,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -887,7 +1011,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		b, dir := GetRaftWithConfig(t, true, true, conf)
@@ -950,6 +1074,20 @@ func TestRaft_Backend_Performance(t *testing.T) {
 		if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
 			t.Fatalf("bad config: %v", localConfig)
 		}
+
+		b.conf = map[string]string{
+			"path":                   dir,
+			"performance_multiplier": "0",
+		}
+
+		localConfig = raft.DefaultConfig()
+		err = ApplyConfigSettings(b.logger, b.conf, localConfig)
+		if err == nil {
+			t.Fatal("expected error for performance_multiplier=0")
+		}
+		if !strings.Contains(err.Error(), "performance_multiplier") {
+			t.Fatalf("expected error to mention performance_multiplier, got: %v", err)
+		}
 	})
 }
 
@@ -957,7 +1095,7 @@ func BenchmarkDB_Puts(b *testing.B) {
 	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(b, true, false, conf)
@@ -994,7 +1132,7 @@ func BenchmarkDB_Snapshot(b *testing.B) {
 	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
-			"raft_wal":      useRaftWal,
+			"log_store":     useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(b, true, false, conf)

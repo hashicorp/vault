@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	_ "github.com/jackc/pgx/v4"
+	_ "github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,9 +28,7 @@ func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
-
+	_, sys := getClusterPostgresDB(t)
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
@@ -93,6 +91,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"verify_connection":                  false,
 			"skip_static_role_import_rotation":   false,
 			"rotation_schedule":                  "",
+			"rotation_policy":                    "",
 			"rotation_period":                    time.Duration(0).Seconds(),
 			"rotation_window":                    time.Duration(0).Seconds(),
 			"disable_automated_rotation":         false,
@@ -153,6 +152,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"verify_connection":                  false,
 			"skip_static_role_import_rotation":   false,
 			"rotation_schedule":                  "",
+			"rotation_policy":                    "",
 			"rotation_period":                    time.Duration(0).Seconds(),
 			"rotation_window":                    time.Duration(0).Seconds(),
 			"disable_automated_rotation":         false,
@@ -203,6 +203,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"verify_connection":                  false,
 			"skip_static_role_import_rotation":   false,
 			"rotation_schedule":                  "",
+			"rotation_policy":                    "",
 			"rotation_period":                    time.Duration(0).Seconds(),
 			"rotation_window":                    time.Duration(0).Seconds(),
 			"disable_automated_rotation":         false,
@@ -251,7 +252,6 @@ func TestBackend_connectionCrud(t *testing.T) {
 	t.Parallel()
 	dbFactory := &singletonDBFactory{}
 	cluster, sys := getClusterPostgresDBWithFactory(t, dbFactory.factory)
-	defer cluster.Cleanup()
 
 	dbFactory.sys = sys
 	client := cluster.Cores[0].Client.Logical()
@@ -354,6 +354,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"verify_connection":                  false,
 		"skip_static_role_import_rotation":   false,
 		"rotation_schedule":                  "",
+		"rotation_policy":                    "",
 		"rotation_period":                    json.Number("0"),
 		"rotation_window":                    json.Number("0"),
 		"disable_automated_rotation":         false,

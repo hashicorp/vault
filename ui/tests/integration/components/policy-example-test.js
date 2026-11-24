@@ -18,7 +18,7 @@ const SELECTORS = {
 module('Integration | Component | policy-example', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders the correct paragraph for ACL policy', async function (assert) {
+  test('it renders the correct paragraph for ACL Policy', async function (assert) {
     await render(hbs`
     <PolicyExample
       @policyType="acl"

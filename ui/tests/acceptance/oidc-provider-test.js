@@ -11,7 +11,6 @@ import sinon from 'sinon';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { visit, settled, currentURL, waitFor, currentRouteName, fillIn, click } from '@ember/test-helpers';
-import { clearRecord } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
 import queryParamString from 'vault/utils/query-param-string';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -121,7 +120,6 @@ module('Acceptance | oidc provider', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    this.store = this.owner.lookup('service:store');
     await login();
     await settled();
     this.oidcSetupInformation = await setupOidc(this.uid);
@@ -129,6 +127,11 @@ module('Acceptance | oidc provider', function (hooks) {
   });
 
   hooks.afterEach(async function () {
+    const api = this.owner.lookup('service:api');
+    await Promise.allSettled([
+      api.identity.oidcDeleteProvider(WEB_APP_NAME),
+      api.identity.oidcDeleteProvider(PROVIDER_NAME),
+    ]);
     await login();
   });
 
@@ -169,10 +172,6 @@ module('Acceptance | oidc provider', function (hooks) {
       .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
     const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
     assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
-
-    //* clean up test state
-    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
-    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
@@ -220,10 +219,6 @@ module('Acceptance | oidc provider', function (hooks) {
     );
     assert.strictEqual(currentRouteName(), 'vault.cluster.oidc-provider');
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
-
-    //* clean up test state
-    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
-    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
 
   // Error handling test coverage, see issue for more context https://github.com/hashicorp/vault/issues/27772
@@ -271,7 +266,52 @@ module('Acceptance | oidc provider', function (hooks) {
     //* clean up test state
     authStub.restore();
     await login();
-    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
-    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
+  });
+
+  test('prompt=none with no session redirects to Vault auth, not directly to redirect_uri', async function (assert) {
+    const { providerName, clientId } = this.oidcSetupInformation;
+    const unregisteredRedirect = 'http://localhost:9999/';
+    const url = getAuthzUrl(providerName, unregisteredRedirect, clientId, { prompt: 'none' });
+
+    await visit('/vault/logout');
+    await visit(url);
+
+    assert.ok(
+      currentURL().startsWith('/vault/auth'),
+      `redirects to Vault auth page instead of ${unregisteredRedirect} (actual: ${currentURL()})`
+    );
+    assert.ok(currentURL().includes('o='), 'oidcProvider query param is present on auth page');
+  });
+
+  test('prompt=none with no session and registered redirect_uri: after login the backend redirects to the registered URI', async function (assert) {
+    const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
+    // callback ('http://127.0.0.1:8251/callback') IS in the allowlist.
+    const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'none' });
+
+    await visit('/vault/logout');
+    await visit(url);
+
+    assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth page before login');
+
+    // Log in as the OIDC end-user.
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom('[data-test-oidc-redirect]')
+      .exists('redirect link is shown after login (window.location.replace suppressed in tests)');
+    const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
+    assert.ok(
+      link.startsWith(callback),
+      `redirect targets the registered callback URI, not an arbitrary one (got: ${link})`
+    );
+    assert.ok(
+      link.includes(`${callback}?code=`),
+      'redirect carries an authorization code to the registered callback URI'
+    );
   });
 });

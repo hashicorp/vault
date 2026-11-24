@@ -6,16 +6,17 @@
 import LdapRolesRoute from '../roles';
 
 import type Transition from '@ember/routing/transition';
-import type LdapRoleModel from 'vault/models/ldap/role';
+import type { LdapRole } from 'vault/secrets/ldap';
 import type Controller from '@ember/controller';
-import type { Breadcrumb } from 'vault/vault/app-types';
+import type { Breadcrumb } from 'vault/app-types';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import { LdapApplicationModel } from '../application';
 
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
-  roles: Array<LdapRoleModel>;
+  isSelfManaged: boolean;
+  roles: Array<LdapRole>;
 }
 
 interface RouteController extends Controller {
@@ -35,11 +36,14 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
 
   async model(params: { page?: string; pageFilter: string }) {
     const { page, pageFilter: filter } = params;
-    const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
+    const { secretsEngine, promptConfig, isSelfManaged } = this.modelFor(
+      'application'
+    ) as LdapApplicationModel;
     const { roles, capabilities } = await this.fetchRolesAndCapabilities({ page: Number(page) || 1, filter });
     return {
       secretsEngine,
       promptConfig,
+      isSelfManaged,
       roles,
       capabilities,
     };
@@ -49,7 +53,8 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: resolvedModel.secretsEngine.id, route: 'overview' },
       { label: 'Roles' },
     ];

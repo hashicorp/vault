@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, findAll } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
@@ -13,7 +13,6 @@ import Service from '@ember/service';
 import sinon from 'sinon';
 import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const searchSelect = create(ss);
 
@@ -40,12 +39,11 @@ module('Integration | Component | path filter config list', function (hooks) {
 
   hooks.beforeEach(function () {
     this.context = { owner: this.engine }; // this.engine set by setupEngine
-    const ajaxStub = sinon.stub();
-    ajaxStub.withArgs('/v1/sys/internal/ui/mounts', 'GET').resolves(MOUNTS_RESPONSE);
-    ajaxStub
-      .withArgs('/v1/sys/internal/ui/mounts', 'GET', { namespace: 'ns1' })
-      .resolves(NAMESPACE_MOUNTS_RESPONSE);
-    this.set('ajaxStub', ajaxStub);
+    const api = this.engine.lookup('service:api');
+    this.mountsStub = sinon
+      .stub(api.sys, 'internalUiListEnabledVisibleMounts')
+      .resolves(MOUNTS_RESPONSE.data);
+    this.mountsStub.withArgs(api.buildHeaders({ namespace: 'ns1' })).resolves(NAMESPACE_MOUNTS_RESPONSE.data);
     const namespaceServiceStub = Service.extend({
       init() {
         this._super(...arguments);
@@ -53,24 +51,11 @@ module('Integration | Component | path filter config list', function (hooks) {
       },
     });
 
-    const storeServiceStub = Service.extend({
-      adapterFor() {
-        return {
-          ajax: ajaxStub,
-        };
-      },
-    });
     this.engine.register('service:namespace', namespaceServiceStub);
-    this.engine.register('service:store', storeServiceStub);
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-        // TODO: Fix groupname rendering on SearchSelect component
-        'aria-required-parent': { enabled: false },
-      },
-    });
+  });
+
+  hooks.afterEach(function () {
+    this.mountsStub.restore();
   });
 
   test('it renders', async function (assert) {
@@ -78,6 +63,31 @@ module('Integration | Component | path filter config list', function (hooks) {
     await render(hbs`<PathFilterConfigList @config={{this.config}} @paths={{this.paths}} />`, this.context);
 
     assert.dom('[data-test-component=path-filter-config]').exists();
+    assert.dom('[data-test-filter-mode="none"]').isChecked('Include everything is selected by default');
+    assert.dom('[data-test-component="search-select"]').doesNotExist('No paths are needed without filtering');
+    assert.dom('[data-test-remove-warning]').doesNotExist('A new configuration has no removal warning');
+  });
+
+  test.each(
+    'it selects Include everything for an unset mode',
+    [undefined, ''],
+    async function (assert, mode) {
+      this.set('config', { mode, paths: [] });
+      await render(hbs`<PathFilterConfigList @config={{this.config}} />`, this.context);
+
+      assert.dom('[data-test-filter-mode="none"]').isChecked('Falsy modes display Include everything');
+      assert.dom('[data-test-remove-warning]').doesNotExist('An unset mode has no filter to remove');
+    }
+  );
+
+  test.each('it displays an existing filter mode', ['allow', 'deny'], async function (assert, mode) {
+    this.set('config', { mode, paths: ['auth/userpass/'] });
+    await render(hbs`<PathFilterConfigList @config={{this.config}} />`, this.context);
+
+    assert.dom(`[data-test-filter-mode="${mode}"]`).isChecked('The saved filter mode is selected');
+    assert.dom('[data-test-field-label]').hasText(`Paths in this ${mode}`, 'Paths label reflects the mode');
+    assert.dom('[data-test-selected-option="0"]').hasText('auth/userpass/', 'Saved paths remain selected');
+    assert.dom('[data-test-remove-warning]').doesNotExist('The existing filter is not being removed');
   });
 
   test('it sets config.paths', async function (assert) {
@@ -102,17 +112,47 @@ module('Integration | Component | path filter config list', function (hooks) {
   test('it sets config.mode', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     await render(hbs`<PathFilterConfigList @config={{this.config}} />`, this.context);
-    await click('#deny');
+    await click('[data-test-filter-mode="deny"]');
     assert.strictEqual(this.config.mode, 'deny');
-    await click('#no-filtering');
+    assert.dom('[data-test-filter-mode="deny"]').isChecked('Deny is selected after changing mode');
+    assert.dom('[data-test-filter-mode="allow"]').isNotChecked('Allow is deselected');
+    assert.dom('[data-test-field-label]').hasText('Paths in this deny', 'Paths label updates to deny');
+    await click('[data-test-filter-mode="none"]');
     assert.strictEqual(this.config.mode, null);
+    assert.dom('[data-test-filter-mode="none"]').isChecked('Include everything is selected');
+    assert.dom('[data-test-component="search-select"]').doesNotExist('Path selection is hidden');
+    await click('[data-test-filter-mode="allow"]');
+    assert.strictEqual(this.config.mode, 'allow', 'Allow can be reselected');
+    assert.dom('[data-test-filter-mode="allow"]').isChecked('Allow is selected again');
+    assert.dom('[data-test-field-label]').hasText('Paths in this allow', 'Paths label updates to allow');
   });
 
-  test('it shows a warning when going from a mode to allow all', async function (assert) {
-    this.set('config', { mode: 'allow', paths: [] });
+  test.each('it warns when removing an existing filter', ['allow', 'deny'], async function (assert, mode) {
+    this.set('config', { mode, paths: ['auth/userpass/'] });
     await render(hbs`<PathFilterConfigList @config={{this.config}} />`, this.context);
-    await click('#no-filtering');
-    assert.dom('[data-test-remove-warning]').exists('shows removal warning');
+    await click('[data-test-filter-mode="none"]');
+    assert.strictEqual(this.config.mode, null, 'Removing a filter sets mode to null, not a string');
+    assert
+      .dom('[data-test-remove-warning]')
+      .hasTextContaining(
+        "Saving with 'Include everything' will remove any existing filter configuration",
+        'Warns that saving removes the existing filter'
+      );
+    assert.deepEqual(this.config.paths, ['auth/userpass/'], 'Changing mode does not discard selected paths');
+    await click(`[data-test-filter-mode="${mode}"]`);
+    assert.dom('[data-test-remove-warning]').doesNotExist('Reselecting a filter dismisses the warning');
+    assert.dom('[data-test-selected-option="0"]').hasText('auth/userpass/', 'Selected paths are restored');
+  });
+
+  test('it does not warn when changing a new configuration back to Include everything', async function (assert) {
+    this.set('config', { mode: null, paths: [] });
+    await render(hbs`<PathFilterConfigList @config={{this.config}} />`, this.context);
+
+    await click('[data-test-filter-mode="allow"]');
+    assert.strictEqual(this.config.mode, 'allow', 'A new configuration can select filtering');
+    await click('[data-test-filter-mode="none"]');
+    assert.strictEqual(this.config.mode, null, 'Include everything clears the mode');
+    assert.dom('[data-test-remove-warning]').doesNotExist('There is no saved filter to remove');
   });
 
   test('it fetches mounts from a namespace when namespace name is entered', async function (assert) {

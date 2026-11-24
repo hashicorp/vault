@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kmip (Enterprise): Obey configured best_effort_wal_wait_duration when forwarding kmip requests.
+```

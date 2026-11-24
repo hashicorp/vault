@@ -196,29 +196,45 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	warnAboutNonceUsage := false
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
 		}
 
+		decryptVer, err := getVersion(item.Ciphertext)
+		if err != nil {
+			batchResponseItems[i].Error = err.Error()
+			continue
+		}
+
+		decryptVerType := p.KeyVersionType(decryptVer)
+
 		var factories []any
 		if item.DecryptPaddingScheme != "" {
-			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.DecryptPaddingScheme)
+			paddingScheme, err := parsePaddingSchemeArg(decryptVerType, item.DecryptPaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].decrypt_padding_scheme' invalid: %s", i, err.Error())
 				continue
 			}
 			factories = append(factories, paddingScheme)
 		}
-		if item.Nonce != "" && !nonceAllowed(p) {
+		if item.Nonce != "" && !nonceAllowed(p, item.KeyVersion) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
+		}
+
+		if decryptVerType == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
 		}
 
 		opts := keysutil.EncryptionOptions{
@@ -237,9 +253,11 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
+		encryptVerType := p.KeyVersionType(item.KeyVersion)
+
 		factories = make([]any, 0)
 		if item.EncryptPaddingScheme != "" {
-			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.EncryptPaddingScheme)
+			paddingScheme, err := parsePaddingSchemeArg(encryptVerType, item.EncryptPaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].encrypt_padding_scheme' invalid: %s", i, err.Error())
 				continue
@@ -247,14 +265,25 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			factories = append(factories, paddingScheme)
 			factories = append(factories, keysutil.PaddingScheme(item.EncryptPaddingScheme))
 		}
-		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce, item.KeyVersion) {
 			warnAboutNonceUsage = true
+		}
+
+		if encryptVerType == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
 		}
 
 		opts = keysutil.EncryptionOptions{
 			KeyVersion: item.KeyVersion,
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, plaintext, factories...)
@@ -281,6 +310,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 		batchResponseItems[i].Ciphertext = ciphertext
 		batchResponseItems[i].KeyVersion = keyVersion
+		successfulRequests++
 	}
 
 	resp := &logical.Response{}
@@ -304,6 +334,10 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 	if constants.IsFIPS() && warnAboutNonceUsage {
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
+	}
+
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit rewrap request count", "error", err.Error())
 	}
 
 	return resp, nil

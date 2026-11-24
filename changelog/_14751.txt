@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki (enterprise): Fix SCEP nonce logging in audit data.
+```

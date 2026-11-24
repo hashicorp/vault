@@ -14,17 +14,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
@@ -69,21 +70,24 @@ const (
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 
-	mountPathSystem    = "sys/"
-	mountPathIdentity  = "identity/"
-	mountPathCubbyhole = "cubbyhole/"
+	mountPathSystem        = "sys/"
+	mountPathIdentity      = "identity/"
+	mountPathCubbyhole     = "cubbyhole/"
+	mountPathAgentRegistry = "agent-registry/"
 
-	mountTypeSystem      = "system"
-	mountTypeNSSystem    = "ns_system"
-	mountTypeIdentity    = "identity"
-	mountTypeNSIdentity  = "ns_identity"
-	mountTypeCubbyhole   = "cubbyhole"
-	mountTypePlugin      = "plugin"
-	mountTypeKV          = "kv"
-	mountTypeNSCubbyhole = "ns_cubbyhole"
-	mountTypeToken       = "token"
-	mountTypeNSToken     = "ns_token"
-	mountTypeDatabase    = "database"
+	mountTypeSystem          = "system"
+	mountTypeNSSystem        = "ns_system"
+	mountTypeIdentity        = "identity"
+	mountTypeNSIdentity      = "ns_identity"
+	mountTypeCubbyhole       = "cubbyhole"
+	mountTypePlugin          = "plugin"
+	mountTypeKV              = "kv"
+	mountTypeNSCubbyhole     = "ns_cubbyhole"
+	mountTypeToken           = "token"
+	mountTypeNSToken         = "ns_token"
+	mountTypeDatabase        = "database"
+	mountTypeAgentRegistry   = "agent_registry"
+	mountTypeNSAgentRegistry = "ns_agent_registry"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -107,11 +111,13 @@ var (
 		mountPathSystem,
 		mountPathCubbyhole,
 		mountPathIdentity,
+		mountPathAgentRegistry,
 	}
 
 	untunableMounts = []string{
 		mountPathCubbyhole,
 		mountPathSystem,
+		mountPathAgentRegistry,
 		"audit/",
 	}
 
@@ -122,6 +128,7 @@ var (
 		mountTypeSystem,
 		mountTypeToken,
 		mountTypeIdentity,
+		mountTypeAgentRegistry,
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
@@ -149,6 +156,18 @@ func (c *Core) generateMountAccessor(entryType string) (string, error) {
 type MountTable struct {
 	Type    string        `json:"type"`
 	Entries []*MountEntry `json:"entries"`
+}
+
+func (m *MountTable) Clone() (*MountTable, error) {
+	entries := make([]*MountEntry, 0, len(m.Entries))
+	for _, entry := range m.Entries {
+		clonedEntry, err := entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, clonedEntry)
+	}
+	return &MountTable{Type: m.Type, Entries: entries}, nil
 }
 
 //go:generate enumer -type=MountMigrationStatus -trimprefix=MigrationStatus -transform=kebab
@@ -334,7 +353,6 @@ type MountEntry struct {
 	Tainted               bool              `json:"tainted,omitempty"`                 // Set as a Write-Ahead flag for unmount/remount
 	MountState            string            `json:"mount_state,omitempty"`             // The current mount state.  The only non-empty mount state right now is "unmounting"
 	NamespaceID           string            `json:"namespace_id"`
-
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
 
@@ -345,9 +363,10 @@ type MountEntry struct {
 	synthesizedConfigCache sync.Map
 
 	// version info
-	Version        string `json:"plugin_version,omitempty"`         // The configured semantic version of the mounted plugin, e.g. v1.2.3. May be overridden by a pinned version.
-	RunningVersion string `json:"running_plugin_version,omitempty"` // The semantic version of the currently running mounted plugin.
-	RunningSha256  string `json:"running_sha256,omitempty"`
+	Version         string `json:"plugin_version,omitempty"`         // The configured semantic version of the mounted plugin, e.g. v1.2.3. May be overridden by a pinned version.
+	RunningVersion  string `json:"running_plugin_version,omitempty"` // The semantic version of the currently running mounted plugin.
+	RunningSha256   string `json:"running_sha256,omitempty"`
+	NeedsSealRewrap bool   `json:"needs_seal_rewrap,omitempty"`
 }
 
 // MountConfig is used to hold settable options
@@ -572,8 +591,13 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 	}, nil
 }
 
-// Mount is used to mount a new backend to the mount table.
+// mount is used to mount a new backend to the mount table.
 func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
+	return c.mountWithRequest(ctx, entry, nil)
+}
+
+// mountWithRequest is used to mount a new backend to the mount table with a request
+func (c *Core) mountWithRequest(ctx context.Context, entry *MountEntry, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -594,7 +618,7 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 	}
 
 	// Mount internally
-	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
+	if err := c.mountInternalWithRequest(ctx, entry, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -602,6 +626,10 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
+	return c.mountInternalWithRequest(ctx, entry, updateStorage, nil)
+}
+
+func (c *Core) mountInternalWithRequest(ctx context.Context, entry *MountEntry, updateStorage bool, request *logical.Request) error {
 	c.mountsLock.Lock()
 	c.authLock.Lock()
 	locked := true
@@ -779,7 +807,14 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 		// initialize, using the core's active context.
 		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
-		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{
+			Storage:             view,
+			MountPoint:          entry.Path,
+			MountType:           entry.Type,
+			MountAccessor:       entry.Accessor,
+			BackendUUID:         entry.BackendAwareUUID,
+			MountRunningVersion: entry.RunningVersion,
+		})
 		if err != nil {
 			return err
 		}
@@ -789,14 +824,21 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, map[string]interface{}{
+	observationData := map[string]interface{}{
 		"path":                   entry.Path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
@@ -845,9 +887,15 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 	return consts.PluginTypeUnknown
 }
 
-// Unmount is used to unmount a path. The boolean indicates whether the mount
+// unmount is used to unmount a path. The boolean indicates whether the mount
 // was found.
 func (c *Core) unmount(ctx context.Context, path string) error {
+	return c.unmountWithRequest(ctx, path, nil)
+}
+
+// unmountWithRequest is used to unmount a path with a request. The boolean
+// indicates whether the mount was found.
+func (c *Core) unmountWithRequest(ctx context.Context, path string, request *logical.Request) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -861,7 +909,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	}
 
 	// Unmount mount internally
-	if err := c.unmountInternal(ctx, path, MountTableUpdateStorage); err != nil {
+	if err := c.unmountInternalWithRequest(ctx, path, MountTableUpdateStorage, request); err != nil {
 		return err
 	}
 
@@ -874,6 +922,10 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 }
 
 func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage bool) error {
+	return c.unmountInternalWithRequest(ctx, path, updateStorage, nil)
+}
+
+func (c *Core) unmountInternalWithRequest(ctx context.Context, path string, updateStorage bool, request *logical.Request) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -984,14 +1036,21 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
 	}
 
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, map[string]interface{}{
-		"path":                   entry.Path,
+	observationData := map[string]interface{}{
+		"path":                   path,
 		"local_mount":            entry.Local,
 		"type":                   entry.Type,
 		"accessor":               entry.Accessor,
 		"plugin_version":         entry.Version,
 		"running_plugin_version": entry.RunningVersion,
-	})
+	}
+	if request != nil {
+		observationData["entity_id"] = request.EntityID
+		observationData["request_id"] = request.ID
+		observationData["client_id"] = request.ClientID
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, observationData)
 	if err != nil {
 		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
@@ -1321,7 +1380,17 @@ func (c *Core) loadMounts(ctx context.Context) error {
 	// If this node is a performance standby we do not want to attempt to
 	// upgrade the mount table, this will be the active node's responsibility.
 	if !c.perfStandby {
-		err := c.runMountUpdates(ctx, needPersist)
+		oldMounts, err := c.mounts.Clone()
+		if err != nil {
+			c.logger.Error("failed to clone mount table", "error", err)
+			return err
+		}
+		err = c.runMountUpdates(ctx, needPersist, true)
+		if errors.Is(err, physical.ErrValueSize) {
+			c.logger.Error("Cannot add default mounts because the mount table is too large to write to storage. If you are using integrated storage, increase the max_mount_and_namespace_table_entry_size in your Vault config file to add all default mounts to all namespaces. If you are using Consul storage, increase the txn_max_req_len in your Consul config file to add all default mounts to all namespaces. Continuing without default mounts")
+			c.mounts = oldMounts
+			err = c.runMountUpdates(ctx, needPersist, false)
+		}
 		if err != nil {
 			c.logger.Error("failed to run mount table upgrades", "error", err)
 			return err
@@ -1367,7 +1436,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 
 // Note that this is only designed to work with singletons, as it checks by
 // type only.
-func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
+func (c *Core) runMountUpdates(ctx context.Context, needPersist, tryAddingRequiredMounts bool) error {
 	// Upgrade to typed mount table
 	if c.mounts.Type == "" {
 		c.mounts.Type = mountTableType
@@ -1391,8 +1460,20 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 		// ensure this comes over. If we upgrade first, we simply don't
 		// create the mount, so we won't conflict when we sync. If this is
 		// local (e.g. cubbyhole) we do still add it.
-		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) {
+		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) && tryAddingRequiredMounts {
 			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
+			needPersist = true
+		}
+	}
+
+	if !c.IsPerfSecondary() && tryAddingRequiredMounts {
+		var modified bool
+		var err error
+		c.mounts.Entries, modified, err = c.addRequiredNamespaceMounts(c.mounts.Entries)
+		if err != nil {
+			return err
+		}
+		if modified {
 			needPersist = true
 		}
 	}
@@ -1448,7 +1529,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 	// Persist both mount tables
 	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
 		c.logger.Error("failed to persist mount table", "error", err)
-		return errLoadMountsFailed
+		return errors.Join(errLoadMountsFailed, err)
 	}
 	return nil
 }
@@ -1646,7 +1727,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
-			c.logger.Error("failed to mount entry", "path", entry.Path, "error", err)
+			c.logger.Error("failed to mount entry", "path", entry.Path, "namespace_id", entry.NamespaceID, "error", err)
 			return errLoadMountsFailed
 		}
 
@@ -1656,19 +1737,29 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			localEntry := entry
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 				postUnsealLogger := c.logger.With("type", localEntry.Type, "version", localEntry.RunningVersion, "path", localEntry.Path)
+				// A skipped backend may later be recovered by a plugin reload.
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origReadOnlyErr)
+				}
 				if backend == nil {
 					postUnsealLogger.Error("skipping initialization for nil backend", "path", localEntry.Path)
 					return
 				}
-				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
-					view.setReadOnlyErr(origReadOnlyErr)
-				}
 
 				nsActiveContext := namespace.ContextWithNamespace(c.activeContext, localEntry.Namespace())
-				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
+				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{
+					Storage:             view,
+					MountPoint:          localEntry.Path,
+					MountType:           localEntry.Type,
+					MountAccessor:       localEntry.Accessor,
+					BackendUUID:         localEntry.BackendAwareUUID,
+					MountRunningVersion: localEntry.RunningVersion,
+				})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
+
+				c.postMountInitialize(localEntry, postUnsealLogger)
 			})
 		}
 
@@ -1713,7 +1804,22 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	c.mounts = nil
 	c.router.reset()
 	c.systemBarrierView = nil
+	c.agentRegistry = nil
 	return nil
+}
+
+// persistMountLocked persists the mount be it a secret or auth mount.  The mount table lock
+// must be held.
+func (c *Core) persistMountLocked(ctx context.Context, path string, mountEntry *MountEntry) error {
+	// Update the mount table
+	var err error
+	switch {
+	case strings.HasPrefix(path, "auth/"):
+		err = c.persistAuth(ctx, c.auth, &mountEntry.Local)
+	default:
+		err = c.persistMounts(ctx, c.mounts, &mountEntry.Local)
+	}
+	return err
 }
 
 // newLogicalBackend is used to create and configure a new logical backend by name.
@@ -1792,6 +1898,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Plugin:        entry.Type,
 		PluginVersion: pluginVersion,
 		Version:       pluginOptionsVersion,
+		IsLocal:       entry.Local,
 	})
 	if err != nil {
 		return nil, err
@@ -1962,6 +2069,33 @@ func (c *Core) requiredMountTable() *MountTable {
 		BackendAwareUUID: identityBackendUUID,
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
+			AllowedResponseHeaders:    []string{"Location"},
+		},
+		RunningVersion: versions.DefaultBuiltinVersion,
+	}
+
+	agentRegistryUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity mount entry UUID: %v", err))
+	}
+	agentRegistryAccessor, err := c.generateMountAccessor("agent-registry")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
+	}
+	agentRegistryBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity backend UUID: %v", err))
+	}
+	agentRegistryMount := &MountEntry{
+		Table:            mountTableType,
+		Path:             "agent-registry/",
+		Type:             "agent_registry",
+		Description:      "agent registry",
+		UUID:             agentRegistryUUID,
+		Accessor:         agentRegistryAccessor,
+		BackendAwareUUID: agentRegistryBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Authorization"},
 		},
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}
@@ -1969,6 +2103,7 @@ func (c *Core) requiredMountTable() *MountTable {
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	table.Entries = append(table.Entries, identityMount)
+	table.Entries = append(table.Entries, agentRegistryMount)
 
 	return table
 }
@@ -2014,6 +2149,12 @@ func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *
 		c.cubbyholeBackend = ch
 	case mountTypeIdentity:
 		c.identityStore = backend.(*IdentityStore)
+	case mountTypeAgentRegistry:
+		// core should only have a reference to the root namespace's
+		// agent registry
+		if entry.NamespaceID == namespace.RootNamespaceID {
+			c.agentRegistry = backend.(*AgentRegistry)
+		}
 	}
 }
 

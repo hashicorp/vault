@@ -4,5 +4,21 @@
  */
 
 import Route from '@ember/routing/route';
+import { service } from '@ember/service';
+import { fetchMfaMethods } from 'vault/utils/mfa-login-enforcement-helpers';
 
-export default class MfaLoginEnforcementEditRoute extends Route {}
+import MfaLoginEnforcementForm from 'vault/forms/mfa/login-enforcement';
+
+export default class MfaLoginEnforcementEditRoute extends Route {
+  @service api;
+
+  async model() {
+    const methods = await fetchMfaMethods(this.api);
+    const { enforcement } = this.modelFor('vault.cluster.access.mfa.enforcements.enforcement');
+    const selectedMethods = methods.filter((method) =>
+      (enforcement.mfa_method_ids || []).includes(method.id)
+    );
+    const formData = { ...enforcement, mfa_methods: selectedMethods };
+    return { form: new MfaLoginEnforcementForm(formData, { isNew: false }), methods, name: enforcement.name };
+  }
+}

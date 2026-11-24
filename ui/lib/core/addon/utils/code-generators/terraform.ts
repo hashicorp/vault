@@ -3,32 +3,137 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export interface TerraformTemplateArgs {
-  resource: string; // The Terraform resource type (e.g., "vault_auth_backend", "vault_mount")
+import { typeOf } from '@ember/utils';
+import { sanitizePath } from '../sanitize-path';
+import { formatArgsFromPayload } from './formatters';
+
+// Yes, this seems silly but pretty formatting these snippets was a...journey.
+// Hopefully these consts make it easier for whoever comes next.
+const TWO_SPACES = `  `;
+const FOUR_SPACES = `    `;
+
+export interface TerraformResourceTemplateArgs {
+  resource?: string; // The Terraform resource type (e.g., "vault_auth_backend", "vault_mount")
   localId?: string; // The local identifier/label for this resource instance. Used in Terraform commands like `terraform import vault_auth_backend.example github` (<- is "example" here)
-  options: TerraformOptions; //  Key/value pairs that build the terraform configuration
+  resourceArgs?: Record<string, unknown>; //  Key/value pairs that build the terraform configuration, string interpolations should be wrapped in double `""` quotes, e.g. resourceArgs = { name: `"${name}"` };
+}
+
+export interface TerraformVariableTemplateArgs {
+  variable?: string; // The Terraform variable name (e.g., "vault_team_ns")
+  variableArgs?: Record<string, unknown>; //  Key/value pairs that build the terraform configuration, string interpolations should be wrapped in double `""` quotes, e.g. variableArgs = { default: `"${name}"` };
 }
 
 /**
  * Generates a Terraform resource block for Vault providers.
  * @see https://registry.terraform.io/providers/hashicorp/vault/latest/docs
+ * @example (double quotes are intentional for string values so the output is wrapped in double quotes)
+ * ```
+ * terraformResourceTemplate({
+ *   resource: 'vault_mount',
+ *   localId: 'kvv2-example',
+ *   resourceArgs: {
+ *     path: '"my-kv-path"',
+ *     type: '"kv-v2"',
+ *     description: '"This is an example KV Version 2 secret engine mount"',
+ *     options: {
+ *       version: '"2"',
+ *       type: '"kv-v2"'
+ *     }
+ *   }
+ * })
+ * ```
+ *
+ * Output:
+ * ```
+ * resource "vault_mount" "kvv2-example" {
+ *   path = "my-kv-path"
+ *   type = "kv-v2"
+ *   description = "This is an example KV Version 2 secret engine mount"
+ *   options = {
+ *     version = "2"
+ *     type = "kv-v2"
+ *   }
+ * }
+ * ```
  */
-export const terraformTemplate = ({
-  resource = '',
+export const terraformResourceTemplate = ({
+  resource = '<resource name>',
   localId = '<local identifier>',
-  options,
-}: TerraformTemplateArgs) => {
-  const formattedContent = formatTerraformOptions(options);
+  resourceArgs = {},
+}: TerraformResourceTemplateArgs = {}) => {
+  const formattedContent = formatTerraformArgs(resourceArgs);
   return `resource "${resource}" "${localId}" {
-${formattedContent.join('\n\n')}
+${formattedContent.join('\n')}
 }`;
 };
 
-export const formatTerraformOptions = (options: TerraformOptions) => {
-  const argReferences = [];
-  for (const [key, value] of Object.entries(options)) {
-    // Additional spaces before "key" are so argument references are indented over
-    argReferences.push(`  ${key} = ${value}`);
+export const terraformVariableTemplate = ({
+  variable = '<variable name>',
+  variableArgs = {},
+}: TerraformVariableTemplateArgs = {}) => {
+  const formattedContent = formatTerraformArgs(variableArgs);
+  return `variable "${variable}" {
+${formattedContent.join('\n')}
+}`;
+};
+
+// if specific resource cannot be determined the generic endpoint resource can be used with the API path
+export const terraformGenericResourceTemplate = (
+  path: string,
+  resourceArgs: Record<string, unknown> = {},
+  localId = '<local identifier>',
+  namespace?: string
+) => {
+  const formattedContent = formatTerraformArgs(resourceArgs);
+  const ns = namespace ? `namespace = "${namespace}"\n` : '';
+
+  return `resource "vault_generic_endpoint" "${localId}" {
+  path = "${sanitizePath(path)}"
+  ${ns}
+  data_json = jsonencode({
+  ${formattedContent.join(`\n${TWO_SPACES}`)}
+  })
+}`;
+};
+
+export const formatTerraformArgs = (resourceArgs: Record<string, unknown> = {}) => {
+  // strip empty values before formatting
+  // focus on empty strings, objects and arrays, as well as undefined values, but this can be expanded as needed
+  const filteredArgs = formatArgsFromPayload(resourceArgs);
+  const formattedArgs = [];
+  for (const [key, value] of Object.entries(filteredArgs)) {
+    // Handle nested objects (like "options" above)
+    if (typeOf(value) === 'object') {
+      const formattedValue = formatNestedObject(key, value as Record<string, unknown>);
+      formattedArgs.push(formattedValue);
+      continue;
+    }
+    // Additional spaces before "key" are so arguments are indented over
+    formattedArgs.push(formatKvPairs(TWO_SPACES, key, value));
   }
-  return argReferences;
+  return formattedArgs;
+};
+
+const formatNestedObject = (objKey: string, objValue: Record<string, unknown>): string => {
+  const formatted = [];
+  for (const [key, value] of Object.entries(objValue)) {
+    // More spaces to indent even more because this block is nested
+    formatted.push(formatKvPairs(FOUR_SPACES, key, value));
+  }
+  const formatObjValue = `{
+${formatted.join('\n')}
+  }`;
+  return formatKvPairs(TWO_SPACES, objKey, formatObjValue);
+};
+
+const formatKvPairs = (indent: string, key: string, value: unknown) => `${indent}${key} = ${value}`;
+
+// Helper function to ensure valid Terraform identifiers
+// https://developer.hashicorp.com/terraform/language/syntax/configuration#identifiers
+export const sanitizeId = (name: string): string => {
+  // If the name starts with a number, prefix with 'ns_'
+  if (/^\d/.test(name)) {
+    return `ns_${name}`;
+  }
+  return name;
 };

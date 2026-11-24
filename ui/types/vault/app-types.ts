@@ -2,10 +2,9 @@
  * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
-import type EmberDataModel from 'ember-data/model'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 import type Owner from '@ember/owner';
+import type { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
-// Type that comes back from expandAttributeMeta
 export interface FormField {
   name: string;
   type: string;
@@ -18,14 +17,6 @@ interface AttributeOptions {
   isOppositeValue: boolean;
 }
 
-export interface FormFieldGroups {
-  [key: string]: Array<FormField>;
-}
-
-export interface FormFieldGroupOptions {
-  [key: string]: Array<string>;
-}
-
 export type Validator =
   | 'presence'
   | 'length'
@@ -34,7 +25,8 @@ export type Validator =
   | 'endsInSlash'
   | 'hasWhitespace'
   | 'isNonString'
-  | 'isNot';
+  | 'isNot'
+  | 'maxDuration';
 
 export type ValidatorOption = {
   nullable?: boolean;
@@ -68,32 +60,11 @@ export interface ValidationMap {
     warnings: Array<string>;
   };
 }
-export interface ModelValidations {
+export interface FormValidations {
   isValid: boolean;
   state: ValidationMap;
   invalidFormMessage: string;
 }
-// TODO: [Ember Data] - ModelValidations can be renamed to FormValidations and this can be removed
-export type FormValidations = ModelValidations;
-
-export type Model = Omit<EmberDataModel, 'isNew'> & {
-  // override isNew which is a computed prop and ts will complain since it sees it as a function
-  isNew: boolean;
-};
-
-export type WithFormFieldsModel = Model & {
-  formFields: Array<FormField>;
-  formFieldGroups: FormFieldGroups;
-  allFields: Array<FormField>;
-};
-
-export type WithValidationsModel = Model & {
-  validate(): ModelValidations;
-};
-
-export type WithFormFieldsAndValidationsModel = WithFormFieldsModel & {
-  validate(): ModelValidations;
-};
 
 // capabilities
 export interface Capabilities {
@@ -138,6 +109,8 @@ export interface TtlEvent {
   seconds: number;
   timeString: string;
   goSafeTimeString: string;
+  /** False when an enabled value is longer than Vault supports. */
+  isValid: boolean;
 }
 
 export interface EngineOwner extends Owner {
@@ -153,3 +126,5 @@ export interface SearchSelectOption {
 export interface StringMap {
   [key: string]: string;
 }
+
+export type WizardId = (typeof WIZARD_ID_MAP)[keyof typeof WIZARD_ID_MAP];

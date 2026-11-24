@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -106,7 +106,6 @@ jobs:
           create-docker-container: true
           create-packages: true
           create-redhat-container: ${{ matrix.redhat }}
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           goarch: ${{ matrix.goarch }}
           goos: ${{ matrix.goos }}
           go-tags: ui
@@ -180,20 +179,15 @@ jobs:
           - false
         goos:
           - freebsd
-          - netbsd
-          - openbsd
-          - solaris
           - windows
         goarch:
           - 386
           - amd64
           - arm
         exclude:
-          - goos: solaris
-            goarch: 386
-          - goos: solaris
-            goarch: arm
           - goos: windows
+            goarch: arm
+          - goos: freebsd
             goarch: arm
         include:
           - goos: darwin
@@ -210,27 +204,20 @@ jobs:
             goarch: 386
             docker: true
             packages: true
-          - goos: linux
-            docker: true
-            goarch: arm
-            goarm: 6
-            packages: true
       fail-fast: true
-    name: (${{ matrix.goos }}, ${{ matrix.goarch }}${{ matrix.goarm && ' ' || '' }}${{ matrix.goarm }})
+    name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           create-docker-container: ${{ matrix.docker }}
           create-packages: ${{ matrix.packages }}
           create-redhat-container: false
           goarch: ${{ matrix.goarch }}
           goos: ${{ matrix.goos }}
-          goarm: ${{ matrix.goarm }}
           go-tags: ${{ matrix.go-tags != '' && matrix.go-tags || 'ui' }}
           vault-binary-name: vault
           vault-edition: ce
@@ -247,7 +234,7 @@ jobs:
       - core
       - extended
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Determine status

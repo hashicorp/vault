@@ -4,7 +4,9 @@
 package audit
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -25,6 +27,19 @@ var _ Backend = (*fileBackend)(nil)
 
 type fileBackend struct {
 	*backend
+	sinkCloser io.Closer
+}
+
+// Close releases the file sink opened by this backend.
+func (b *fileBackend) Close() error {
+	if b.sinkCloser == nil {
+		return nil
+	}
+	if err := b.sinkCloser.Close(); err != nil {
+		return fmt.Errorf("unable to close file audit sink: %w", err)
+	}
+	b.sinkCloser = nil
+	return nil
 }
 
 // NewFileBackend provides a wrapper to support the expectation elsewhere in Vault that
@@ -77,7 +92,7 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*fileBa
 		return nil, err
 	}
 
-	sinkOpts := []event.Option{event.WithLogger(conf.Logger)}
+	sinkOpts := []event.Option{event.WithLogger(conf.Logger), event.WithNonExecutableFileMode()}
 	if mode, ok := conf.Config[optionMode]; ok {
 		if strings.TrimSpace(mode) != "" {
 			m, err := strconv.ParseUint(mode, 8, 32)
@@ -85,7 +100,9 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*fileBa
 				return nil, fmt.Errorf("invalid mode: %s", mode)
 			}
 			if m&0o111 != 0 {
-				return nil, fmt.Errorf("file mode may not be executable: %s", mode)
+				m = uint64(int64(m) & ^0o111)
+				conf.Config[optionMode] = fmt.Sprintf("%04o", m)
+				conf.Logger.Warn("configured file mode contained executable bits, clearing", "configured_mode", mode, "new_mode", conf.Config[optionMode])
 			}
 		}
 		sinkOpts = append(sinkOpts, event.WithFileMode(mode))
@@ -142,11 +159,17 @@ func (b *fileBackend) configureSinkNode(name string, filePath string, format for
 	if err != nil {
 		return fmt.Errorf("file sink creation failed for path %q: %w", filePath, err)
 	}
-
-	// Wrap the sink node with metrics middleware
+	closer, canClose := sinkNode.(io.Closer)
+	// Wrap the sink node with metrics middleware and store the closer if applicable
 	err = b.wrapMetrics(sinkName, sinkNodeID, sinkNode)
 	if err != nil {
+		if canClose {
+			return errors.Join(err, closer.Close())
+		}
 		return err
+	}
+	if canClose {
+		b.sinkCloser = closer
 	}
 
 	return nil

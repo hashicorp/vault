@@ -36,6 +36,11 @@ const (
 	// TokenTypeDefault is sent back by the mount, create Batch tokens
 	TokenTypeDefaultBatch
 
+	TokenTypeEnt
+
+	// TokenTypeSCIM is used by external IDPs for SCIM API access.
+	TokenTypeSCIM
+
 	// ClientIDTWEDelimiter Delimiter between the string fields used to generate a client
 	// ID for tokens without entities. This is the 0 character, which
 	// is a non-printable string. Please see unicode.IsPrint for details.
@@ -67,6 +72,10 @@ func (t *TokenType) UnmarshalJSON(b []byte) error {
 		*t = TokenTypeDefaultService
 	case `"default-batch"`:
 		*t = TokenTypeDefaultBatch
+	case `"ent"`:
+		*t = TokenTypeEnt
+	case `"scim"`:
+		*t = TokenTypeSCIM
 	default:
 		return fmt.Errorf("unknown token type %q", s)
 	}
@@ -75,6 +84,8 @@ func (t *TokenType) UnmarshalJSON(b []byte) error {
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
+	EntToken
+
 	Type TokenType `json:"type" mapstructure:"type" structs:"type" sentinel:""`
 
 	// ID of this entry, generally a random UUID
@@ -253,7 +264,7 @@ func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
 	case "type":
 		teType := te.Type
 		switch teType {
-		case TokenTypeBatch, TokenTypeService:
+		case TokenTypeBatch, TokenTypeService, TokenTypeEnt:
 		case TokenTypeDefault:
 			teType = TokenTypeService
 		default:

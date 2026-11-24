@@ -6,21 +6,13 @@
 import { visit, currentURL } from '@ember/test-helpers';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
 
-export const createSecretsEngine = (store) => {
+export const createSecretsEngine = () => {
   const data = {
     accessor: 'ldap_7e838627',
     path: 'ldap-test/',
     type: 'ldap',
   };
-  if (store) {
-    store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data,
-    });
-    return store.peekRecord('secret-engine', 'ldap-test');
-  } else {
-    return new SecretsEngineResource(data);
-  }
+  return new SecretsEngineResource(data);
 };
 
 export const generateBreadcrumbs = (backend, childRoute) => {

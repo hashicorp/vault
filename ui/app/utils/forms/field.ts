@@ -1,7 +1,25 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
+
+// see: https://helios.hashicorp.design/components/form/key-value-inputs?tab=code#input-types
+export interface KeyValueField {
+  name: string;
+  label?: string;
+  type?: 'text' | 'textarea' | 'select' | 'masked' | 'file';
+  placeholder?: string;
+  possibleValues?: unknown[];
+  // prepends a "Select one" placeholder option when type is "select"
+  noDefault?: boolean;
+  width?: string;
+  isRequired?: boolean;
+  isOptional?: boolean;
+  helpText?: string;
+  // binds this field directly to its own model attribute instead of the parent attr's combined value
+  // (see `hasFieldValuePaths` in form-field.js)
+  valuePath?: string;
+}
 
 export interface FieldOptions {
   label?: string;
@@ -14,7 +32,20 @@ export interface FieldOptions {
   isSingleRow?: boolean;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
+  keyInputType?: string;
+  valueInputType?: string;
+  keyPossibleValues?: unknown[];
+  valuePossibleValues?: unknown[];
+  // fields rendered in each row for editType "keyValueInputs"
+  keyValueFields?: KeyValueField[];
+  isRequired?: boolean;
+  isOptional?: boolean;
+  maxRows?: number;
+  maxRowsText?: string;
+  addRowButtonText?: string;
   editDisabled?: boolean;
+  // read-only while editing an existing record, e.g. an auth method item's path identifier
+  readOnly?: boolean;
   sensitive?: boolean;
   noCopy?: boolean;
   docLink?: string;
@@ -25,6 +56,8 @@ export interface FieldOptions {
   noDefault?: boolean;
   isSectionHeader?: boolean;
   hideToggle?: boolean;
+  // for editType "ttl": treat an empty input as 0 rather than a required-field error
+  emptyMeansZero?: boolean;
   labelDisabled?: string;
   mapToBoolean?: string;
   isOppositeValue?: boolean;
@@ -32,6 +65,14 @@ export interface FieldOptions {
   defaultShown?: string;
   example?: string;
   mode?: string;
+  // for editType "json": an emptied input is saved as an empty string
+  allowReset?: boolean;
+  theme?: string;
+  // for editType "searchSelect": model types to fetch options from, and how the selection behaves
+  models?: string[];
+  fallbackComponent?: string;
+  selectLimit?: number;
+  onlyAllowExisting?: boolean;
 }
 
 export default class FormField {

@@ -6,11 +6,10 @@ package totp
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	cache "github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 )
 
 const operationPrefixTOTP = "totp"
@@ -44,7 +43,8 @@ func Backend() *backend {
 		BackendType: logical.TypeLogical,
 	}
 
-	b.usedCodes = cache.New(0, 30*time.Second)
+	b.usedCodes = ttlcache.New[string, struct{}]()
+	go b.usedCodes.Start()
 
 	return &b
 }
@@ -52,7 +52,7 @@ func Backend() *backend {
 type backend struct {
 	*framework.Backend
 
-	usedCodes *cache.Cache
+	usedCodes *ttlcache.Cache[string, struct{}]
 }
 
 const backendHelp = `

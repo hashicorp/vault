@@ -7,30 +7,33 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import { handlePartialUpdate, refreshIdentityShow } from 'vault/utils/identity-helpers';
 
 export default class IdentityPopupMembers extends Component {
   @service flashMessages;
+  @service api;
+  @service router;
   @tracked showConfirmModal = false;
 
   onSuccess(memberId) {
     if (this.args.onSuccess) {
       this.args.onSuccess();
     }
+    refreshIdentityShow({ router: this.router, model: this.args.model });
     this.flashMessages.success(`Successfully removed '${memberId}' from the group`);
   }
-  onError(err, memberId) {
+  async onError(err, memberId) {
     if (this.args.onError) {
       this.args.onError();
     }
-    const error = errorMessage(err);
+    const { message: error } = await this.api.parseError(err);
     this.flashMessages.danger(`There was a problem removing '${memberId}' from the group - ${error}`);
   }
 
   transaction() {
-    const members = this.args.model[this.args.groupArray];
-    this.args.model[this.args.groupArray] = members.without(this.args.memberId);
-    return this.args.model.save();
+    const { model, groupArray, memberId } = this.args;
+    const members = model[groupArray].filter((id) => id !== memberId);
+    return handlePartialUpdate({ api: this.api, model, fields: { [groupArray]: members } });
   }
 
   @action
@@ -40,7 +43,7 @@ export default class IdentityPopupMembers extends Component {
       await this.transaction();
       this.onSuccess(memberId);
     } catch (e) {
-      this.onError(e, memberId);
+      await this.onError(e, memberId);
     }
   }
 }

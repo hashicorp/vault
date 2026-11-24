@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix DR operation token generation failing with a 403 error by sending the primary root token as the X-Vault-Token header.
+```

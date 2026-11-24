@@ -5,7 +5,6 @@ package client
 
 import (
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -19,12 +18,8 @@ func TestClient(t *testing.T) {
 	Scheme = testConf.ClientScheme
 	TokenFile = testConf.PathToTokenFile
 	RootCAFile = testConf.PathToRootCAFile
-	if err := os.Setenv(EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Setenv(EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(EnvVarKubernetesServicePort, testConf.ServicePort)
 
 	client, err := New(hclog.Default())
 	if err != nil {

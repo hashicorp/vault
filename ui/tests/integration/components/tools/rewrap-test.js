@@ -26,7 +26,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
   test('it renders defaults', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('h1').hasText('Rewrap Token', 'title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Rewrap token', 'title renders');
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('original-token')).hasValue('');
     assert.dom(TS.toolsInput('rewrapped-token')).doesNotExist();

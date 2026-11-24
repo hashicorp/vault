@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update copy on merge entities page to specify entity ID is the required data input when merging entities.
+```

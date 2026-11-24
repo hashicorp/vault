@@ -4,12 +4,13 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { PKI_TIDY_FORM } from 'vault/tests/helpers/pki/pki-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { convertToSeconds } from 'core/utils/duration-utils';
 import PkiTidyForm from 'vault/forms/secrets/pki/tidy';
 import TidyGroupsHelper from 'pki/helpers/tidy-groups';
@@ -77,12 +78,13 @@ module('Integration | Component | pki tidy form', function (hooks) {
     await this.renderComponent();
     // the form isn't created until we render so expect assertions need to be after render
     const loopAssertCount = this.allFields.length * 2 - 3; // loop skips 3 params
-    assert.expect(loopAssertCount + headerAssertCount + 4);
+    assert.expect(loopAssertCount + headerAssertCount + 5);
 
     assert.dom(GENERAL.toggleInput('enabled')).isNotChecked();
+    assert.dom(GENERAL.ttl.toggle('enabled')).hasText('Automatic tidy disabled');
     assert
-      .dom(GENERAL.ttl.toggle('enabled'))
-      .hasText('Automatic tidy disabled Automatic tidy operations will not run.');
+      .dom(`[data-test-tidy-form="auto"] .hds-form-helper-text`)
+      .hasText('Automatic tidy operations will not run.');
 
     this.allFields.forEach((field) => {
       if (field !== 'enabled') {
@@ -273,6 +275,96 @@ module('Integration | Component | pki tidy form', function (hooks) {
 
     await click(PKI_TIDY_FORM.tidyCancel);
     assert.true(this.onCancel.called, 'onCancel called on click');
+  });
+
+  test('it blocks a pause duration longer than Vault supports', async function (assert) {
+    assert.expect(5);
+
+    await this.renderComponent('manual');
+    await fillIn(GENERAL.ttl.input('Pause duration'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Pause duration'), 'd');
+    await click(PKI_TIDY_FORM.tidySave);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('pause_duration'))
+      .hasText('Pause duration is too large. Maximum allowed value is 106,751 days.');
+    assert.dom(GENERAL.invalidFormMessage).hasText('There is an error with this form.');
+    assert.true(this.tidyStub.notCalled, 'tidy is not started');
+    assert.false(this.onSave.called, 'onSave is not called');
+
+    await fillIn(GENERAL.ttl.input('Pause duration'), '106751');
+    await click(PKI_TIDY_FORM.tidySave);
+    assert.true(this.tidyStub.calledOnce, 'tidy starts once the duration is valid');
+  });
+
+  test('it blocks an ACME safety buffer longer than Vault supports', async function (assert) {
+    assert.expect(5);
+
+    await this.renderComponent('manual');
+    await click(PKI_TIDY_FORM.toggleInput('acme_account_safety_buffer'));
+    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Tidy ACME enabled'), 'd');
+    await click(PKI_TIDY_FORM.tidySave);
+
+    assert
+      .dom(TTL_PICKER.error)
+      .hasText('Tidy ACME enabled is too large. Maximum allowed value is 106,751 days.');
+    assert.dom(GENERAL.invalidFormMessage).hasText('There is an error with this form.');
+    assert.true(this.tidyStub.notCalled, 'tidy is not started');
+    assert.false(this.onSave.called, 'onSave is not called');
+
+    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, '106751');
+    await click(PKI_TIDY_FORM.tidySave);
+    assert.true(this.tidyStub.calledOnce, 'tidy starts once the buffer is valid');
+  });
+
+  test('it blocks an ACME safety buffer too long to be stored as a number', async function (assert) {
+    assert.expect(3);
+
+    await this.renderComponent('manual');
+    await click(PKI_TIDY_FORM.toggleInput('acme_account_safety_buffer'));
+    // The TTL picker turns this many digits into Infinity, which it sends as the string "Infinityh".
+    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, '9'.repeat(400));
+    await fillIn(TTL_PICKER.unitInputByLabel('Tidy ACME enabled'), 'd');
+    await click(PKI_TIDY_FORM.tidySave);
+
+    assert.dom(GENERAL.invalidFormMessage).hasText('There is an error with this form.');
+    assert.true(this.tidyStub.notCalled, 'tidy is not started');
+    assert.false(this.onSave.called, 'onSave is not called');
+  });
+
+  test('it ignores an ACME safety buffer that is too long once ACME tidy is turned off', async function (assert) {
+    assert.expect(3);
+
+    await this.renderComponent('manual');
+    const initial = this.form.data.acme_account_safety_buffer;
+    await click(PKI_TIDY_FORM.toggleInput('acme_account_safety_buffer'));
+    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Tidy ACME enabled'), 'd');
+    await click(PKI_TIDY_FORM.toggleInput('acme_account_safety_buffer'));
+    await click(PKI_TIDY_FORM.tidySave);
+
+    assert.dom(GENERAL.invalidFormMessage).doesNotExist('the hidden value does not block tidying');
+    const [, payload] = this.tidyStub.firstCall.args;
+    assert.false(payload.tidy_acme, 'ACME tidy is off');
+    assert.strictEqual(payload.acme_account_safety_buffer, initial, 'the hidden value is replaced');
+  });
+
+  test('it ignores durations that are too long when automatic tidy is turned off', async function (assert) {
+    assert.expect(3);
+
+    await this.renderComponent();
+    await click(GENERAL.toggleInput('enabled'));
+    await fillIn(GENERAL.ttl.input('Pause duration'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Pause duration'), 'd');
+    // Turning automatic tidy off hides the pause duration.
+    await click(GENERAL.toggleInput('enabled'));
+    await click(PKI_TIDY_FORM.tidySave);
+
+    assert.dom(GENERAL.invalidFormMessage).doesNotExist('the hidden value does not block saving');
+    const [, payload] = this.autoTidyStub.firstCall.args;
+    assert.false(payload.enabled, 'automatic tidy is saved as off');
+    assert.strictEqual(payload.pause_duration, '0', 'the hidden value is replaced');
   });
 
   test('it saves and performs manual tidy', async function (assert) {

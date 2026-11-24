@@ -1354,3 +1354,198 @@ type pluginCatalogStaticSystemView struct {
 func (p pluginCatalogStaticSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
 	return p.pluginCatalog.NewPluginClient(ctx, config)
 }
+
+// TestPluginCatalog_ReloadExternalPlugin_Multiplexed_KillsOnce verifies that
+// when reloadExternalPlugin is called for multiple connections that share a
+// single multiplexed gRPC process, the process is killed exactly once (by the
+// first caller) and all subsequent callers are treated as no-ops via the
+// reloading sentinel flag.
+func TestPluginCatalog_ReloadExternalPlugin_Multiplexed_KillsOnce(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	TestAddTestPlugin(t, pluginCatalog, "mux-userpass", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_UserpassMultiplexed", []string{})
+
+	// Start three connections that all share the same multiplexed process.
+	c1 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+	c2 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+	c3 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+
+	pluginCatalog.lock.RLock()
+	if len(pluginCatalog.externalPlugins) != 1 {
+		pluginCatalog.lock.RUnlock()
+		t.Fatalf("expected 1 externalPlugin entry, got %d", len(pluginCatalog.externalPlugins))
+	}
+	expectConnectionLen(t, 3, firstExternalPlugin(pluginCatalog).connections)
+	pluginCatalog.lock.RUnlock()
+
+	// Reload via c1 — should kill the process and set reloading=true.
+	if err := c1.Reload(); err != nil {
+		t.Fatalf("c1.Reload() error: %v", err)
+	}
+
+	pluginCatalog.lock.RLock()
+	ep := firstExternalPlugin(pluginCatalog)
+	if !ep.reloading {
+		pluginCatalog.lock.RUnlock()
+		t.Fatal("expected externalPlugin.reloading=true after first Reload()")
+	}
+	if !ep.multiplexingSupport {
+		pluginCatalog.lock.RUnlock()
+		t.Fatal("expected externalPlugin.multiplexingSupport=true in reloading entry")
+	}
+	expectConnectionLen(t, 0, ep.connections)
+	pluginCatalog.lock.RUnlock()
+
+	// Reload via c2 — should be a no-op (process already killed).
+	if err := c2.Reload(); err != nil {
+		t.Fatalf("c2.Reload() error: %v", err)
+	}
+
+	// Reload via c3 — also a no-op.
+	if err := c3.Reload(); err != nil {
+		t.Fatalf("c3.Reload() error: %v", err)
+	}
+
+	// Spin up a new connection — must spawn exactly one fresh process and clear reloading.
+	c4 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+
+	pluginCatalog.lock.RLock()
+	ep = firstExternalPlugin(pluginCatalog)
+	if ep.reloading {
+		pluginCatalog.lock.RUnlock()
+		t.Fatal("expected externalPlugin.reloading=false after new connection registered")
+	}
+	expectConnectionLen(t, 1, ep.connections)
+	pluginCatalog.lock.RUnlock()
+
+	// A second new connection reuses the fresh process (multiplexed).
+	c5 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+
+	pluginCatalog.lock.RLock()
+	expectConnectionLen(t, 2, firstExternalPlugin(pluginCatalog).connections)
+	pluginCatalog.lock.RUnlock()
+
+	c4.Close()
+	c5.Close()
+}
+
+// TestPluginCatalog_ReloadExternalPlugin_Multiplexed_ReloadingClears verifies
+// that after a reload cycle completes and a new connection is established, a
+// subsequent reload (second reload cycle) kills the new process correctly and
+// does not silently swallow the kill because reloading was never cleared.
+func TestPluginCatalog_ReloadExternalPlugin_Multiplexed_ReloadingClears(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	TestAddTestPlugin(t, pluginCatalog, "mux-userpass", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_UserpassMultiplexed", []string{})
+
+	// First reload cycle.
+	c1 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+	if err := c1.Reload(); err != nil {
+		t.Fatalf("first Reload() error: %v", err)
+	}
+
+	// Re-attach with a new connection after the reload.
+	c2 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+
+	pluginCatalog.lock.RLock()
+	if firstExternalPlugin(pluginCatalog).reloading {
+		pluginCatalog.lock.RUnlock()
+		t.Fatal("expected reloading=false after new connection established post-reload")
+	}
+	pluginCatalog.lock.RUnlock()
+
+	// Second reload cycle via c2 — must kill the new process, not silently succeed.
+	if err := c2.Reload(); err != nil {
+		t.Fatalf("second Reload() error: %v", err)
+	}
+
+	pluginCatalog.lock.RLock()
+	ep := firstExternalPlugin(pluginCatalog)
+	if !ep.reloading {
+		pluginCatalog.lock.RUnlock()
+		t.Fatal("expected reloading=true after second Reload()")
+	}
+	expectConnectionLen(t, 0, ep.connections)
+	pluginCatalog.lock.RUnlock()
+
+	// Attach a new connection to leave the catalog in a clean state.
+	c3 := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
+	c3.Close()
+}
+
+// firstExternalPlugin is a test helper that returns the sole externalPlugin
+// entry from the catalog, failing if there is not exactly one.
+func firstExternalPlugin(c *PluginCatalog) *externalPlugin {
+	for _, ep := range c.externalPlugins {
+		return ep
+	}
+	return nil
+}
+
+func TestPluginCatalog_EndReloadOperation_PrunesStaleReloadingEntries(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	staleKey := externalPluginsKey{name: "stale", typ: consts.PluginTypeCredential, version: "1.0.0"}
+	reloadingWithConnectionsKey := externalPluginsKey{name: "live", typ: consts.PluginTypeCredential, version: "1.0.0"}
+	nonReloadingKey := externalPluginsKey{name: "steady", typ: consts.PluginTypeCredential, version: "1.0.0"}
+
+	pluginCatalog.externalPlugins = map[externalPluginsKey]*externalPlugin{
+		staleKey: {
+			connections:         map[string]*pluginClient{},
+			multiplexingSupport: true,
+			reloading:           true,
+		},
+		reloadingWithConnectionsKey: {
+			connections: map[string]*pluginClient{
+				"id": {},
+			},
+			multiplexingSupport: true,
+			reloading:           true,
+		},
+		nonReloadingKey: {
+			connections:         map[string]*pluginClient{},
+			multiplexingSupport: true,
+			reloading:           false,
+		},
+	}
+
+	pluginCatalog.BeginReloadOperation()
+	pluginCatalog.EndReloadOperation()
+
+	if _, ok := pluginCatalog.externalPlugins[staleKey]; ok {
+		t.Fatal("expected stale reloading entry to be pruned")
+	}
+	if _, ok := pluginCatalog.externalPlugins[reloadingWithConnectionsKey]; !ok {
+		t.Fatal("expected reloading entry with connections to be retained")
+	}
+	if _, ok := pluginCatalog.externalPlugins[nonReloadingKey]; !ok {
+		t.Fatal("expected non-reloading entry to be retained")
+	}
+}
+
+func TestPluginCatalog_EndReloadOperation_WaitsForAllInFlightOperations(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	staleKey := externalPluginsKey{name: "stale", typ: consts.PluginTypeCredential, version: "1.0.0"}
+	pluginCatalog.externalPlugins = map[externalPluginsKey]*externalPlugin{
+		staleKey: {
+			connections:         map[string]*pluginClient{},
+			multiplexingSupport: true,
+			reloading:           true,
+		},
+	}
+
+	pluginCatalog.BeginReloadOperation()
+	pluginCatalog.BeginReloadOperation()
+	pluginCatalog.EndReloadOperation()
+
+	if _, ok := pluginCatalog.externalPlugins[staleKey]; !ok {
+		t.Fatal("expected stale entry to remain while another reload operation is active")
+	}
+
+	pluginCatalog.EndReloadOperation()
+
+	if _, ok := pluginCatalog.externalPlugins[staleKey]; ok {
+		t.Fatal("expected stale entry to be pruned once all reload operations complete")
+	}
+}

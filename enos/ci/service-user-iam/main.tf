@@ -24,21 +24,29 @@ locals {
 }
 
 resource "aws_iam_role" "role" {
-  provider           = aws.us_east_1
-  name               = local.service_user
-  assume_role_policy = data.aws_iam_policy_document.assume_role_policy_document.json
+  provider             = aws.us_east_1
+  name                 = local.service_user
+  assume_role_policy   = data.aws_iam_policy_document.assume_role_policy_document.json
+  max_session_duration = 10800
 }
 
 data "aws_iam_policy_document" "assume_role_policy_document" {
   provider = aws.us_east_1
 
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole",
+      "sts:SetSourceIdentity",
+      "sts:TagSession",
+    ]
 
     principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${local.aws_account_id}:user/${local.service_user}"]
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${local.aws_account_id}:user/${local.service_user}",
+        "arn:aws:iam::397512762488:user/doormatServiceUser",
+      ]
     }
   }
 }
@@ -200,8 +208,10 @@ data "aws_iam_policy_document" "enos_scenario" {
       "iam:DeletePolicy",
       "iam:DeleteRole",
       "iam:DeleteRolePolicy",
+      "iam:DeleteUserPermissionsBoundary",
       "iam:DetachRolePolicy",
       "iam:GetInstanceProfile",
+      "iam:GetLoginProfile",
       "iam:GetPolicy",
       "iam:GetPolicyVersion",
       "iam:GetRole",
@@ -217,9 +227,11 @@ data "aws_iam_policy_document" "enos_scenario" {
       "iam:ListRoles",
       "iam:ListServiceSpecificCredentials",
       "iam:ListSigningCertificates",
+      "iam:ListUsers",
       "iam:PassRole",
       "iam:PutRolePolicy",
       "iam:RemoveRoleFromInstanceProfile",
+      "iam:TagInstanceProfile",
       "iam:UpdateUser",
       "kms:CreateAlias",
       "kms:CreateKey",

@@ -1,0 +1,3 @@
+```release-note: bug
+consumption-billing: Fixed a bug where SSH duration-adjusted certificate counts and OTP counts whose decimal representation began with '4' could not be read back from storage, causing `sys/billing/overview` to return a 500 error with "lz4: bad magic number". The storage encoding now uses plain decimal strings consistent with other billing metrics, avoiding misidentification as lz4-compressed data.
+```

@@ -14,8 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
+	awsutilint "github.com/hashicorp/vault/internal/awsutil/v2"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 )
@@ -843,7 +842,7 @@ func TestRegionFromHeader(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedRegion, region)
 
-			stsEndpoint, err := stsRegionalEndpoint(region)
+			stsEndpoint, err := awsutilint.STSRegionalEndpoint(context.Background(), region)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedSTSEndpoint, stsEndpoint)
 		})
@@ -856,29 +855,71 @@ func TestRegionFromHeader(t *testing.T) {
 	})
 
 	t.Run("invalid-region", func(t *testing.T) {
-		endpoint, err := stsRegionalEndpoint("fake-region-1")
-		assert.EqualError(t, err, "unable to get regional STS endpoint for region: fake-region-1")
-		assert.Empty(t, endpoint)
+		// Endpoint resolution is offline and always yields an sts.<region>.amazonaws.com
+		// URL, so a bogus region is safe: it can't leave the AWS STS domain and would
+		// only fail later at the actual GetCallerIdentity call.
+		endpoint, err := awsutilint.STSRegionalEndpoint(context.Background(), "fake-region-1")
+		assert.NoError(t, err)
+		assert.Equal(t, "https://sts.fake-region-1.amazonaws.com", endpoint)
 	})
 }
 
-func defaultLoginData() (map[string]interface{}, error) {
-	awsSession, err := session.NewSession()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %s", err)
+// TestBackend_pathLogin_PKCS7Validation verifies that the size limit rejects
+// oversized inputs without rejecting valid signed identity documents.
+func TestBackend_pathLogin_PKCS7Validation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		input   string
+		wantErr string
+	}{
+		// these first two errors are from parsing, not validating, so reaching this error
+		// means the validation passed.
+		{"short", "AAAA", "failed to parse the BER encoded PKCS#7 signature:"},
+		{"size limit", strings.Repeat("A", maxPKCS7SignatureSize), "failed to parse the BER encoded PKCS#7 signature:"},
+		{"oversized", strings.Repeat("A", maxPKCS7SignatureSize+1), "PKCS#7 signature exceeds maximum size"},
 	}
 
-	stsService := sts.New(awsSession)
-	stsInputParams := &sts.GetCallerIdentityInput{}
-	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
-	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
-	stsRequestValid.HTTPRequest.Header.Add("Authorization", fmt.Sprintf("%s,%s,%s",
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			config := logical.TestBackendConfig()
+			config.StorageView = &logical.InmemStorage{}
+			b, err := Factory(ctx, config)
+			assert.NoError(t, err, "unexpected error creating backend")
+			t.Cleanup(func() { b.Cleanup(ctx) })
+
+			// fake request with just pkcs7
+			resp, err := b.HandleRequest(ctx, &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "login",
+				Storage:   config.StorageView,
+				Data:      map[string]any{"pkcs7": tc.input},
+			})
+			assert.ErrorContains(t, err, tc.wantErr, "reject unsafe PKCS#7 input")
+			assert.Nil(t, resp, "invalid input must not authenticate")
+		})
+	}
+}
+
+func defaultLoginData() (map[string]interface{}, error) {
+	body := "Action=GetCallerIdentity&Version=2011-06-15"
+	req, err := http.NewRequest(http.MethodPost, "https://sts.amazonaws.com/", strings.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	req.Header.Add("X-Amz-Date", "20180910T203328Z")
+	req.Header.Add(iamServerIdHeader, testVaultHeaderValue)
+	req.Header.Add("Authorization", fmt.Sprintf("%s,%s,%s",
 		"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request",
 		"SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id",
 		"Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"))
-	stsRequestValid.Sign()
 
-	return buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testValidRoleName)
+	return buildCallerIdentityLoginData(req, testValidRoleName)
 }
 
 // setupIAMTestServer configures httptest server to intercept and respond to the

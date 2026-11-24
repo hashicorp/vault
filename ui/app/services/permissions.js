@@ -68,21 +68,28 @@ export const PERMISSIONS_BANNER_STATES = {
 
 export const RESULTANT_ACL_PATH = 'sys/internal/ui/resultant-acl'; // export for tests
 
+// API_PATHS is used to find the first accessible path for a given nav item, so it must be kept in order of the sidebar nav structure.
 const API_PATHS = {
-  access: {
-    methods: 'sys/auth',
-    mfa: 'identity/mfa/method',
-    oidc: 'identity/oidc/client',
-    entities: 'identity/entity/id',
-    groups: 'identity/group/id',
-    leases: 'sys/leases/lookup',
-    namespaces: 'sys/namespaces',
-    'control-groups': 'sys/control-group/',
+  sync: {
+    destinations: 'sys/sync/destinations',
+    associations: 'sys/sync/associations',
+    config: 'sys/sync/config',
+    github: 'sys/sync/github-apps',
   },
   policies: {
     acl: 'sys/policies/acl',
     rgp: 'sys/policies/rgp',
     egp: 'sys/policies/egp',
+  },
+  access: {
+    'control-groups': 'sys/control-group/',
+    leases: 'sys/leases/lookup',
+    methods: 'sys/auth',
+    mfa: 'identity/mfa/method',
+    oidc: 'identity/oidc/client',
+    namespaces: 'sys/namespaces',
+    groups: 'identity/group/id',
+    entities: 'identity/entity/id',
   },
   tools: {
     wrap: 'sys/wrapping/wrap',
@@ -92,39 +99,37 @@ const API_PATHS = {
     random: 'sys/tools/random',
     hash: 'sys/tools/hash',
   },
+  settings: {
+    customMessages: 'sys/config/ui/custom-messages',
+  },
   status: {
+    seal: 'sys/seal',
     replication: 'sys/replication',
     license: 'sys/license',
-    seal: 'sys/seal',
     raft: 'sys/storage/raft/configuration',
   },
   clients: {
     activity: 'sys/internal/counters/activity',
     config: 'sys/internal/counters/config',
   },
-  settings: {
-    customMessages: 'sys/config/ui/custom-messages',
-  },
-  sync: {
-    destinations: 'sys/sync/destinations',
-    associations: 'sys/sync/associations',
-    config: 'sys/sync/config',
-    github: 'sys/sync/github-apps',
-  },
   monitoring: {
     'utilization-report': 'sys/utilization-report',
   },
+  billing: {
+    overview: 'sys/billing/overview',
+  },
 };
 
+// API_PATHS_TO_ROUTE_PARAMS is used to resolve route params for that path when checking permissions for the nav item.
 const API_PATHS_TO_ROUTE_PARAMS = {
-  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
-  'identity/entity/id': { route: 'vault.cluster.access.identity', models: ['entities'] },
-  'identity/group/id': { route: 'vault.cluster.access.identity', models: ['groups'] },
-  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
-  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
-  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
+  'identity/entity/id': { route: 'vault.cluster.access.identity.entities.index', models: [] },
+  'identity/group/id': { route: 'vault.cluster.access.identity.groups.index', models: [] },
   'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
   'identity/oidc/client': { route: 'vault.cluster.access.oidc', models: [] },
+  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
+  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
+  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
+  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
 };
 
 // Canary endpoints: quick check for “meaningful UI access” in the *current* namespace.
@@ -158,7 +163,7 @@ export default class PermissionsService extends Service {
   @tracked _aclLoadFailed = false;
   @tracked chrootNamespace = null;
 
-  @service store;
+  @service api;
   @service namespace;
 
   // isAclLoaded:
@@ -218,6 +223,8 @@ export default class PermissionsService extends Service {
   }
 
   // Load resultant-ACL used by sidebar + banner.
+  // The ACL is always read from the user's root namespace, not the current one, so that
+  // policies granting access to child namespaces are included.
   // Success:
   //   • Clear _aclLoadFailed, then hydrate via setPaths(resp).
   // Failure (network/403/etc):
@@ -226,7 +233,8 @@ export default class PermissionsService extends Service {
   //   • Clear exact/glob to avoid using stale ACL from a prior success.
   @task *getPaths() {
     try {
-      const resp = yield this.store.adapterFor('permissions').query();
+      const namespace = this.namespace.userRootNamespace ?? this.namespace.path;
+      const resp = yield this.api.sys.internalUiReadResultantAcl(this.api.buildHeaders({ namespace }));
       this._aclLoadFailed = false;
       this.setPaths(resp);
     } catch (err) {
@@ -240,17 +248,17 @@ export default class PermissionsService extends Service {
     }
   }
 
-  // Populate tracked state from a successful resultant-ACL response.
+  // Populate tracked state from a successful resultant-ACL response (the unwrapped `data` payload).
   //   • exact_paths / glob_paths → used for all permission checks
   //   • root (boolean) → authoritative “real root” from backend
   //   • hasFallbackAccess → always false on success (only true if ACL fetch fails)
   //   • chroot_namespace → prefix applied to all checks
   setPaths(resp) {
-    this.exactPaths = resp.data.exact_paths;
-    this.globPaths = resp.data.glob_paths;
-    this.isRoot = resp.data.root; // true root per backend
+    this.exactPaths = resp.exact_paths;
+    this.globPaths = resp.glob_paths;
+    this.isRoot = resp.root; // true root per backend
     this.hasFallbackAccess = false; // nav gating shortcut (true root behaves like “show all”). Only set true if ACL fail.
-    this.chrootNamespace = resp.data.chroot_namespace;
+    this.chrootNamespace = resp.chroot_namespace;
   }
 
   reset() {
@@ -467,6 +475,57 @@ export default class PermissionsService extends Service {
     if (this.isRoot) return true;
     const full = this.pathNameWithNamespace(pathName);
     return this._decide(full, capabilities);
+  }
+
+  // True when the token holds any of `capabilities` on at least one path below `pathName`, e.g.
+  // whether "Enable new engine" applies under sys/mounts. capabilities-self only evaluates literal
+  // paths, so probing "sys/mounts/*" is denied for a policy on "sys/mounts/team-*" even though that
+  // token can enable "team-kv". Resultant-acl glob keys are prefixes ('*' stripped) and may use '+'.
+  // `excludedSubpaths` skips grants on reserved routes below the base, e.g. "api-lock/lock" under
+  // sys/namespaces, which share the prefix but do not grant the action being checked.
+  hasPermissionBeneath(pathName, capabilities, excludedSubpaths = []) {
+    // Without ACL data, show the action and let the API enforce access.
+    if (this.isRoot || this.hasFallbackAccess || !this.isAclLoaded) return true;
+    const base = sanitizePath(this.pathNameWithNamespace(pathName));
+    const allows = (entry) =>
+      !this.isDenied(entry) && capabilities.some((cap) => this.hasCapability(entry, cap));
+    const globs = Object.entries(this.globPaths || {}).map(([key, entry]) => [key.replace(/\*$/, ''), entry]);
+
+    // The most specific glob covering the whole subtree wins, so a narrower deny beats a broader allow.
+    const covering = globs
+      .filter(([key]) => this._prefixCovers(key, `${base}/`))
+      .sort(([a], [b]) => b.length - a.length)[0];
+    if (covering && allows(covering[1])) return true;
+
+    // Otherwise a narrower path below the base, such as "sys/mounts/team-", can still grant access.
+    const exact = Object.entries(this.exactPaths || {});
+    const isExcluded = (key) => {
+      const subpath = key.split('/').slice(base.split('/').length).join('/');
+      return excludedSubpaths.some((excluded) => subpath === excluded || subpath.startsWith(`${excluded}/`));
+    };
+    return [...globs, ...exact].some(
+      ([key, entry]) => this._isBeneath(key, base) && !isExcluded(key) && allows(entry)
+    );
+  }
+
+  // True if every path starting with `target` also starts with the prefix `key`.
+  _prefixCovers(key, target) {
+    const pattern = key
+      .split('/')
+      .map((seg) => (seg === '+' ? '[^/]+' : seg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      .join('/');
+    return new RegExp(`^${pattern}`).test(target);
+  }
+
+  // True if `key` names a path, or a prefix of one, strictly below `base`.
+  _isBeneath(key, base) {
+    const keySegments = key.split('/');
+    const baseSegments = base.split('/');
+    return (
+      keySegments.length > baseSegments.length &&
+      keySegments[baseSegments.length] !== '' &&
+      baseSegments.every((seg, i) => keySegments[i] === '+' || keySegments[i] === seg)
+    );
   }
 
   // ===== capability helpers ==================================================

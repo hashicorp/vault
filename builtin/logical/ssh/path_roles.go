@@ -6,6 +6,7 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -78,8 +79,27 @@ func pathListRoles(b *backend) *framework.Path {
 			OperationSuffix: "roles",
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleList,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of SSH role keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `SSH role details keyed by the role name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
+			},
 		},
 
 		HelpSynopsis:    pathRoleHelpSyn,
@@ -479,6 +499,9 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHRoleWrite, roleEntry.observationMetadata(roleName))
+
 	return nil, nil
 }
 
@@ -753,7 +776,8 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	role, err := b.getRole(ctx, req.Storage, d.Get("role").(string))
+	roleName := d.Get("role").(string)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -766,6 +790,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHRoleRead, role.observationMetadata(roleName))
 	return &logical.Response{
 		Data: roleInfo,
 	}, nil
@@ -786,6 +811,9 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHRoleDelete, map[string]interface{}{
+		"role_name": roleName,
+	})
 	return nil, nil
 }
 
@@ -805,3 +833,28 @@ then a user could request for a credential at "ssh/creds/web" for an IP that
 belongs to the role. The credential will be for the 'default_user' registered
 with the role. There is also an optional parameter 'username' for 'creds/' endpoint.
 `
+
+func (r *sshRole) observationMetadata(roleName string) map[string]interface{} {
+	metadata := map[string]interface{}{
+		"role_name": roleName,
+		"key_type":  r.KeyType,
+	}
+	switch r.KeyType {
+	case KeyTypeCA:
+		metadata["ttl"] = r.TTL
+		metadata["max_ttl"] = r.MaxTTL
+		metadata["allow_user_certificates"] = r.AllowUserCertificates
+		metadata["allow_host_certificates"] = r.AllowHostCertificates
+		metadata["allow_bare_domains"] = r.AllowBareDomains
+		metadata["allow_subdomains"] = r.AllowSubdomains
+		metadata["allow_user_key_ids"] = r.AllowUserKeyIDs
+		metadata["allowed_users_template"] = r.AllowedUsersTemplate
+		metadata["allowed_domains_template"] = r.AllowedDomainsTemplate
+		metadata["default_user_template"] = r.DefaultUserTemplate
+		metadata["default_extensions_template"] = r.DefaultExtensionsTemplate
+		metadata["algorithm_signer"] = r.AlgorithmSigner
+		metadata["not_before_duration"] = r.NotBeforeDuration.String()
+		metadata["allow_empty_principals"] = r.AllowEmptyPrincipals
+	}
+	return metadata
+}

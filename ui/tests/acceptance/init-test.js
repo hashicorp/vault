@@ -4,9 +4,9 @@
  */
 
 import { waitFor } from '@ember/test-helpers';
+import { Response } from 'miragejs';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -77,14 +77,8 @@ module('Acceptance | init', function (hooks) {
   setupMirage(hooks);
 
   test('cloud seal init', async function (assert) {
-    // continue button is disabled, violating color-contrast
-    setRunOptions({
-      rules: {
-        'color-contrast': { enabled: false },
-      },
-    });
     assert.expect(6);
-    this.server.put('/sys/init', (schema, req) => {
+    this.server.post('/sys/init', (schema, req) => {
       assertRequest(req, assert, true);
       return CLOUD_SEAL_RESPONSE;
     });
@@ -106,7 +100,7 @@ module('Acceptance | init', function (hooks) {
   test('shamir seal init', async function (assert) {
     assert.expect(6);
 
-    this.server.put('/sys/init', (schema, req) => {
+    this.server.post('/sys/init', (schema, req) => {
       assertRequest(req, assert, false);
       return SEAL_RESPONSE;
     });
@@ -119,5 +113,19 @@ module('Acceptance | init', function (hooks) {
     await waitFor(GENERAL.button('Continue to Unseal'));
     assert.strictEqual(initPage.keys.length, SEAL_RESPONSE.keys.length, 'shows all of the recovery keys');
     assert.dom(GENERAL.button('Continue to Unseal')).exists('links to unseal');
+  });
+
+  test('init shows the API error for a 400 response', async function (assert) {
+    this.server.post('/sys/init', () => new Response(400, {}, { errors: ['Vault is already initialized'] }));
+    this.server.get('/sys/seal-status', () => SEAL_STATUS_RESPONSE);
+
+    await initPage.init(3, 2);
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom('[data-test-message-error-description]')
+      .hasText('Vault is already initialized', 'it shows the error returned by the API');
+    assert.dom(GENERAL.submitButton).isNotDisabled('it stops loading so the form can be resubmitted');
+    assert.strictEqual(initPage.keys.length, 0, 'it shows no keys');
   });
 });

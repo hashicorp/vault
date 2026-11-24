@@ -9,11 +9,10 @@ import { action } from '@ember/object';
 
 import config from 'vault/config/environment';
 
-import ControlGroupError from 'vault/lib/control-group-error';
-
 export default class ApplicationRoute extends Route {
   @service analytics;
   @service controlGroup;
+  @service intl;
   @service('router') routing;
   @service('namespace') namespaceService;
   @service('flags') flagsService;
@@ -25,8 +24,7 @@ export default class ApplicationRoute extends Route {
   @action
   error(error, transition) {
     const controlGroup = this.controlGroup;
-    // support both types of control group errors until Ember Data is removed
-    if (error instanceof ControlGroupError || error.isControlGroupError) {
+    if (error.isControlGroupError) {
       return controlGroup.handleError(error);
     }
     if (error.path === '/v1/sys/wrapping/unwrap') {
@@ -72,20 +70,19 @@ export default class ApplicationRoute extends Route {
   }
 
   beforeModel() {
+    this.intl.setLocale(['en-us']);
     return this.flagsService.fetchFeatureFlags();
   }
 
   afterModel() {
-    const { environment, APP } = config;
-    const { ANALYTICS_CONFIG } = APP;
+    const { ANALYTICS_CONFIG } = config.APP;
 
-    // if the app is built for dev  -> attempt to start the analytics service based on the config setting
-    // if the app is built for prod -> attempt to start the analytics service based on the config setting AND HVD ownership
-    // if the app is built for test -> don't start the analytics service
-    if (environment === 'development') {
-      this.analytics.start('posthog', ANALYTICS_CONFIG);
-    } else if (environment === 'production' && this.flagsService.isHvdManaged) {
-      this.analytics.start('posthog', ANALYTICS_CONFIG);
+    // HVD (managed) clusters start capturing analytics immediately, with no
+    // consent gate. Self-managed clusters are started later via the consent gate
+    // in the cluster route so they can prompt for consent before activating.
+    if (this.flagsService.isHvdManaged) {
+      // Pass the HVD hint so the provider classifies productPlanType as HVD or SM
+      this.analytics.start(ANALYTICS_CONFIG.provider, { ...ANALYTICS_CONFIG, isHvdManaged: true });
     }
   }
 }

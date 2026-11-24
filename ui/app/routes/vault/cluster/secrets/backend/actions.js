@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -30,7 +30,7 @@ export default EditBase.extend({
   setupController(controller, model) {
     this._super(...arguments);
     const { selectedAction } = this.paramsFor(this.routeName);
-    controller.set('selectedAction', selectedAction || model.secret.supportedActions[0]);
+    controller.set('selectedAction', selectedAction || model.secret.supportedActions[0]?.name);
     controller.set('breadcrumbs', [
       {
         label: 'Secrets',

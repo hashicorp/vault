@@ -40,7 +40,7 @@ func runCloseGithubCopiedPullRequestCmd(cmd *cobra.Command, args []string) error
 		}
 		fmt.Println(string(b))
 	case "markdown":
-		tbl := res.ToTable(err)
+		tbl := res.ToMarkdownTable(err)
 		tbl.SetTitle("Close Origin Pull Request")
 		fmt.Println(tbl.RenderMarkdown())
 	default:

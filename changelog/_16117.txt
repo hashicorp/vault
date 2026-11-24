@@ -1,0 +1,3 @@
+```release-note:bug
+agent/pki-external-ca: Fix CA chain extraction from Vault PKI API responses where `ca_chain` field was always empty in templates due to incorrect type handling of array responses
+```

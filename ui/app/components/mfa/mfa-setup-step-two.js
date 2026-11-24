@@ -1,11 +1,12 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module MfaSetupStepTwo
@@ -19,7 +20,8 @@ import { action } from '@ember/object';
  */
 
 export default class MfaSetupStepTwo extends Component {
-  @service store;
+  @service api;
+  @tracked error = null;
 
   @action
   redirectPreviousPage() {
@@ -30,14 +32,14 @@ export default class MfaSetupStepTwo extends Component {
   @action
   async restartSetup() {
     this.error = null;
-    const adapter = this.store.adapterFor('mfa-setup');
     try {
-      await adapter.adminDestroy({
+      await this.api.identity.mfaAdminDestroyTotpSecret({
         entity_id: this.args.entityId,
         method_id: this.args.uuid,
       });
     } catch (error) {
-      this.error = error.errors;
+      const parsed = await this.api.parseError(error);
+      this.error = parsed.message;
       return 'stop_progress';
     }
     this.args.restartFlow();

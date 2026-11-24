@@ -2,10 +2,14 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-MAIN_PACKAGES=$$($(GO_CMD) list ./... | grep -v vendor/ )
-SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list ./... | grep -v vendor/ )
+MAIN_PACKAGES=$$($(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
+SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
 API_PACKAGES=$$(cd $(CURDIR)/api && $(GO_CMD) list ./... | grep -v vendor/ )
-ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES)
+VERSION_PACKAGES=$$(cd $(CURDIR)/version && $(GO_CMD) list ./... | grep -v vendor/ )
+INTERNALSHARED_PACKAGES=$$(cd $(CURDIR)/internalshared && $(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
+BASE_COMMAND_PACKAGES=$$(cd $(CURDIR)/command/base && $(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
+CLIENT_COMMAND_PACKAGES=$$(cd $(CURDIR)/command/client && $(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
+ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES) $(VERSION_PACKAGES) $(INTERNALSHARED_PACKAGES) $(BASE_COMMAND_PACKAGES) $(CLIENT_COMMAND_PACKAGES)
 TEST=$$(echo $(ALL_PACKAGES) | grep -v integ/ )
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
@@ -13,9 +17,17 @@ INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
+SED_CMD := $(SED) -i
+# MacOS without gsed requires an empty string argument for -i.
+ifeq ($(shell uname -s),Darwin)
+	ifneq ($(findstring gsed,$(SED)),gsed)
+		SED_CMD := $(SED) -i ''
+	endif
+endif
 
 GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
-GO_CMD?=go
+GO_ARCH_LOCAL=$$(go env GOARCH)
+GO_CMD?=GOWORK=off go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -113,7 +125,7 @@ cover:
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
+	@$(GO_CMD) list -tags enterprise -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
 		| xargs $(GO_CMD) vet ; if [ $$? -eq 1 ]; then \
 			echo ""; \
@@ -147,7 +159,7 @@ ci-vet-codechecker: tools-internal check-tools-external
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint: check-tools-external
-	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
+	@$(GO_CMD) list -tags enterprise -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| xargs golangci-lint run; if [ $$? -eq 1 ]; then \
 			echo ""; \
 			echo "Lint found suspicious constructs. Please check the reported constructs"; \
@@ -163,18 +175,23 @@ protolint: prep check-tools-external
 	@echo "==> Linting protobufs..."
 	@buf lint
 
-# prep runs `go generate` to build the dynamically generated
-# source files.
+# prep runs `go generate` to build the dynamically generated source files.
+# Since generated files are committed to git, this is usually not needed.
+# Set SKIP_GEN=1 to skip generation (for savvy users who know they don't need it).
 #
 # n.b.: prep used to depend on fmtcheck, but since fmtcheck is
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version clean
-	@echo "==> Running go generate..."
-	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
-	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
-	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+prep: check-go-version
+	@if [ "$(SKIP_GEN)" = "1" ]; then \
+		echo "==> Skipping go generate (SKIP_GEN=1)"; \
+	else \
+		echo "==> Running go generate..."; \
+		GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES); \
+		(cd api && GOARCH= GOOS= $(GO_CMD) generate $(API_PACKAGES)); \
+		(cd sdk && GOARCH= GOOS= $(GO_CMD) generate $(SDK_PACKAGES)); \
+	fi
 
 # Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
 # whenever a make target is invoked.
@@ -198,26 +215,26 @@ static-assets-dir:
 
 install-ui-dependencies:
 	@echo "==> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && pnpm i
 
 test-ember: install-ui-dependencies
 	@echo "==> Running ember tests"
-	@cd ui && yarn run test:oss
+	@cd ui && pnpm run test:oss
 
 test-ember-enos: install-ui-dependencies
 	@echo "==> Running ember tests with a real backend"
-	@cd ui && yarn run test:enos
+	@cd ui && pnpm run test:enos
 
 ember-dist: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "==> Building Ember application"
-	@cd ui && yarn run build
+	@cd ui && pnpm run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
 ember-dist-dev: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "==> Building Ember application"
-	@cd ui && yarn run build:dev
+	@cd ui && pnpm run build:dev
 
 static-dist: ember-dist
 static-dist-dev: ember-dist-dev
@@ -229,18 +246,18 @@ proto: check-tools-external
 	# No additional sed expressions should be added to this list. Going forward
 	# we should just use the variable names chosen by protobuf. These are left
 	# here for backwards compatibility, namely for SDK compilation.
-	$(SED) -i -e 's/Id/ID/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' vault/request_forwarding_service.pb.go
-	$(SED) -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
+	$(SED_CMD) -e 's/Id/ID/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' vault/request_forwarding_service.pb.go
+	$(SED_CMD) -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 
 	# This will inject the sentinel struct tags as decorated in the proto files.
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 importfmt: check-tools-external
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gosimports -w
 
 fmt: importfmt
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 fmtcheck: check-go-fmt
 
@@ -402,14 +419,10 @@ ci-copywriteheaders:
 	cd sdk && $(CURDIR)/scripts/copywrite-exceptions.sh
 	cd shamir && $(CURDIR)/scripts/copywrite-exceptions.sh
 
-.PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker clean dev
+.PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker dev
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
 .PHONY: all-packages
 all-packages:
 	@echo $(ALL_PACKAGES) | tr ' ' '\n'
-
-.PHONY: clean
-clean:
-	@echo "==> Cleaning..."

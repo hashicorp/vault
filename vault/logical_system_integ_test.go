@@ -170,8 +170,6 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 	}
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	corehelpers.RetryUntil(t, 15*time.Second, func() error {
 		// Use standby deliberately to make sure it forwards

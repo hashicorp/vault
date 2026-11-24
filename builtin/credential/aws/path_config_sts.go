@@ -6,6 +6,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -29,6 +30,7 @@ func (b *backend) pathListSts() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathStsList,
+				Summary:  "List the configured STS roles for all AWS accounts.",
 			},
 		},
 
@@ -70,15 +72,37 @@ The Vault server must have permissions to assume this role.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigStsCreateUpdate,
+				Summary:  "Configure an STS role for a given AWS account.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigStsCreateUpdate,
+				Summary:  "Configure an STS role for a given AWS account.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigStsRead,
+				Summary:  "Return the configured STS role for a given AWS account.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"sts_role":    {Type: framework.TypeString, Description: "AWS ARN of the STS role to assume for the account."},
+							"external_id": {Type: framework.TypeString, Description: "External ID used when assuming the STS role."},
+						},
+					}},
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigStsDelete,
+				Summary:  "Delete the configured STS role for a given AWS account.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 		},
 

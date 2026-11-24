@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package version
@@ -10,6 +10,9 @@ import (
 )
 
 type VersionInfo struct {
+	// BinaryName is only for FullVersionNumber output, which defaults to "Vault"
+	// when this is empty. We leave it out of JSON.
+	BinaryName        string `json:"-"`
 	Revision          string `json:"revision,omitempty"`
 	Version           string `json:"version,omitempty"`
 	VersionPrerelease string `json:"version_prerelease,omitempty"`
@@ -62,12 +65,16 @@ func (c *VersionInfo) VersionNumber() string {
 
 func (c *VersionInfo) FullVersionNumber(rev bool) string {
 	var versionString bytes.Buffer
-
-	if Version == "unknown" && VersionPrerelease == "unknown" {
-		return "Vault (version unknown)"
+	binaryName := c.BinaryName
+	if binaryName == "" {
+		binaryName = "Vault"
 	}
 
-	fmt.Fprintf(&versionString, "Vault v%s", c.Version)
+	if Version == "unknown" && VersionPrerelease == "unknown" {
+		return fmt.Sprintf("%s (version unknown)", binaryName)
+	}
+
+	fmt.Fprintf(&versionString, "%s v%s", binaryName, c.Version)
 	if c.VersionPrerelease != "" {
 		fmt.Fprintf(&versionString, "-%s", c.VersionPrerelease)
 	}

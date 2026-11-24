@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
@@ -67,9 +67,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     assert.dom(selectors.save).isDisabled('Save button is disabled when schema is not selected');
 
     await click(selectors.radioCard);
-    assert
-      .dom('[data-test-component="empty-state"]')
-      .doesNotExist('Empty state is hidden when schema is selected');
+    assert.dom('[data-test-empty-state-title]').doesNotExist('Empty state is hidden when schema is selected');
   });
 
   test('it should render validation messages for invalid form', async function (assert) {
@@ -85,7 +83,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
       .dom(GENERAL.validationErrorByAttr('bindpass'))
       .hasText('Administrator password is required.', 'Validation message renders for bindpass');
     assert
-      .dom('[data-test-invalid-form-message]')
+      .dom(GENERAL.invalidFormMessage)
       .hasText('There are 2 errors with this form.', 'Invalid form message renders');
   });
 

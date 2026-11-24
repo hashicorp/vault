@@ -344,25 +344,27 @@ func (h *HANA) revokeUserDefault(ctx context.Context, req dbplugin.DeleteUserReq
 	}
 	defer tx.Rollback()
 
+	quotedUsername := dbutil.QuoteIdentifier(req.Username)
+
 	// Disable server login for user
-	disableStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", req.Username))
+	disableStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", quotedUsername))
 	if err != nil {
-		return dbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to prepare disable-user statement: %w", err)
 	}
 	defer disableStmt.Close()
 	if _, err := disableStmt.ExecContext(ctx); err != nil {
-		return dbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to execute disable-user statement: %w", err)
 	}
 
 	// Invalidates current sessions and performs soft drop (drop if no dependencies)
 	// if hard drop is desired, custom revoke statements should be written for role
-	dropStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("DROP USER %s RESTRICT", req.Username))
+	dropStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("DROP USER %s RESTRICT", quotedUsername))
 	if err != nil {
-		return dbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to prepare drop-user statement: %w", err)
 	}
 	defer dropStmt.Close()
 	if _, err := dropStmt.ExecContext(ctx); err != nil {
-		return dbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to execute drop-user statement: %w", err)
 	}
 
 	// Commit transaction

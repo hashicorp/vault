@@ -5,11 +5,12 @@
 
 import { module, test } from 'qunit';
 import {
-  enhanceEnginesWithCatalogData,
   categorizeEnginesByStatus,
+  enhanceEnginesWithCatalogData,
+  getAllVersionsForEngineType,
   MOUNT_CATEGORIES,
-  PLUGIN_TYPES,
   PLUGIN_CATEGORIES,
+  PLUGIN_TYPES,
 } from 'vault/utils/plugin-catalog-helpers';
 
 module('Unit | Utility | plugin-catalog-helpers', function () {
@@ -147,6 +148,55 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
       assert.false(externalPlugin.builtin, 'external plugin is not builtin');
     });
 
+    test('it excludes external plugins with builtin mappings from external category', function (assert) {
+      const staticEngines = [
+        {
+          type: 'kv',
+          displayName: 'KV',
+          pluginCategory: PLUGIN_CATEGORIES.GENERIC,
+          mountCategory: [MOUNT_CATEGORIES.SECRET],
+        },
+      ];
+
+      const catalogData = [
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+        },
+        {
+          name: 'vault-plugin-secrets-kv', // This has a builtin mapping
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '2.1.0',
+        },
+        {
+          name: 'truly-external-plugin', // This does not have a builtin mapping
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '1.0.0',
+        },
+      ];
+
+      const result = enhanceEnginesWithCatalogData(staticEngines, catalogData);
+
+      // Should only add the truly external plugin, not the one with builtin mapping
+      assert.strictEqual(result.length, 2, 'adds only truly external plugin');
+
+      const kvEngine = result.find((engine) => engine.type === 'kv');
+      const externalKv = result.find((engine) => engine.type === 'vault-plugin-secrets-kv');
+      const trulyExternal = result.find((engine) => engine.type === 'truly-external-plugin');
+
+      assert.ok(kvEngine, 'KV engine is present');
+      assert.notOk(externalKv, 'external KV plugin is not added as separate engine');
+      assert.ok(trulyExternal, 'truly external plugin is present');
+      assert.strictEqual(
+        trulyExternal.pluginCategory,
+        PLUGIN_CATEGORIES.EXTERNAL,
+        'truly external plugin is in external category'
+      );
+    });
+
     test('it matches external plugins with existing static engine glyphs', function (assert) {
       const staticEngines = [
         {
@@ -280,6 +330,284 @@ module('Unit | Utility | plugin-catalog-helpers', function () {
       assert.strictEqual(PLUGIN_CATEGORIES.CLOUD, 'cloud', 'CLOUD category is correct');
       assert.strictEqual(PLUGIN_CATEGORIES.INFRA, 'infra', 'INFRA category is correct');
       assert.strictEqual(PLUGIN_CATEGORIES.EXTERNAL, 'external', 'EXTERNAL category is correct');
+    });
+  });
+
+  module('getAllVersionsForEngineType', function () {
+    test('it returns empty array when no catalog data provided', function (assert) {
+      const result = getAllVersionsForEngineType(undefined, 'kv', 'secret');
+      assert.deepEqual(
+        result,
+        { versions: [], hasUnversionedPlugins: false },
+        'returns empty result for undefined catalog data'
+      );
+
+      const result2 = getAllVersionsForEngineType([], 'kv', 'secret');
+      assert.deepEqual(
+        result2,
+        { versions: [], hasUnversionedPlugins: false },
+        'returns empty result for empty catalog data'
+      );
+    });
+
+    test('it returns versions for direct engine type matches', function (assert) {
+      const catalogData = [
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '1.0.0',
+        },
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '2.0.0',
+        },
+      ];
+
+      const result = getAllVersionsForEngineType(catalogData, 'kv', 'secret');
+
+      assert.strictEqual(result.versions.length, 2, 'returns both versions');
+      assert.strictEqual(result.versions[0].version, '1.0.0', 'includes first version');
+      assert.strictEqual(result.versions[1].version, '2.0.0', 'includes second version');
+      assert.strictEqual(result.versions[0].pluginName, 'kv', 'includes plugin name');
+      assert.true(result.versions[0].isBuiltin, 'marks builtin correctly');
+      assert.false(result.hasUnversionedPlugins, 'no unversioned plugins detected');
+    });
+
+    test('it returns versions for external plugins that map to engine types', function (assert) {
+      const catalogData = [
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '1.0.0',
+        },
+        {
+          name: 'vault-plugin-secrets-kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '2.1.0',
+        },
+      ];
+
+      const result = getAllVersionsForEngineType(catalogData, 'kv', 'secret');
+
+      assert.strictEqual(result.versions.length, 2, 'returns both builtin and external versions');
+
+      const builtinVersion = result.versions.find((v) => v.isBuiltin);
+      const externalVersion = result.versions.find((v) => !v.isBuiltin);
+
+      assert.ok(builtinVersion, 'includes builtin version');
+      assert.ok(externalVersion, 'includes external version');
+      assert.strictEqual(builtinVersion.pluginName, 'kv', 'builtin uses engine name');
+      assert.strictEqual(
+        externalVersion.pluginName,
+        'vault-plugin-secrets-kv',
+        'external uses full plugin name'
+      );
+      assert.false(result.hasUnversionedPlugins, 'no unversioned plugins detected');
+    });
+
+    test('it excludes external plugins that do not map to the engine type', function (assert) {
+      const catalogData = [
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '1.0.0',
+        },
+        {
+          name: 'vault-plugin-secrets-aws',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '1.5.0',
+        },
+      ];
+
+      const result = getAllVersionsForEngineType(catalogData, 'kv', 'secret');
+
+      assert.strictEqual(result.versions.length, 1, 'only includes matching plugins');
+      assert.strictEqual(result.versions[0].pluginName, 'kv', 'includes only KV engine');
+      assert.false(result.hasUnversionedPlugins, 'no unversioned plugins detected');
+    });
+
+    test('it filters by plugin type correctly', function (assert) {
+      const catalogData = [
+        {
+          name: 'gcp',
+          type: 'auth',
+          builtin: true,
+          version: 'v0.22.0+builtin',
+        },
+        {
+          name: 'gcp',
+          type: 'secret',
+          builtin: true,
+          version: 'v0.23.0+builtin',
+        },
+        {
+          name: 'vault-plugin-secrets-gcp',
+          type: 'secret',
+          builtin: false,
+          version: 'v0.23.0',
+        },
+      ];
+
+      // Test filtering for secret plugins only
+      const secretResult = getAllVersionsForEngineType(catalogData, 'gcp', 'secret');
+      assert.strictEqual(secretResult.versions.length, 2, 'returns only secret type plugins');
+      assert.true(
+        secretResult.versions.every(
+          (plugin) => plugin.pluginName === 'gcp' || plugin.pluginName === 'vault-plugin-secrets-gcp'
+        ),
+        'includes correct secret plugins'
+      );
+      assert.false(secretResult.hasUnversionedPlugins, 'no unversioned plugins detected');
+
+      // Test filtering for auth plugins only
+      const authResult = getAllVersionsForEngineType(catalogData, 'gcp', 'auth');
+      assert.strictEqual(authResult.versions.length, 1, 'returns only auth type plugins');
+      assert.strictEqual(authResult.versions[0].pluginName, 'gcp', 'includes auth plugin');
+      assert.false(authResult.hasUnversionedPlugins, 'no unversioned plugins detected');
+    });
+
+    test('it handles invalid catalog data gracefully', function (assert) {
+      const invalidCatalogData = [
+        null, // null entry
+        { name: 'kv' }, // missing required fields
+        { name: 'aws', version: '1.0.0' }, // missing builtin field
+        {
+          name: 'pki',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '1.0.0',
+        }, // valid entry
+      ];
+
+      const result = getAllVersionsForEngineType(invalidCatalogData, 'pki');
+
+      assert.strictEqual(result.versions.length, 1, 'filters out invalid entries');
+      assert.strictEqual(result.versions[0].pluginName, 'pki', 'includes only valid entry');
+      assert.false(result.hasUnversionedPlugins, 'no unversioned plugins detected');
+    });
+
+    test('it excludes unversioned plugins but detects them', function (assert) {
+      const catalogData = [
+        {
+          name: 'vault-plugin-secrets-keymgmt',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '', // Empty string when plugin registered without version
+          sha256: '9433b2b37d30abf8f7cbf8c3e616dfc263034789681081ea4ba7918673d80086',
+        },
+        {
+          name: 'vault-plugin-secrets-keymgmt',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '1.5.0',
+        },
+      ];
+
+      const result = getAllVersionsForEngineType(catalogData, 'keymgmt', 'secret');
+
+      assert.strictEqual(result.versions.length, 1, 'excludes unversioned plugin from versions');
+      assert.true(result.hasUnversionedPlugins, 'detects presence of unversioned plugins');
+
+      const versionedPlugin = result.versions[0];
+      assert.strictEqual(versionedPlugin.version, '1.5.0', 'includes only versioned plugin');
+      assert.false(versionedPlugin.isBuiltin, 'versioned plugin is not builtin');
+      assert.strictEqual(
+        versionedPlugin.pluginName,
+        'vault-plugin-secrets-keymgmt',
+        'correct plugin name for versioned'
+      );
+    });
+
+    test('it detects unversioned plugins for builtin engines', function (assert) {
+      const catalogData = [
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '1.0.0',
+        },
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '', // Unversioned external kv plugin
+        },
+      ];
+
+      const result = getAllVersionsForEngineType(catalogData, 'kv', 'secret');
+
+      assert.strictEqual(result.versions.length, 1, 'only includes versioned plugins');
+      assert.true(result.hasUnversionedPlugins, 'detects unversioned plugin');
+      assert.strictEqual(result.versions[0].version, '1.0.0', 'includes builtin version');
+      assert.true(result.versions[0].isBuiltin, 'included plugin is builtin');
+    });
+
+    test('it handles multiple unversioned plugins for same engine type', function (assert) {
+      const catalogData = [
+        {
+          name: 'vault-plugin-secrets-custom',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '', // First unversioned plugin
+        },
+        {
+          name: 'custom',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: false,
+          version: '', // Second unversioned plugin (direct match)
+        },
+        {
+          name: 'custom',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '2.0.0', // Versioned plugin
+        },
+      ];
+
+      const result = getAllVersionsForEngineType(catalogData, 'custom', 'secret');
+
+      assert.strictEqual(result.versions.length, 1, 'excludes all unversioned plugins');
+      assert.true(result.hasUnversionedPlugins, 'detects multiple unversioned plugins');
+      assert.strictEqual(result.versions[0].version, '2.0.0', 'includes only versioned plugin');
+    });
+
+    test('it handles invalid engine type parameters', function (assert) {
+      const catalogData = [
+        {
+          name: 'kv',
+          type: PLUGIN_TYPES.SECRET,
+          builtin: true,
+          version: '1.0.0',
+        },
+      ];
+
+      const result1 = getAllVersionsForEngineType(catalogData, null);
+      assert.deepEqual(
+        result1,
+        { versions: [], hasUnversionedPlugins: false },
+        'returns empty result for null engine type'
+      );
+
+      const result2 = getAllVersionsForEngineType(catalogData, '');
+      assert.deepEqual(
+        result2,
+        { versions: [], hasUnversionedPlugins: false },
+        'returns empty result for empty engine type'
+      );
+
+      const result3 = getAllVersionsForEngineType(catalogData, undefined);
+      assert.deepEqual(
+        result3,
+        { versions: [], hasUnversionedPlugins: false },
+        'returns empty result for undefined engine type'
+      );
     });
   });
 });

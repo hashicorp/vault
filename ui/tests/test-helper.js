@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,23 +11,46 @@ import { setup } from 'qunit-dom';
 import start from 'ember-exam/test-support/start';
 import './helpers/flash-message';
 import preloadAssets from 'ember-asset-loader/test-support/preload-assets';
-import { setupGlobalA11yHooks, setRunOptions } from 'ember-a11y-testing/test-support';
+import {
+  a11yAudit,
+  DEFAULT_A11Y_TEST_HELPER_NAMES,
+  setupGlobalA11yHooks,
+} from 'ember-a11y-testing/test-support';
 import manifest from 'vault/config/asset-manifest';
 import setupSinon from 'ember-sinon-qunit';
+import { DISMISSED_WIZARD_KEY, WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import { setupDarkThemeAudit } from './theme-helper';
 
 preloadAssets(manifest).then(() => {
   setup(QUnit.assert);
   setApplication(Application.create(config.APP));
-  setupGlobalA11yHooks(() => true, {
-    helpers: ['render'],
-  });
-  setRunOptions({
-    runOnly: {
-      type: 'tag',
-      values: ['wcag2a'],
-    },
-  });
   setupSinon();
+  // conditional a11y testing allows for theme specific testing
+  // dark theme audit focusses specifically on the color-contrast rule
+  if (config.APP.DARK_THEME_AUDIT) {
+    setupDarkThemeAudit();
+  } else {
+    setupGlobalA11yHooks(
+      () => true,
+      (options = {}) =>
+        a11yAudit({
+          ...options,
+          // Per-test options replace global options, so enforce the cumulative A+AA policy here.
+          runOnly: {
+            type: 'tag',
+            values: ['wcag2a', 'wcag2aa'],
+          },
+        }),
+      {
+        helpers: [...DEFAULT_A11Y_TEST_HELPER_NAMES, 'render', 'fillIn', 'select', 'tab'],
+      }
+    );
+  }
+  // dismiss all wizards before each test to have a consistent state
+  // this can be overridden in individual tests when needed
+  QUnit.hooks.beforeEach(function () {
+    window.localStorage.setItem(DISMISSED_WIZARD_KEY, JSON.stringify(Object.values(WIZARD_ID_MAP)));
+  });
   start({
     setupTestIsolationValidation: true,
   });

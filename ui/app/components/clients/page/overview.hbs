@@ -6,7 +6,7 @@
 <Clients::RunningTotal @byMonthClients={{this.byMonthClients}} @runningTotals={{@activity.total}} />
 
 {{! by_namespace is an empty array when there is no client count activity data }}
-{{#if @activity.byNamespace}}
+{{#if @activity.by_namespace}}
   <Clients::CountsCard @title="Client attribution">
     <:subheader>
       <Clients::FilterToolbar
@@ -27,10 +27,10 @@
         @showPaginationSizeSelector={{true}}
       >
         <:emptyState>
-          <Hds::ApplicationState as |A|>
-            <A.Header @title="No data found" />
-            <A.Body @text="Clear or change filters to view client count data." />
-            <A.Footer as |F|>
+          <Hds::ApplicationState class="is-marginless" as |A|>
+            <A.Header @title="No data found" @titleTag="h2" data-test-empty-state-title />
+            <A.Body @text="Clear or change filters to view client count data." data-test-empty-state-message />
+            <A.Footer data-test-empty-state-actions as |F|>
               <F.LinkStandalone
                 @icon="file-text"
                 @text="Client count documentation"

@@ -1,0 +1,3 @@
+```release-note:feature
+**UI TLS Certificate login: Add UI login support for the TLS certificate (cert) authentication.
+```

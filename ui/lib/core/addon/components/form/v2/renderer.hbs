@@ -1,0 +1,33 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Form ...attributes as |Form|>
+  {{#if @error}}
+    <Form.Section>
+      <Form::V2::ErrorAlert @error={{@error}} />
+    </Form.Section>
+  {{/if}}
+
+  {{#if @renderFields}}
+    {{#each @form.config.sections as |section|}}
+      {{#if (this.isSectionVisible section)}}
+        <Form::V2::Section @section={{section}} @formComponent={{Form}}>
+          {{#each section.fields as |field|}}
+            {{#if (this.isFieldVisible field)}}
+              <Form::V2::Field
+                @field={{field}}
+                @value={{get @form.payload field.name}}
+                @errors={{this.getFieldErrors field.name}}
+                @onChange={{this.handleFieldChange}}
+              />
+            {{/if}}
+          {{/each}}
+        </Form::V2::Section>
+      {{/if}}
+    {{/each}}
+  {{/if}}
+
+  {{yield Form}}
+</Hds::Form>

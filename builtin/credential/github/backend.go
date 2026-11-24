@@ -7,7 +7,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v83/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"

@@ -1,0 +1,51 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container
+  @level={{if @isCard "mid" "base"}}
+  @hasBorder={{@isCard}}
+  class={{if @isCard "has-padding-m"}}
+  data-test-card-container="policy-allowed-actions"
+  data-test-policy-allowed-actions
+  ...attributes
+>
+  {{#if @isCard}}
+    <Hds::Layout::Flex class="has-bottom-margin-m" @gap="8">
+      <Hds::Icon @name="target" @size="24" class="has-text-grey" />
+      <Hds::Text::Display @tag="h2" @weight="semibold">
+        Allowed actions
+      </Hds::Text::Display>
+    </Hds::Layout::Flex>
+  {{/if}}
+
+  {{#each this.sortedPaths as |pathEntry|}}
+    <div
+      class="box has-border-200 has-background-white-bis has-padding-s has-bottom-margin-xs"
+      data-test-path-entry={{get pathEntry 0}}
+    >
+      <Hds::Text::Code @tag="pre" @align="left" class="has-bottom-margin-xs" data-test-path={{get pathEntry 0}}>{{get
+          pathEntry
+          0
+        }}</Hds::Text::Code>
+      <Hds::Layout::Flex @gap="8" @wrap={{true}} data-test-capabilities>
+        {{#each (get pathEntry 1) as |capability|}}
+          <Hds::Badge
+            @text={{this.formatCapability capability}}
+            @color={{this.getCapabilityColor capability}}
+            @type="filled"
+            @size="small"
+            data-test-capability={{capability}}
+          />
+        {{/each}}
+      </Hds::Layout::Flex>
+    </div>
+  {{else}}
+    <div class="box has-border-200 has-background-white-bis" data-test-empty-state>
+      <Hds::Text::Body @tag="p" @color="faint">
+        No policy paths to display
+      </Hds::Text::Body>
+    </div>
+  {{/each}}
+</Hds::Card::Container>

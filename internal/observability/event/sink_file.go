@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package event
@@ -6,6 +6,7 @@ package event
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 )
 
 // defaultFileMode is the default file permissions (read/write for everyone).
@@ -27,16 +29,18 @@ var _ eventlogger.Node = (*FileSink)(nil)
 
 // FileSink is a sink node which handles writing events to file.
 type FileSink struct {
-	file           *os.File
-	fileLock       sync.RWMutex
-	fileMode       os.FileMode
-	path           string
-	requiredFormat string
-	logger         hclog.Logger
+	file                  *os.File
+	writePermit           *permitpool.Pool
+	permitInitOnce        sync.Once
+	fileMode              os.FileMode
+	nonExecutableFileMode bool
+	path                  string
+	requiredFormat        string
+	logger                hclog.Logger
 }
 
 // NewFileSink should be used to create a new FileSink.
-// Accepted options: WithFileMode.
+// Accepted options include WithFileMode and WithNonExecutableFileMode.
 func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	// Parse and check path
 	p := strings.TrimSpace(path)
@@ -61,17 +65,23 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 			return nil, fmt.Errorf("unable to determine existing file mode: %w", err)
 		}
 		mode = fileInfo.Mode()
+		if opts.nonExecutableFileMode && mode&0o111 != 0 && opts.withLogger != nil {
+			opts.withLogger.Warn("existing file mode contained executable bits, clearing", "configured_mode", fmt.Sprintf("%04o", mode.Perm()), "new_mode", fmt.Sprintf("%04o", (mode&^0o111).Perm()))
+		}
 	default:
 		mode = *opts.withFileMode
 	}
+	if opts.nonExecutableFileMode {
+		mode &^= 0o111
+	}
 
 	sink := &FileSink{
-		file:           nil,
-		fileLock:       sync.RWMutex{},
-		fileMode:       mode,
-		requiredFormat: format,
-		path:           p,
-		logger:         opts.withLogger,
+		file:                  nil,
+		fileMode:              mode,
+		nonExecutableFileMode: opts.nonExecutableFileMode,
+		requiredFormat:        format,
+		path:                  p,
+		logger:                opts.withLogger,
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -82,6 +92,21 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	}
 
 	return sink, nil
+}
+
+func (s *FileSink) initPermitPool() {
+	s.permitInitOnce.Do(func() {
+		s.writePermit = permitpool.New(1)
+	})
+}
+
+func (s *FileSink) acquirePermit(ctx context.Context) error {
+	s.initPermitPool()
+	return s.writePermit.Acquire(ctx)
+}
+
+func (s *FileSink) releasePermit() {
+	s.writePermit.Release()
 }
 
 // Process handles writing the event to the file sink.
@@ -131,8 +156,10 @@ func (s *FileSink) Reopen() error {
 		return nil
 	}
 
-	s.fileLock.Lock()
-	defer s.fileLock.Unlock()
+	if err := s.acquirePermit(context.Background()); err != nil {
+		return err
+	}
+	defer s.releasePermit()
 
 	if s.file == nil {
 		return s.open()
@@ -146,6 +173,24 @@ func (s *FileSink) Reopen() error {
 	}
 
 	return s.open()
+}
+
+// Close releases the file descriptor held by the sink
+func (s *FileSink) Close() error {
+	if err := s.acquirePermit(context.Background()); err != nil {
+		return err
+	}
+	defer s.releasePermit()
+
+	file := s.file
+	s.file = nil
+	if file == nil {
+		return nil
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("unable to close file for sink %q: %w", s.path, err)
+	}
+	return nil
 }
 
 // Type describes the type of this node (sink).
@@ -162,7 +207,13 @@ func (s *FileSink) open() error {
 		return nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(s.path), s.fileMode); err != nil {
+	dir := filepath.Dir(s.path)
+	dirMode := s.fileMode
+	if s.nonExecutableFileMode {
+		// Directories need traversal permission even when audit files cannot be executable.
+		dirMode |= 0o700 | (s.fileMode&0o444)>>2 | (s.fileMode&0o222)>>1
+	}
+	if err := os.MkdirAll(dir, dirMode); err != nil {
 		return fmt.Errorf("unable to create file %q: %w", s.path, err)
 	}
 
@@ -173,18 +224,23 @@ func (s *FileSink) open() error {
 	}
 
 	// Change the file mode in case the log file already existed.
-	// We special case '/dev/null' since we can't chmod it, and bypass if the mode is zero.
+	// We special case '/dev/null' since we can't chmod it.
 	switch s.path {
 	case devnull:
 	default:
-		if s.fileMode != 0 {
-			err = os.Chmod(s.path, s.fileMode)
+		if s.fileMode != 0 || s.nonExecutableFileMode {
+			err = s.file.Chmod(s.fileMode)
 			if err != nil {
-				return fmt.Errorf("unable to change file permissions '%v' for sink %q: %w", s.fileMode, s.path, err)
+				chmodErr := fmt.Errorf("unable to change file permissions '%v' for sink %q: %w", s.fileMode, s.path, err)
+				closeErr := s.file.Close()
+				s.file = nil
+				if closeErr != nil {
+					return errors.Join(chmodErr, fmt.Errorf("unable to close file for sink %q: %w", s.path, closeErr))
+				}
+				return chmodErr
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -192,10 +248,11 @@ func (s *FileSink) open() error {
 // NOTE: We attempt to acquire a lock on the file in order to write, but will
 // yield if the context is 'done'.
 func (s *FileSink) log(ctx context.Context, data []byte) error {
-	// Wait for the lock, but ensure we check for a cancelled context as soon as
-	// we have it, as there's no point in continuing if we're cancelled.
-	s.fileLock.Lock()
-	defer s.fileLock.Unlock()
+	if err := s.acquirePermit(ctx); err != nil {
+		return err
+	}
+	defer s.releasePermit()
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

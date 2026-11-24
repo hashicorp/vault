@@ -18,7 +18,7 @@ import { computed } from '@ember/object';
     @clusterMode="primary"
     />
  * ```
- * @param {Object} replicationDetails=null - An Ember data object pulled from the Ember Model. It contains details specific to the whether the replication is dr or performance.
+ * @param {Object} replicationDetails=null - An object pulled from the cluster. It contains details specific to the whether the replication is dr or performance.
  * @param {String} clusterMode=null - The cluster mode (e.g. primary or secondary) passed through to a table component.
  */
 

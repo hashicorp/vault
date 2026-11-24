@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -82,6 +82,11 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 		return true, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
 	}
 
+	b.TryRecordObservationWithRequest(ctx, nil, ObservationTypeAWSStaticCredentialRotate, map[string]interface{}{
+		"role_name":       cfg.Name,
+		"rotation_period": cfg.RotationPeriod.String(),
+	})
+
 	return true, nil
 }
 
@@ -103,7 +108,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 		return nil, fmt.Errorf("iam user didn't exist, or username/userid didn't match: %w", err)
 	}
 
-	accessKeys, err := iamClient.ListAccessKeys(&iam.ListAccessKeysInput{
+	accessKeys, err := iamClient.ListAccessKeys(ctx, &iam.ListAccessKeysInput{
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
@@ -125,7 +130,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 			}
 		}
 
-		_, err := iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+		_, err := iamClient.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
 			AccessKeyId: oldestKey.AccessKeyId,
 			UserName:    oldestKey.UserName,
 		})
@@ -135,7 +140,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 	}
 
 	// Create new set of keys
-	out, err := iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
+	out, err := iamClient.CreateAccessKey(ctx, &iam.CreateAccessKeyInput{
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
@@ -198,7 +203,7 @@ func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage,
 	}
 
 	// because we have the information, this is the one we created, so it's safe for us to delete.
-	_, err = iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+	_, err = iamClient.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
 		AccessKeyId: aws.String(creds.AccessKeyID),
 		UserName:    aws.String(cfg.Username),
 	})

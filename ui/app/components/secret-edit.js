@@ -23,19 +23,33 @@
  * @param {boolean} preferAdvancedEdit - property set from the controller of show/edit/create route passed in through secret-edit-layout
  */
 
-import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import KVObject from 'vault/lib/kv-object';
-import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
-import { alias, or } from '@ember/object/computed';
+import { dump } from 'js-yaml';
 
 export default class SecretEdit extends Component {
-  @service store;
-
   @tracked secretData = null;
   @tracked editorString = null;
+  @tracked editorFormat = 'json';
+
+  breadcrumbs = [
+    { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
+    { text: 'Secrets engines', path: 'vault.cluster.secrets.backends' },
+    this.args.root,
+    { label: this.title, text: this.title },
+  ];
+
+  get title() {
+    if (this.args.mode === 'create') {
+      return 'Create secret';
+    } else if (this.args.mode === 'edit') {
+      return 'Edit secret';
+    } else {
+      return this.args.key.id;
+    }
+  }
 
   // fired on did-insert from render modifier
   @action
@@ -43,35 +57,30 @@ export default class SecretEdit extends Component {
     this.secretData = KVObject.create({ content: [] }).fromJSON(model.secretData);
     this.editorString = this.secretData.toJSONString();
   }
-  // TODO move this to the secret model
-  @maybeQueryRecord(
-    'capabilities',
-    (context) => {
-      if (!context.args.model || context.args.mode === 'create') {
-        return;
-      }
-      const backend = context.args.model.backend;
-      const id = context.args.model.id;
-      const path = `${backend}/${id}`;
-      return {
-        id: path,
-      };
-    },
-    'model',
-    'model.id',
-    'mode'
-  )
-  checkSecretCapabilities;
-  @alias('checkSecretCapabilities.canUpdate') canUpdateSecret;
-  @alias('checkSecretCapabilities.canRead') canReadSecret;
 
-  @or('model.isLoading', 'model.isReloading', 'model.isSaving') requestInFlight;
-  @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
+  get canUpdateSecret() {
+    return this.args.capabilities?.canUpdate ?? this.args.model?.canUpdate;
+  }
+
+  get canReadSecret() {
+    return this.args.capabilities?.canRead ?? this.args.model?.canRead;
+  }
+
+  get buttonDisabled() {
+    return Boolean(this.args.model?.isFolder);
+  }
 
   get modelForData() {
     const { model } = this.args;
     if (!model) return null;
-    return model;
+    if (model.secretKeyAndValue) return model;
+    return {
+      ...model,
+      secretKeyAndValue: Object.keys(model.secretData || {}).map((key) => ({
+        key,
+        value: model.secretData[key],
+      })),
+    };
   }
 
   get basicModeDisabled() {
@@ -88,6 +97,10 @@ export default class SecretEdit extends Component {
 
   get showAdvancedMode() {
     return this.secretDataIsAdvanced || this.args.preferAdvancedEdit;
+  }
+
+  get getSecretsDataInYAML() {
+    return dump(this.secretDataAsJSON, { noRefs: true });
   }
 
   get isWriteWithoutRead() {
@@ -109,5 +122,16 @@ export default class SecretEdit extends Component {
   @action
   toggleAdvanced(bool) {
     this.args.onToggleAdvancedEdit(bool);
+  }
+
+  @action
+  setView(format) {
+    // 'ui' shows the key/value form; 'json'/'yaml' show the advanced editor
+    if (format === 'ui') {
+      this.toggleAdvanced(false);
+    } else {
+      this.editorFormat = format;
+      this.toggleAdvanced(true);
+    }
   }
 }

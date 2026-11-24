@@ -1,0 +1,3 @@
+```release-note:improvement
+core (enterprise): Add OAuth resource server authorization_details type discovery endpoints and align vault:path_access claim matching semantics with path/capabilities evaluation; discovery endpoints are unauthenticated.
+```

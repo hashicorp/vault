@@ -4,9 +4,10 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { setupRenderingTest } from 'vault/tests/helpers';
+import { render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import ReplicationAttributesResource from 'vault/resources/replication-attributes';
 
 const TITLE = 'Status';
 
@@ -45,7 +46,6 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title='Primary cluster'/>`
     );
-
     assert.dom('[data-test-info-table]').exists('it shows the known primary cluster details');
 
     const expectedUrl = `${REPLICATION_DETAILS.primaries[0].api_address}/ui/`;
@@ -113,5 +113,24 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
         'There has been some transient failure. Your cluster will eventually switch back to connection and try to establish a connection again.',
         'show correct error message'
       );
+  });
+
+  test('it updates when the replication resource is refreshed in place', async function (assert) {
+    const details = new ReplicationAttributesResource({
+      mode: 'secondary',
+      state: 'stream-wals',
+      connection_state: 'ready',
+    });
+    this.set('replicationDetails', details);
+    await render(
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title={{this.title}} />`
+    );
+    assert.dom('[data-test-state]').includesText('stream-wals');
+    assert.dom('[data-test-connection]').includesText('ready');
+
+    details.update({ state: 'merkle-sync', connection_state: 'disconnected' });
+    await settled();
+    assert.dom('[data-test-state]').includesText('merkle-sync', 'the state is updated');
+    assert.dom('[data-test-connection]').includesText('disconnected', 'the connection is updated');
   });
 });

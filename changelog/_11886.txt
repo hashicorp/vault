@@ -1,0 +1,3 @@
+```release-note:bug
+identity: Fix issue where Vault may consume more memory than intended under heavy authentication load.
+```

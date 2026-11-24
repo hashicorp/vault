@@ -18,7 +18,7 @@ module.exports = {
       plugins: [['@babel/plugin-proposal-decorators', { decoratorsBeforeExport: true }]],
     },
   },
-  plugins: ['ember'],
+  plugins: ['ember', 'vault'],
   extends: [
     'eslint:recommended',
     'plugin:ember/recommended',
@@ -29,7 +29,8 @@ module.exports = {
     browser: true,
   },
   rules: {
-    'no-console': 'error',
+    'vault/require-version-guard': 'error',
+    'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
     'prefer-const': ['error', { destructuring: 'all' }],
     'ember/no-mixins': 'warn',
     'ember/no-new-mixins': 'off', // should be warn but then every line of the mixin is green
@@ -42,6 +43,12 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
   },
   overrides: [
+    {
+      files: ['scripts/generate-form-config.js'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
     // node files
     {
       files: [
@@ -55,6 +62,7 @@ module.exports = {
         './config/**/*.js',
         './lib/*/index.js',
         './server/**/*.js',
+        './eslint-rules/**/*.js',
       ],
       parserOptions: {
         sourceType: 'script',
@@ -71,6 +79,14 @@ module.exports = {
       extends: ['plugin:qunit/recommended'],
       rules: {
         'qunit/require-expect': 'off',
+      },
+    },
+    {
+      // e2e files are plain Playwright/Node tests, not Ember code — this rule false-positives on
+      // Playwright's fixture-tuple syntax, mistaking it for an Ember object literal default.
+      files: ['e2e/**/*.{js,ts}'],
+      rules: {
+        'ember/avoid-leaking-state-in-ember-objects': 'off',
       },
     },
     {

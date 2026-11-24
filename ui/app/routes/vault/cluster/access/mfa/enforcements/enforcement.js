@@ -5,11 +5,16 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { prepareTargets, fetchMfaMethods } from 'vault/utils/mfa-login-enforcement-helpers';
 
 export default class MfaLoginEnforcementRoute extends Route {
-  @service store;
+  @service api;
 
-  model({ name }) {
-    return this.store.findRecord('mfa-login-enforcement', name);
+  async model({ name }) {
+    const { data } = await this.api.identity.mfaReadLoginEnforcement(name);
+    const targets = await prepareTargets(data, this.api);
+    const methods = await fetchMfaMethods(this.api);
+
+    return { enforcement: data, name, targets, methods };
   }
 }

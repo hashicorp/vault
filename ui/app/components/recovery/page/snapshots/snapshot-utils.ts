@@ -5,7 +5,7 @@
 import Ember from 'ember';
 import { timeout } from 'ember-concurrency';
 
-import { ROOT_NAMESPACE } from 'vault/services/namespace';
+import { ROOT_NAMESPACE } from 'vault/utils/constants/namespace';
 
 import type ApiService from 'vault/services/api';
 

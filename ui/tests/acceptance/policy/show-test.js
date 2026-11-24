@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL } from '@ember/test-helpers';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import page from 'vault/tests/pages/policy/show';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Acceptance | policy/acl/:name', function (hooks) {
+module('Acceptance | policies | show', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -17,7 +17,8 @@ module('Acceptance | policy/acl/:name', function (hooks) {
   });
 
   test('it redirects to list if navigating to root', async function (assert) {
-    await page.visit({ type: 'acl', name: 'root' });
+    await visit('/vault/policy/acl/root');
+
     assert.strictEqual(
       currentURL(),
       '/vault/policies/acl',
@@ -26,7 +27,8 @@ module('Acceptance | policy/acl/:name', function (hooks) {
   });
 
   test('it navigates to edit when the toggle is clicked', async function (assert) {
-    await page.visit({ type: 'acl', name: 'default' }).toggleEdit();
+    await visit('/vault/policy/acl/default');
+    await click(GENERAL.button('Edit policy'));
     assert.strictEqual(currentURL(), '/vault/policy/acl/default/edit', 'toggle navigates to edit page');
   });
 });

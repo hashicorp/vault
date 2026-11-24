@@ -123,7 +123,6 @@ func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func())
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 	cores := cluster.Cores
 
 	core := cores[0]
@@ -144,6 +143,5 @@ func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func())
 		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
 
 	return config, func() {
-		cluster.Cleanup()
 	}
 }

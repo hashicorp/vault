@@ -4,26 +4,26 @@
 }}
 
 {{#if this.importedIssuerKeyMap}}
-  <div class="is-flex-start has-top-margin-xs">
-    <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
+  <Hds::Layout::Flex class="has-top-margin-xs" as |LF|>
+    <LF.Item @grow={{true}} @shrink={{true}} @basis="0%" class="has-text-grey has-bottom-margin-xs">
       <h2>
         Imported Issuer
       </h2>
-    </div>
-    <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
+    </LF.Item>
+    <LF.Item @grow={{true}} @shrink={{true}} @basis="0%" class="has-text-grey has-bottom-margin-xs">
       <h2>
         Imported Key
       </h2>
-    </div>
-  </div>
+    </LF.Item>
+  </Hds::Layout::Flex>
   <div class="box is-fullwidth is-sideless is-marginless is-paddingless" data-test-imported-bundle-mapping>
     {{#each this.importedIssuerKeyMap as |imported|}}
       <div
         class="box is-marginless no-top-shadow has-slim-padding"
         data-test-import-pair={{concat imported.issuer "_" imported.key}}
       >
-        <div class="is-flex-start">
-          <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
+        <Hds::Layout::Flex as |LF|>
+          <LF.Item @grow={{true}} @shrink={{true}} @basis="0%" class="has-bottom-margin-xs" data-test-imported-issuer>
             {{#if imported.issuer}}
               <LinkTo @route="issuers.issuer.details" @models={{array @model.backend imported.issuer}}>
                 {{imported.issuer}}
@@ -31,8 +31,8 @@
             {{else}}
               None
             {{/if}}
-          </div>
-          <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
+          </LF.Item>
+          <LF.Item @grow={{true}} @shrink={{true}} @basis="0%" class="has-bottom-margin-xs" data-test-imported-key>
             {{#if imported.key}}
               <LinkTo @route="keys.key.details" @models={{array @model.backend imported.key}}>
                 {{imported.key}}
@@ -40,8 +40,8 @@
             {{else}}
               None
             {{/if}}
-          </div>
-        </div>
+          </LF.Item>
+        </Hds::Layout::Flex>
       </div>
     {{/each}}
   </div>

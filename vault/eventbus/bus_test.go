@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -354,17 +355,31 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			waitFor(t, 1*time.Second, func() bool { return stopped.Load() == int32(stop) })
 
 			// send another message, but half should stop receiving
+			sendCount := 1
+			if !tc.cancel {
+				// With buffered subscriber channels, non-readers are dropped once
+				// their queue fills. Send enough events to trigger that behavior.
+				sendCount = defaultSubscriberBuffer + 1
+			}
 			event, err = logical.NewEvent()
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
-			if err != nil {
-				t.Error(err)
+			for i := 0; i < sendCount; i++ {
+				err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
+				if err != nil && !errors.Is(err, ErrSlowConsumer) {
+					t.Error(err)
+				}
 			}
-			waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-stop) })
-			// the sends should time out and the subscriptions should drop when cancelFunc is called or the context cancels
-			waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(create-stop) })
+			if tc.cancel {
+				waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-stop) })
+			} else {
+				waitFor(t, 1*time.Second, func() bool { return received.Load() >= int32(create*2-stop) })
+			}
+			// the sends should cause slow subscribers to drop; under burst load,
+			// additional drops are acceptable but the count must fall at least to
+			// the expected baseline.
+			waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() <= int64(create-stop) })
 		})
 	}
 }
@@ -659,6 +674,7 @@ func TestBexpr(t *testing.T) {
 			Plugin:        "kv",
 			PluginVersion: "v1.13.1+builtin",
 			Version:       "2",
+			IsLocal:       false,
 		}
 		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), false, event)
 	}
@@ -672,6 +688,8 @@ func TestBexpr(t *testing.T) {
 		{"non-matching expression", "data_path == nothing", false},
 		{"matching expression", "data_path == secret/my/secret/path", true},
 		{"full matching expression", "data_path == secret/my/secret/path and operation != read and source_plugin_mount == secret/ and source_plugin_mount != somethingelse", true},
+		{"non-matching on local", "source_plugin_is_local == true", false},
+		{"matching on local", "source_plugin_is_local == false", true},
 	}
 
 	for _, testCase := range testCases {
@@ -739,6 +757,103 @@ func TestPipelineCleanedUp(t *testing.T) {
 	}
 }
 
+// TestSlowSubscriberQueueFullCancels ensures a subscriber with a full queue is closed
+// and cleaned from subscriptions/pipelines/filters.
+func TestSlowSubscriberQueueFullCancels(t *testing.T) {
+	// Enable bounded event queues for this test with buffer size 16
+	t.Setenv(EnvVaultEventNotificationsBoundedQueueSize, "16")
+
+	subscriptions.Store(0)
+
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+
+	eventType := logical.EventType("slow/subscriber")
+	_, cancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel)
+
+	closedByBackpressure := false
+	for i := 0; i < defaultSubscriberBuffer+2; i++ {
+		e, err := logical.NewEvent()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = bus.SendEventInternal(context.Background(), namespace.RootNamespace, nil, eventType, false, e)
+		// ErrSlowConsumer is expected when the queue fills up
+		if errors.Is(err, ErrSlowConsumer) || subscriptions.Load() == 0 {
+			closedByBackpressure = true
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !closedByBackpressure {
+		t.Fatal("expected subscriber to close once queue is full")
+	}
+
+	waitFor(t, 2*time.Second, func() bool { return subscriptions.Load() == 0 })
+	if bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
+		t.Fatal("expected pipeline to be removed after slow consumer cancellation")
+	}
+	if bus.filters.anyMatch(namespace.RootNamespace, eventType) {
+		t.Fatal("expected filter entries to be removed after slow consumer cancellation")
+	}
+}
+
+// TestSlowSubscriberNoGoroutinePerEvent verifies that event processing for a stalled
+// subscriber does not create goroutines proportional to event count.
+func TestSlowSubscriberNoGoroutinePerEvent(t *testing.T) {
+	// Enable bounded event queues for this test with buffer size 16
+	t.Setenv(EnvVaultEventNotificationsBoundedQueueSize, "16")
+
+	subscriptions.Store(0)
+
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+
+	eventType := logical.EventType("slow/goroutines")
+	_, cancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel)
+
+	base := runtime.NumGoroutine()
+
+	for i := 0; i < 500; i++ {
+		e, err := logical.NewEvent()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = bus.SendEventInternal(context.Background(), namespace.RootNamespace, nil, eventType, false, e)
+		if errors.Is(err, ErrSlowConsumer) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	waitFor(t, 2*time.Second, func() bool { return subscriptions.Load() == 0 })
+
+	// We don't assert exact equality because background runtime activity can vary,
+	// but goroutines must not scale with event count.
+	after := runtime.NumGoroutine()
+	if after > base+50 {
+		t.Fatalf("unexpected goroutine growth: base=%d after=%d", base, after)
+	}
+}
+
 // TestSubscribeGlobal tests that the global filter subscription mechanism works.
 func TestSubscribeGlobal(t *testing.T) {
 	bus, err := NewEventBus("", nil, nil)
@@ -748,10 +863,10 @@ func TestSubscribeGlobal(t *testing.T) {
 
 	bus.Start()
 
-	bus.filters.addGlobalPattern([]string{""}, "abc*")
+	bus.filters.addClusterWidePattern([]string{""}, "abc*")
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
-	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	ch, cancel2, err := bus.NewClusterWideSubscription(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -783,19 +898,19 @@ func TestSubscribeGlobal_WithApply(t *testing.T) {
 	}
 
 	bus.Start()
-	assert.False(t, bus.GlobalMatch(namespace.RootNamespace, "abcd"))
-	bus.ApplyGlobalFilterChanges([]FilterChange{
+	assert.False(t, bus.ClusterWideMatch(namespace.RootNamespace, "abcd"))
+	bus.ApplyClusterWideFilterChanges([]FilterChange{
 		{
 			Operation:         FilterChangeAdd,
 			NamespacePatterns: []string{""},
 			EventTypePattern:  "abc*",
 		},
 	})
-	assert.True(t, bus.GlobalMatch(namespace.RootNamespace, "abcd"))
+	assert.True(t, bus.ClusterWideMatch(namespace.RootNamespace, "abcd"))
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
-	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	ch, cancel2, err := bus.NewClusterWideSubscription(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -829,7 +944,7 @@ func TestSubscribeClusterNode(t *testing.T) {
 
 	bus.Start()
 
-	bus.filters.addPattern("somecluster", []string{""}, "abc*")
+	bus.filters.addPattern("somecluster", []string{""}, "abc*", "uuid")
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
 	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
@@ -910,15 +1025,15 @@ func TestClearGlobalFilter(t *testing.T) {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
-	bus.ApplyGlobalFilterChanges([]FilterChange{
+	bus.ApplyClusterWideFilterChanges([]FilterChange{
 		{
 			Operation:         FilterChangeAdd,
 			NamespacePatterns: []string{""},
 			EventTypePattern:  "abc*",
 		},
 	})
-	bus.ClearGlobalFilter()
-	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	bus.ClearClusterWideFilter()
+	ch, cancel2, err := bus.NewClusterWideSubscription(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -994,12 +1109,9 @@ func TestNotifyOnGlobalFilterChanges(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
 
-	ch, cancel2, err := bus.NotifyOnGlobalFilterChanges(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ch, cancel2 := bus.NotifyOnClusterWideFilterChanges(ctx)
 	t.Cleanup(cancel2)
-	bus.ApplyGlobalFilterChanges([]FilterChange{
+	bus.ApplyClusterWideFilterChanges([]FilterChange{
 		{
 			Operation:         FilterChangeAdd,
 			NamespacePatterns: []string{""},
@@ -1037,10 +1149,7 @@ func TestNotifyOnLocalFilterChanges(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
 
-	ch, cancel2, err := bus.NotifyOnLocalFilterChanges(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ch, cancel2 := bus.NotifyOnLocalFilterChanges(ctx)
 	t.Cleanup(cancel2)
 	bus.ApplyClusterNodeFilterChanges("somecluster", []FilterChange{
 		{
@@ -1067,22 +1176,26 @@ func TestNotifyOnLocalFilterChanges(t *testing.T) {
 	}
 }
 
-type fakeWALGetter struct {
+type fakeStorageInfoGetter struct {
 	Header string
 }
 
-func (f *fakeWALGetter) GetCurrentWALHeader() string {
+func (f *fakeStorageInfoGetter) GetCurrentWALHeader() string {
 	return f.Header
 }
 
-var _ StorageWALGetter = (*fakeWALGetter)(nil)
+func (f *fakeStorageInfoGetter) IsReplicated(secondaryID, namespace, storagePath string) bool {
+	return false
+}
+
+var _ StorageInfoGetter = (*fakeStorageInfoGetter)(nil)
 
 // Test_getIndexForEvent tests the retrieval of the Vault storage index for an
 // event based on its metadata.
 func Test_getIndexForEvent(t *testing.T) {
 	tests := map[string]struct {
 		event       *logical.EventReceived
-		walGetter   StorageWALGetter
+		walGetter   StorageInfoGetter
 		expectErr   string
 		expectIndex string
 	}{
@@ -1096,7 +1209,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "",
 			expectIndex: "test-wal",
 		},
@@ -1110,7 +1223,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "",
 			expectIndex: "",
 		},
@@ -1124,7 +1237,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "",
 			expectIndex: "",
 		},
@@ -1138,7 +1251,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "failed to parse event metadata modified",
 			expectIndex: "",
 		},
@@ -1181,6 +1294,56 @@ func Test_getIndexForEvent(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.expectIndex, index)
 			}
+		})
+	}
+}
+
+// TestActiveSubscriptionCount verifies that ActiveSubscriptionCount increases when
+// subscriptions are created and decreases when they are canceled.
+func TestActiveSubscriptionCount(t *testing.T) {
+	subscriptions.Store(0)
+
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+
+	require.Equal(t, int64(0), ActiveSubscriptionCount())
+
+	_, cancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, "someType", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, int64(1), ActiveSubscriptionCount())
+
+	// cleanup is asynchronous, so wait for the counter to settle after canceling
+	cancel()
+	waitFor(t, 1*time.Second, func() bool { return ActiveSubscriptionCount() == 0 })
+}
+
+// TestIsBoundedQueueEnabled verifies that IsBoundedQueueEnabled reports whether a
+// positive bounded queue size is configured via the environment variable.
+func TestIsBoundedQueueEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		envValue string
+		expected bool
+	}{
+		"disabled": {envValue: "0", expected: false},
+		"enabled":  {envValue: "16", expected: true},
+		"invalid":  {envValue: "notanumber", expected: false},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// the buffer size is read from the environment at bus construction
+			t.Setenv(EnvVaultEventNotificationsBoundedQueueSize, tc.envValue)
+
+			bus, err := NewEventBus("", nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			require.Equal(t, tc.expected, bus.IsBoundedQueueEnabled())
 		})
 	}
 }

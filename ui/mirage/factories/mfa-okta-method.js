@@ -6,6 +6,7 @@
 import { Factory } from 'miragejs';
 
 export default Factory.extend({
+  id: () => (Math.random() + 1).toString(36).substring(2),
   base_url: 'okta.com',
   mount_accessor: '',
   name: '', // returned but cannot be set at this time

@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -198,8 +198,6 @@ func TestAutoTidy(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Mount PKI
@@ -336,8 +334,6 @@ func TestAutoTidyPersistsAcrossRestarts(t *testing.T) {
 		NumCores:    1,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 
@@ -362,7 +358,7 @@ func TestAutoTidyPersistsAcrossRestarts(t *testing.T) {
 	require.True(t, exists, "did not find last_auto_tidy_finished")
 
 	cluster.StopCore(t, 0)
-	cluster.StartCore(t, 0, opts)
+	cluster.StartCore(t, 0, opts, false)
 	cluster.UnsealCore(t, cluster.Cores[0])
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 
@@ -643,8 +639,6 @@ func TestCertStorageMetrics(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Mount PKI
@@ -912,7 +906,6 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 	testCtx := context.Background()
 
 	// Grab the mount UUID for sys/raw invocations.
@@ -1069,7 +1062,6 @@ func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
 
 	// This would still be way easier if I could do both sides
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 	testCtx := context.Background()
 
 	// Grab the mount UUID for sys/raw invocations.

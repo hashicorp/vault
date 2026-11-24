@@ -6,6 +6,7 @@ package awsauth
 import (
 	"context"
 	"encoding/base64"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -32,12 +33,30 @@ to avoid any encoding problems, it can be base64 encoded.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoletagDenyListUpdate,
+				Summary:  "Add a role tag to the deny list.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRoletagDenyListRead,
+				Summary:  "Return the deny-list entry for the given role tag.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"creation_time":   {Type: framework.TypeString, Description: "Time the deny-list entry was created, in RFC3339 format."},
+							"expiration_time": {Type: framework.TypeString, Description: "Time the deny-list entry expires, in RFC3339 format."},
+						},
+					}},
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoletagDenyListDelete,
+				Summary:  "Delete the deny-list entry for the given role tag.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 		},
 
@@ -59,6 +78,7 @@ func (b *backend) pathListRoletagDenyList() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoletagDenyListsList,
+				Summary:  "List the deny-listed role tags.",
 			},
 		},
 

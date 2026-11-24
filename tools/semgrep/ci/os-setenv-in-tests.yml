@@ -1,0 +1,26 @@
+# Copyright IBM Corp. 2016, 2026
+# SPDX-License-Identifier: BUSL-1.1
+
+rules:
+  - id: os-setenv-in-tests
+    paths:
+      include:
+        - "*_test.go"
+    patterns:
+      - pattern: os.Setenv(...)
+    message: >-
+      Do not call os.Setenv directly in tests. Use t.Setenv (or b.Setenv)
+      instead: it automatically restores the environment variable to its
+      original state when the test completes, including fully unsetting it
+      if it was originally unset. A manual "defer os.Setenv(key,
+      os.Getenv(key))" restore is unsafe, because os.Getenv returns "" for
+      an unset variable, so the deferred restore sets the variable to an
+      empty string instead of truly unsetting it. That can silently break
+      other tests that run afterward in the same process. If this call
+      genuinely cannot use t.Setenv (e.g. it runs in init(), in a helper
+      with no *testing.T in scope, or inside sync.Once-guarded setup shared
+      across tests), suppress it with a
+      "// nosemgrep: tools.semgrep.ci.os-setenv-in-tests" comment that
+      explains why.
+    languages: [go]
+    severity: ERROR

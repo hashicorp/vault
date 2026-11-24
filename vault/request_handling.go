@@ -18,21 +18,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -101,8 +101,6 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 
 	policies := make(map[string][]string)
 	if !skipDeriveEntityPolicies {
-		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
-
 		// Attach the policies on the entity
 		if len(entity.Policies) != 0 {
 			policies[entity.NamespaceID] = append(policies[entity.NamespaceID], entity.Policies...)
@@ -182,18 +180,32 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 	if tokenNS.Path == policyNS.Path {
 		// Same namespace - add all and continue
 		for _, policyName := range nsPolicies {
-			filteredPolicies = append(filteredPolicies, policyName)
+			validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+			if err != nil {
+				c.Logger().Debug("skipping invalid group policy name during ACL construction")
+				continue
+			}
+			filteredPolicies = append(filteredPolicies, validatedPolicyName)
+		}
+		if len(filteredPolicies) == 0 {
+			return nil, ErrNoApplicablePolicies
 		}
 		return filteredPolicies, nil
 	}
 
 	for _, policyName := range nsPolicies {
-		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, policyName)
+		validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+		if err != nil {
+			c.Logger().Debug("skipping invalid group policy name during ACL construction")
+			continue
+		}
+
+		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, validatedPolicyName)
 		if err != nil && errors.Is(err, ErrPolicyNotExistInTypeMap) {
 			// When we attempt to get a non-EGP policy type, and receive an
 			// explicit error that it doesn't exist (in the type map) we log the
 			// ns/policy and continue without error.
-			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, policyName).Error())
+			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, validatedPolicyName).Error())
 			continue
 		}
 		if err != nil || t == nil {
@@ -203,18 +215,18 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 		switch *t {
 		case PolicyTypeRGP:
 			if tokenNS.HasParent(policyNS) {
-				filteredPolicies = append(filteredPolicies, policyName)
+				filteredPolicies = append(filteredPolicies, validatedPolicyName)
 			}
 		case PolicyTypeACL:
 			if policyApplicationMode != groupPolicyApplicationModeWithinNamespaceHierarchy {
 				// Group policy application mode isn't set to enforce
 				// the namespace hierarchy, so apply all the ACLs,
 				// regardless of their namespaces.
-				filteredPolicies = append(filteredPolicies, policyName)
+				filteredPolicies = append(filteredPolicies, validatedPolicyName)
 				continue
 			}
 			if policyNS.HasParent(tokenNS) {
-				filteredPolicies = append(filteredPolicies, policyName)
+				filteredPolicies = append(filteredPolicies, validatedPolicyName)
 			}
 		default:
 			return nil, fmt.Errorf("unexpected policy type: %v", t)
@@ -228,7 +240,10 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 
 func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, map[string][]string, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
-
+	if req == nil {
+		c.logger.Error("fetchACLTokenEntryAndEntity called with nil request")
+		return nil, nil, nil, nil, ErrInternalError
+	}
 	// Ensure there is a client token
 	if req.ClientToken == "" {
 		return nil, nil, nil, nil, logical.ErrPermissionDenied
@@ -239,6 +254,54 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
+	var actorEntity *identity.Entity
+	var err error
+	if req.OAuthJwtValidated && req.ActorEntityID != "" {
+		actorEntity, err = c.identityStore.MemDBEntityByID(req.ActorEntityID, true)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		if actorEntity == nil {
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
+	}
+	if IsOAuthJwt(req.ClientToken) && !req.OAuthJwtValidated {
+		isValidEnterpriseJwt, tokenMetadataContainer, entity, jwtActor, chosenProfile, err := c.validateOAuthJwtAndFetchEntity(ctx, req.ClientToken)
+		if err != nil {
+			c.logger.Error("failed to validate jwt", "error", err)
+		}
+
+		if !isValidEnterpriseJwt {
+			// currently only internal errors and agent registration errors have dedicated
+			// error body and http code, everything else gets normalize into "permission denied" with http code 403
+			// when reaching back to client
+			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) || errors.Is(err, ErrAgentRegistrationNotUsable) {
+				return nil, nil, nil, nil, err
+			}
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
+		req.JwtUniqueId, err = getJwtUniqueIDFromProfile(tokenMetadataContainer, chosenProfile)
+		if err != nil {
+			c.logger.Error("failed to extract unique ID from JWT", "error", err)
+			return nil, nil, nil, nil, fmt.Errorf("invalid JWT: %w", err)
+		}
+		req.JwtIssuer = getJwtIssuer(tokenMetadataContainer)
+		req.JwtTransactionClaim = getJwtTransaction(tokenMetadataContainer)
+		req.JwtAudienceClaim = getJwtAudience(tokenMetadataContainer)
+		authorizationDetailsClaim := getAuthorizationDetailsClaim(chosenProfile)
+		_, req.JwtAuthorizationDetailsClaimPresent = tokenMetadataContainer[authorizationDetailsClaim]
+		req.JwtAuthorizationDetails = getJwtAuthorizationDetails(tokenMetadataContainer, chosenProfile)
+		actorEntity = jwtActor
+		err = c.createAndStoreOAuthJwtTokenEntry(ctx, req, tokenMetadataContainer, entity, jwtActor, chosenProfile)
+		if err != nil {
+			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
+			}
+			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing jwt"))
+		}
+		req.OAuthJwtValidated = true
+		extractValidatedProfileDetailsIntoRequest(chosenProfile, req)
+	}
 	// Resolve the token policy
 	var te *logical.TokenEntry
 	switch req.TokenEntry() {
@@ -260,9 +323,23 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
 	}
 
+	if actorEntity != nil {
+		if req.Auth == nil {
+			req.Auth = &logical.Auth{}
+		}
+		req.Auth.ActorEntityID = actorEntity.ID
+		req.Auth.ActorEntityName = actorEntity.Name
+	}
+
 	// CIDR checks bind all tokens except non-expiring root tokens
 	if te.TTL != 0 && len(te.BoundCIDRs) > 0 {
 		var valid bool
+
+		// Validate req for connection on CIDR
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			c.logger.Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
 		remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
 		if err != nil {
 			if c.Logger().IsDebug() {
@@ -304,6 +381,20 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		policyNames[nsID] = policyutil.SanitizePolicies(append(policyNames[nsID], nsPolicies...), false)
 	}
 
+	var actorEntityPolicyNames map[string][]string
+	if actorEntity != nil {
+		c.logger.Debug("building separate ACL for actor entity", "entity_id", actorEntity.ID)
+		actorEntityPolicyNames = make(map[string][]string)
+		actorEntityIdentityPolicies, err := c.fetchCeilingPolicies(ctx, actorEntity)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		// Store second entity policies separately - do NOT merge with primary entity's policies
+		for nsID, nsPolicies := range actorEntityIdentityPolicies {
+			actorEntityPolicyNames[nsID] = policyutil.SanitizePolicies(nsPolicies, false)
+		}
+	}
+
 	// Attach token's namespace information to the context. Wrapping tokens by
 	// should be able to be used anywhere, so we also special case behavior.
 	var tokenCtx context.Context
@@ -325,13 +416,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// Add the inline policy if it's set
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy)
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
-		}
-		if duplicate {
-			c.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 	}
@@ -344,7 +431,82 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
+	if actorEntity != nil {
+		req.ActorEntityID = actorEntity.ID
+		newAcl, err := c.performDelegationTokenChecks(tokenCtx, acl, actorEntity, actorEntityPolicyNames)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		acl = newAcl
+	}
+
 	return acl, te, entity, identityPolicies, nil
+}
+
+// restoreForwardingTokenHeaders restores client token headers so forwarded
+// requests preserve the caller's original token representation on the active
+// node. It prefers Request.InboundSSCToken (captured before any token
+// normalization) and falls back to Request.ClientToken when no inbound value is
+// available.
+func restoreForwardingTokenHeaders(req *logical.Request) {
+	if req == nil {
+		return
+	}
+	tokenToForward := req.InboundSSCToken
+	if tokenToForward == "" {
+		tokenToForward = req.ClientToken
+	}
+	if tokenToForward == "" {
+		return
+	}
+	if req.Headers == nil {
+		req.Headers = make(map[string][]string)
+	}
+	switch req.ClientTokenSource {
+	case logical.ClientTokenFromVaultHeader:
+		req.Headers[consts.AuthHeaderName] = []string{tokenToForward}
+	case logical.ClientTokenFromAuthzHeader:
+		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", tokenToForward))
+	}
+}
+
+// requiresMaterializedTokenState reports whether the request path needs a
+// storage-backed token entry for enterprise token authentication flows.
+//
+// Token renew/revoke paths are intentionally excluded because token store
+// handlers reject enterprise tokens for those operations.
+func requiresMaterializedTokenState(path string) bool {
+	if path == "sys/leases/count" || path == "sys/leases" ||
+		path == "sys/leases/lookup" || strings.HasPrefix(path, "sys/leases/lookup/") {
+		return true
+	}
+	switch path {
+	case "auth/token/lookup-self", "auth/token/lookup":
+		return true
+	case "sys/capabilities-self":
+		return true
+	}
+	if strings.HasPrefix(path, "cubbyhole/") {
+		return true
+	}
+	// The UI paths below are unauthenticated but re-fetch the token entry
+	// inside their handlers to build ACL context for hasMountAccess /
+	// entPathInternalUINamespacesRead. Non-storage-backed JWT tokens must be
+	// materialized before routing so the handler can look them up by ID.
+	//
+	// sys/internal/ui/mounts (exact) — pathInternalUIMountsRead: lists all
+	// mounts visible to the caller; called by the Vault UI sidebar after login.
+	//
+	// sys/internal/ui/mounts/* (prefix) — pathInternalUIMountRead: used by the
+	// CLI preflight request issued by `vault kv put/get`.
+	//
+	// sys/internal/ui/namespaces (exact) — entPathInternalUINamespacesRead:
+	// lists namespaces accessible to the caller; called by the Vault UI
+	// namespace picker after login.
+	if path == "sys/internal/ui/mounts" || path == "sys/internal/ui/namespaces" {
+		return true
+	}
+	return strings.HasPrefix(path, "sys/internal/ui/mounts/")
 }
 
 // CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
@@ -449,6 +611,14 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		return nil, te, logical.ErrPermissionDenied
 	}
 
+	// Enforce the SCIM token path allowlist before policy evaluation.
+	// SCIM tokens (identified by scimClientIDMeta stamped at token issuance) may only
+	// reach the SCIM protocol endpoints and the self-service token paths.
+	if te != nil && te.InternalMeta[scimClientIDMeta] != "" && !isSCIMAllowedPath(req.Path) {
+		c.logger.Warn("permission denied: SCIM token attempted access to non-SCIM path", "path", req.Path)
+		return nil, te, logical.ErrPermissionDenied
+	}
+
 	// Check if this is a root protected path
 	rootPath := c.router.RootPath(ctx, req.Path)
 
@@ -467,7 +637,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	switch {
 	case req.ClientTokenSource == logical.ClientTokenFromVaultHeader:
 		delete(req.Headers, consts.AuthHeaderName)
-	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && !unauth && te == nil:
+	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && (!unauth || te != nil):
 		if headers, ok := req.Headers["Authorization"]; ok {
 			retHeaders := make([]string, 0, len(headers))
 			for _, v := range headers {
@@ -521,6 +691,13 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		req.ClientID = clientID
 	}
 
+	if req.Auth != nil {
+		auth.ActorEntityID = req.Auth.ActorEntityID
+		auth.ActorEntityName = req.Auth.ActorEntityName
+	}
+	// Copy authorization details from the request to auth so plugins can access them.
+	auth.AuthorizationDetails = req.JwtAuthorizationDetails
+
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
 	var alternateRecoverCapability *logical.Operation
 	if twoStepRecover {
@@ -563,12 +740,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		// forward this request properly to the active node.
 		if retErr.ErrorOrNil() != nil && checkErrControlGroupTokenNeedsCreated(retErr) &&
 			c.perfStandby && len(req.ClientToken) != 0 {
-			switch req.ClientTokenSource {
-			case logical.ClientTokenFromVaultHeader:
-				req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
-			case logical.ClientTokenFromAuthzHeader:
-				req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
-			}
+			restoreForwardingTokenHeaders(req)
 			// We also return the appropriate error so that the caller can forward the
 			// request to the active node
 			return auth, te, logical.ErrPerfStandbyPleaseForward
@@ -592,7 +764,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	c.activityLogLock.RUnlock()
 	// If it is an authenticated ( i.e. with vault token ) request, increment client count
 	if !unauth && activityLog != nil {
-		err := activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		err := activityLog.HandleUsage(ctx, te, clientID, isTWE, auth.ActorEntityID)
 		if err != nil {
 			return auth, te, err
 		}
@@ -691,19 +863,12 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("mounts of type %q aren't supported by license", entry.Type), logical.ErrInvalidRequest
 	}
 
-	// If the request requires a snapshot ID, we need to perform checks to
-	// ensure the request is valid and lock the snapshot, so it doesn't get
-	// unloaded while the request is being processed.
-	if req.RequiresSnapshotID != "" {
-		if c.perfStandby {
-			return nil, logical.ErrPerfStandbyPleaseForward
-		}
-		unlockSnapshot, err := c.lockSnapshotForRequest(ctx, req, entry)
-		if err != nil {
-			return logical.ErrorResponse("unable to lock snapshot: " + err.Error()), err
-		}
-		defer unlockSnapshot()
+	// Snapshot requests are served by the active node. The snapshot itself is
+	// validated and locked in handleRequest, after the caller is authenticated.
+	if req.RequiresSnapshotID != "" && c.perfStandby {
+		return nil, logical.ErrPerfStandbyPleaseForward
 	}
+
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -803,8 +968,11 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			}
 			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
-			requestBodyToken = token.(string)
-			if IsSSCToken(token.(string)) {
+			requestBodyToken, ok = token.(string)
+			if !ok {
+				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
+			}
+			if IsSSCToken(token.(string)) && !IsOAuthJwt(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
@@ -878,7 +1046,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
+	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth && !(IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
@@ -1034,36 +1202,75 @@ func isControlGroupRun(req *logical.Request) bool {
 	return req.ControlGroup != nil
 }
 
+func wrapForwardingError(fwdErr, err error) error {
+	if !errors.Is(err, logical.ErrReadOnly) {
+		// When handling the request locally, we got an error that
+		// contained ErrReadOnly, but had additional information.
+		// Since we've now forwarded this request and got _another_
+		// error, we should tell the user about both errors, so
+		// they know about both.
+		//
+		// When there is no error from forwarding, the request
+		// succeeded and so no additional context is necessary. When
+		// the initial error here was only ErrReadOnly, it's likely
+		// the plugin authors intended to forward this request
+		// remotely anyway.
+		repErr, ok := fwdErr.(*logical.ReplicationCodedError)
+		if ok {
+			fwdErr = &logical.ReplicationCodedError{
+				Msg:  fmt.Sprintf("errors from both primary and secondary; primary error was %s; secondary errors follow: %s", repErr.Error(), err.Error()),
+				Code: repErr.Code,
+			}
+		} else {
+			fwdErr = multierror.Append(fwdErr, err)
+		}
+	}
+
+	return fwdErr
+}
+
 func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// If we're replicating and we get a read-only error from a backend, need to forward to primary
 	resp, err := c.router.Route(ctx, req)
 	if shouldForward(c, resp, err) {
 		fwdResp, fwdErr := forward(ctx, c, req)
-		if fwdErr != nil && err != logical.ErrReadOnly {
-			// When handling the request locally, we got an error that
-			// contained ErrReadOnly, but had additional information.
-			// Since we've now forwarded this request and got _another_
-			// error, we should tell the user about both errors, so
-			// they know about both.
-			//
-			// When there is no error from forwarding, the request
-			// succeeded and so no additional context is necessary. When
-			// the initial error here was only ErrReadOnly, it's likely
-			// the plugin authors intended to forward this request
-			// remotely anyway.
-			repErr, ok := fwdErr.(*logical.ReplicationCodedError)
-			if ok {
-				fwdErr = &logical.ReplicationCodedError{
-					Msg:  fmt.Sprintf("errors from both primary and secondary; primary error was %s; secondary errors follow: %s", repErr.Error(), err.Error()),
-					Code: repErr.Code,
-				}
-			} else {
-				fwdErr = multierror.Append(fwdErr, err)
-			}
+		if fwdErr != nil {
+			fwdErr = wrapForwardingError(fwdErr, err)
 		}
 		return fwdResp, fwdErr
 	}
 	return resp, err
+}
+
+const (
+	healthCheckExecSuffix = "/health-check/exec"
+	healthCheckLastSuffix = "/health-check/last"
+)
+
+// handleHealthCheckRequest checks whether req.Path matches a health-check suffix.
+// If it matches, it trims the suffix, sets req.Path to the target path, and executes
+// the appropriate health check handler. Returns whether the request was handled, the response, and any error.
+func (c *Core) handleHealthCheckRequest(ctx context.Context, req *logical.Request) (bool, *logical.Response, error) {
+	switch {
+	case strings.HasSuffix(req.Path, healthCheckExecSuffix):
+		targetPath := strings.TrimSuffix(req.Path, healthCheckExecSuffix)
+		if targetPath == "" {
+			return true, nil, fmt.Errorf("health check path must not be empty")
+		}
+		req.Path = targetPath
+		resp, err := c.handleExecHealthCheck(ctx, req)
+		return true, resp, err
+	case strings.HasSuffix(req.Path, healthCheckLastSuffix):
+		targetPath := strings.TrimSuffix(req.Path, healthCheckLastSuffix)
+		if targetPath == "" {
+			return true, nil, fmt.Errorf("health check path must not be empty")
+		}
+		req.Path = targetPath
+		resp, err := c.handleReadLastHealthCheck(ctx, req)
+		return true, resp, err
+	default:
+		return false, nil, nil
+	}
 }
 
 func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
@@ -1096,12 +1303,46 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return
 	}
 
-	// Validate the token
-	auth, te, ctErr := c.CheckToken(ctx, req, false)
-	if ctErr == logical.ErrRelativePath {
+	var auth *logical.Auth
+	var te *logical.TokenEntry
+	var ctErr error
+
+	// Normalize case-insensitive named-resource paths to lowercase before the
+	// ACL check. Several backends resolve resource names case-insensitively
+	// (lowercasing them for storage lookup) while ACL paths are matched
+	// case-sensitively. Without this normalization, an exact deny on the
+	// canonical (lowercase) name can be bypassed by requesting a differently
+	// cased variant that a wildcard allow still matches; the backend then
+	// silently resolves it back to the protected canonical resource. The
+	// original path is restored immediately after the ACL check so downstream
+	// handlers and audit logs see the caller's original casing.
+	originalPath := req.Path
+	req.Path = c.normalizeCaseInsensitiveResourcePath(req.Path, entry)
+
+	// Validate the token. OAuth JWT requests on unauthenticated paths that
+	// require a materialized token entry (sys/internal/ui/mounts,
+	// sys/internal/ui/namespaces) are routed here rather than to
+	// handleLoginRequest so that the full JWT validation and materialization
+	// flow runs. For those requests we preserve the "unauth" semantics — ACL
+	// policy enforcement is skipped just as it would be in handleLoginRequest,
+	// because the path is publicly accessible and pathInternalUIMountRead
+	// performs its own hasMountAccess check.
+	//
+	// Using requiresMaterializedTokenState rather than isActiveOAuthJwt here
+	// means the routing decision is path-driven rather than flag-driven. This
+	// avoids the activation-flag read lock on the hot path and correctly
+	// handles the case where a SPIFFE JWT arrives with the OAuth flag enabled:
+	// auth/spiffe/login is not in requiresMaterializedTokenState, so it still
+	// routes to handleLoginRequest as intended.
+	unauth := c.isLoginRequest(ctx, req) && IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)
+	auth, te, ctErr = c.CheckToken(ctx, req, unauth)
+	// Restore the original path so downstream handlers (and audit logs) see
+	// the caller's original casing, not the normalized form.
+	req.Path = originalPath
+	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
-	if ctErr == logical.ErrPerfStandbyPleaseForward {
+	if errors.Is(ctErr, logical.ErrPerfStandbyPleaseForward) {
 		return nil, nil, ctErr
 	}
 
@@ -1118,46 +1359,73 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
+	// Some request paths require a token store entry (for example token lookup
+	// endpoints and cubbyhole paths). Materialize token state on-demand for
+	// these requests.
+	if ctErr == nil && te != nil && te.Type == logical.TokenTypeEnt && !te.IsStorageBacked() &&
+		requiresMaterializedTokenState(req.Path) {
+		materializedReq, matErr := c.materializeOAuthJwtForUsage(ctx, req, auth, c.perfStandby)
+		if matErr != nil {
+			if errors.Is(matErr, logical.ErrPerfStandbyPleaseForward) {
+				restoreForwardingTokenHeaders(req)
+				return nil, nil, matErr
+			}
+			c.logger.Error("failed to materialize jwt for token endpoint", "request_path", req.Path, "error", matErr)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+
+		// Preserve the returned request's token identity fields so downstream
+		// routing (notably cubbyhole) is keyed by the materialized token ID.
+		req.ClientToken = materializedReq.ClientToken
+		req.ClientTokenAccessor = materializedReq.ClientTokenAccessor
+		req.ClientTokenRemainingUses = materializedReq.ClientTokenRemainingUses
+		req.SetTokenEntry(materializedReq.TokenEntry())
+		te = req.TokenEntry()
+	}
+
 	// We run this logic first because we want to decrement the use count even
 	// in the case of an error (assuming we can successfully look up; if we
 	// need to forward, we exit before now)
 	if te != nil && !isControlGroupRun(req) {
-		// Attempt to use the token (decrement NumUses)
-		var err error
-		te, err = c.tokenStore.UseToken(ctx, te)
-		if err != nil {
-			c.logger.Error("failed to use token", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, nil, retErr
-		}
-		if te == nil {
-			// Token has been revoked by this point
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
-			return nil, nil, retErr
-		}
-		if te.NumUses == tokenRevocationPending {
-			// We defer a revocation until after logic has run, since this is a
-			// valid request (this is the token's final use). We pass the ID in
-			// directly just to be safe in case something else modifies te later.
-			defer func(id string) {
-				nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
-				if err == nil {
-					err = c.expiration.LazyRevoke(ctx, leaseID)
-				}
-				if err != nil {
-					c.logger.Error("failed to revoke token", "error", err)
-					retResp = nil
-					retAuth = nil
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-				if retResp != nil && retResp.Secret != nil &&
-					// Some backends return a TTL even without a Lease ID
-					retResp.Secret.LeaseID != "" {
-					retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
-					return
-				}
-			}(te.ID)
+		if te.IsStorageBacked() {
+			// Attempt to use the token (decrement NumUses)
+			var err error
+			te, err = c.tokenStore.UseToken(ctx, te)
+			if err != nil {
+				c.logger.Error("failed to use token", "request_path", req.Path, "error", err)
+				retErr = multierror.Append(retErr, ErrInternalError)
+				return nil, nil, retErr
+			}
+			if te == nil {
+				// Token has been revoked by this point
+				retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
+				return nil, nil, retErr
+			}
+			if te.NumUses == tokenRevocationPending {
+				// We defer a revocation until after logic has run, since this is a
+				// valid request (this is the token's final use). We pass the ID in
+				// directly just to be safe in case something else modifies te later.
+				defer func(id string) {
+					nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
+					leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
+					if err == nil {
+						err = c.expiration.LazyRevoke(ctx, leaseID)
+					}
+					if err != nil {
+						c.logger.Error("failed to revoke token", "request_path", req.Path, "error", err)
+						retResp = nil
+						retAuth = nil
+						retErr = multierror.Append(retErr, ErrInternalError)
+					}
+					if retResp != nil && retResp.Secret != nil &&
+						// Some backends return a TTL even without a Lease ID
+						retResp.Secret.LeaseID != "" {
+						retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
+						return
+					}
+				}(te.ID)
+			}
 		}
 	}
 
@@ -1259,6 +1527,18 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}()
 
+	// Validate and lock the snapshot only after authentication and the request
+	// audit entry, so that unauthenticated callers can't use the lock errors to
+	// probe mounts or snapshot state, and failures are audited. The lock keeps
+	// the snapshot from being unloaded while the request is processed.
+	if req.RequiresSnapshotID != "" {
+		unlockSnapshot, err := c.lockSnapshotForRequest(ctx, req, entry)
+		if err != nil {
+			return logical.ErrorResponse("unable to lock snapshot: " + err.Error()), auth, err
+		}
+		defer unlockSnapshot()
+	}
+
 	// This context value will be empty if it's a request that doesn't require a
 	// snapshot. This is done on purpose and handled in the
 	// SnapshotStorageRouter
@@ -1290,6 +1570,40 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		req.Path = originalPath
 		req.Data = resp.Data
 		ctx = logical.CreateContextWithSnapshotID(ctx, "")
+	}
+
+	// Passthrough if this request does not match the suffix
+	if strings.HasSuffix(req.Path, healthCheckExecSuffix) || strings.HasSuffix(req.Path, healthCheckLastSuffix) {
+		if strings.HasSuffix(req.Path, healthCheckExecSuffix) && c.perfStandby {
+			// healthCheckManager writes are only allowed on the active node
+			// route the request to the active node if this is a standby
+			c.logger.Debug("healthcheck: standby node is enabled, forwarding to active node to execute health check")
+			restoreForwardingTokenHeaders(req)
+			return nil, auth, logical.ErrPerfStandbyPleaseForward
+		}
+
+		pathWithSuffix := req.Path
+		_, healthCheckResp, healthCheckErr := c.handleHealthCheckRequest(ctx, req)
+
+		// if we get a read-only storage error on a performance secondary,
+		// forward this request to the primary cluster
+		if shouldForward(c, healthCheckResp, healthCheckErr) {
+			c.logger.Debug("healthcheck: encountered read-only storage on a secondary; forwarding to primary cluster")
+			// restore the original input path so we re-route this to the primary cluster with the relevant suffix
+			req.Path = pathWithSuffix
+			fwdResp, fwdErr := forward(ctx, c, req)
+			if fwdErr != nil {
+				fwdErr = wrapForwardingError(fwdErr, healthCheckErr)
+			}
+			return fwdResp, auth, fwdErr
+		}
+
+		if healthCheckErr != nil {
+			retErr = multierror.Append(retErr, healthCheckErr)
+		}
+
+		// successfully routed to HealthChecks, do not need to continue below
+		return healthCheckResp, auth, retErr
 	}
 
 	// Route the request
@@ -1391,6 +1705,20 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if registerLease {
+			registerReq := req
+			if te := req.TokenEntry(); te != nil && !te.IsStorageBacked() {
+				registerReq, err = c.materializeOAuthJwtForUsage(ctx, req, auth, c.perfStandby)
+				if err != nil {
+					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) {
+						restoreForwardingTokenHeaders(req)
+						return nil, nil, err
+					}
+					c.logger.Error("failed to materialize jwt for lease", "request_path", req.Path, "error", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+					return nil, auth, retErr
+				}
+			}
+
 			if req.IsSnapshotReadOrList() {
 				return logical.ErrorResponse("cannot register lease for snapshot read or list"), nil, ErrInternalError
 			}
@@ -1415,7 +1743,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp, "")
+			leaseID, err := registerFunc(ctx, registerReq, resp, "")
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -1462,7 +1790,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
+		entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
 		if err != nil {
 			// Best-effort clean up on error, so we log the cleanup error as a
 			// warning but still return as internal error.
@@ -1488,7 +1816,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
-			case logical.TokenTypeService:
+			case logical.TokenTypeService, logical.TokenTypeSCIM:
 				if !c.perfStandby {
 					registeredTokenEntry := &logical.TokenEntry{
 						TTL:         auth.TTL,
@@ -1514,6 +1842,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					leaseGenerated = true
 				}
 			}
+		}
+		// Tracking token expiration timestamp metadata across token creation and renewal
+		if entity != nil {
+			c.identityStore.recordEntityActivity(entity.ID, entity.NamespaceID, time.Time{}, resp.Auth.ExpirationTime())
 		}
 
 		// We do these later since it's not meaningful for backends/expmgr to
@@ -1545,6 +1877,189 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	return resp, auth, retErr
 }
 
+// caseInsensitiveIdentityPathPrefixes lists identity-store request-path
+// prefixes whose trailing segment is a case-insensitively resolved resource
+// name.
+//
+// Normalization is skipped while the identity store is in case-sensitive
+// mode: once duplicate names are detected it sets disableLowerCasedNames and
+// treats "Admin" and "admin" as distinct resources, so lowercasing
+// unconditionally would let a rule scoped to one authorize the other.
+var caseInsensitiveIdentityPathPrefixes = []string{
+	"identity/group/name/",
+	"identity/entity/name/",
+}
+
+// caseInsensitivePolicyPathPrefixes lists policy-store request-path
+// prefixes whose trailing segment, the policy name, is always resolved
+// case-insensitively.
+//
+// These are trimmed as well as lowercased, mirroring PolicyStore.sanitizeName
+// (vault/policy_store.go). Without trimming, a padded variant such as
+// " Admin " would miss an exact deny on the canonical name while still
+// matching a wildcard allow.
+var caseInsensitivePolicyPathPrefixes = []string{
+	"sys/policy/",
+	"sys/policies/acl/",
+	"sys/policies/rgp/",
+	"sys/policies/egp/",
+}
+
+// caseInsensitiveMountTypePrefixes maps an auth backend type to the
+// mount-relative prefixes whose next path segment is a resource name that
+// backend resolves case-insensitively. These mounts live at arbitrary paths,
+// so matching is relative to the resolved MountEntry rather than the full
+// request path.
+//
+// Every backend listed here lowercases that segment before each storage
+// access. github is the one worth calling out: it inherits the behavior from
+// the shared framework.PathMap helper (sdk/framework/path_map.go), which
+// lowercases keys unless CaseSensitive is set, and its paths assign policies,
+// so a bypass there is a privilege-escalation primitive.
+//
+// userpass's "login/" is included even though logins skip ACL evaluation,
+// because collectEGPPolicies still selects EGP policies against the
+// case-sensitive req.Path. A mandatory EGP on the canonical login path would
+// otherwise be skipped for a case variant. See handleLoginRequest.
+//
+// Keys are canonical backend types, so callers must resolve legacy aliases
+// (credentialAliases) first, and must match only credential-table mounts
+// running the builtin: a secrets mount or an external plugin can share a type
+// name without sharing the behavior.
+//
+// Migration note: After upgrading to a version with this normalization,
+// any existing ACL or EGP deny rules using mixed-case resource names will no
+// longer match requests. For example, a deny rule on `auth/approle/role/MyRole`
+// will fail to block requests for `auth/approle/role/MyRole` because the
+// request path is normalized to lowercase before policy matching. Operators
+// should audit and update deny rules to use lowercase resource names
+// (e.g., `auth/approle/role/myrole`) to prevent rules from failing open.
+//
+// Deliberately excluded: okta, ldap, and radius. See
+// normalizeCaseInsensitiveResourcePath.
+
+var caseInsensitiveMountTypePrefixes = map[string][]string{
+	"approle":    {"role/"},
+	"userpass":   {"users/", "login/"},
+	"aws":        {"role/"},
+	"azure":      {"role/"},
+	"cert":       {"certs/", "crls/"},
+	"gcp":        {"role/"},
+	"github":     {"map/teams/", "map/users/"},
+	"kubernetes": {"role/"},
+	"scep":       {"role/"},
+	"tpm":        {"role/"},
+}
+
+// normalizeCaseInsensitiveResourcePath returns path with the resource-name
+// segment lowercased for backends that resolve that name case-insensitively.
+//
+// vault/acl.go authorizes the raw, caller-supplied path, but these backends
+// lowercase the name before resolving it in storage. Without normalizing
+// first, a token holding a wildcard allow plus an exact deny on the canonical
+// name can bypass the deny with a case variant: the variant misses the deny,
+// matches the wildcard, and the backend resolves it back onto the protected
+// resource.
+//
+// This affects only the path used for authorization. Callers must restore the
+// original path afterwards so that handlers, audit logs, and the caller see
+// the original casing.
+//
+// Note: External systems may provide cased resource names through identity
+// templates (e.g., GitHub aliases, LDAP attributes used as entity names).
+// These names are normalized during ACL evaluation just like any other request
+// path, so deny policies must be written using the lowercase canonical form
+// to correctly protect against case variants from external sources.
+//
+// Not covered, each needing backend state this function cannot read:
+//
+//   - okta resolves group names with EqualFold but stores them with ToLower,
+//     which are different relations over Unicode. One fold-equivalence class
+//     can have several reachable stored names, so no stateless canonical form
+//     is correct and authorizing correctly needs the actual stored name.
+//   - ldap and radius resolve case-insensitively by default, but that is
+//     per-mount config (CaseSensitiveNames), so even deciding whether to
+//     normalize needs a config read.
+//   - identity/scim/client/<name> (Enterprise) is overwritten by a
+//     case-variant write, but only its write path lowercases; read, delete,
+//     and link/unlink use a case-sensitive memdb index. Normalizing here
+//     would authorize against a name those paths do not resolve to, so that
+//     inconsistency has to be settled first. It must also not be gated on the
+//     identity mode, since SCIM lowercases unconditionally.
+//
+// Known limitation: the identity mode is read here, but activateDeduplication
+// flips it asynchronously and the read releases i.lock before the request is
+// routed. A request that observes case-sensitive mode is authorized against
+// the raw path, so if activation completes in that window the store resolves
+// case-insensitively after all. Closing this requires the read and the
+// resource resolution to be atomic under the identity store's lock. Assuming
+// either mode instead is not a workaround: normalizing while genuinely
+// case-sensitive would let a rule on "admin" authorize the distinct "Admin".
+func (c *Core) normalizeCaseInsensitiveResourcePath(path string, entry *MountEntry) string {
+	for _, prefix := range caseInsensitiveIdentityPathPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			// See the identity mode race noted in the doc comment: this
+			// read is point-in-time and can be invalidated by dedup
+			// activation before the request executes.
+			if c.identityStore != nil && c.identityStore.GetDisableLowerCasedNames() {
+				return path
+			}
+			return prefix + strings.ToLower(path[len(prefix):])
+		}
+	}
+
+	for _, prefix := range caseInsensitivePolicyPathPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			name := strings.TrimSpace(path[len(prefix):])
+			return prefix + strings.ToLower(name)
+		}
+	}
+
+	if entry == nil {
+		return path
+	}
+
+	// Match only mounts actually running these builtins. A secrets mount can
+	// share one of these type strings (plugin names are namespaced by plugin
+	// type), and an unversioned external plugin can deliberately override a
+	// builtin of the same name and type (see logical_system.go). Neither
+	// necessarily canonicalizes names, so normalizing them would let a rule
+	// scoped to one resource authorize a genuinely distinct one.
+	if entry.Table != credentialTableType || entry.IsExternalPlugin() {
+		return path
+	}
+
+	mountPath := entry.APIPathNoNamespace()
+	if !strings.HasPrefix(path, mountPath) {
+		return path
+	}
+	relPath := path[len(mountPath):]
+
+	// A legacy alias mount (e.g. "aws-ec2") runs the canonical backend's
+	// code, and so inherits its name canonicalization, but keeps the legacy
+	// type in its MountEntry.
+	mountType := entry.Type
+	if alias, ok := credentialAliases[mountType]; ok {
+		mountType = alias
+	}
+
+	for _, prefix := range caseInsensitiveMountTypePrefixes[mountType] {
+		if !strings.HasPrefix(relPath, prefix) {
+			continue
+		}
+		rest := relPath[len(prefix):]
+		// Lowercase only the first segment so any sub-resource suffix
+		// (e.g. "/role-id") is preserved for further ACL matching.
+		name, tail, found := strings.Cut(rest, "/")
+		if found {
+			return mountPath + prefix + strings.ToLower(name) + "/" + tail
+		}
+		return mountPath + prefix + strings.ToLower(name)
+	}
+
+	return path
+}
+
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
 func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
@@ -1568,10 +2083,24 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 	}
 
+	// Normalize case-insensitive named-resource paths (e.g. userpass
+	// login/<username>) before CheckToken. Login requests skip ACL
+	// evaluation entirely (see performPolicyChecksSinglePath), but EGP
+	// policies are still selected against the case-sensitive req.Path in
+	// collectEGPPolicies, before userpass lowercases the username for its
+	// own lookup. Without normalizing here, a mandatory EGP on the
+	// canonical (lowercase) login path could be skipped for a
+	// differently-cased login request that authenticates the same user.
+	originalPath := req.Path
+	req.Path = c.normalizeCaseInsensitiveResourcePath(req.Path, entry)
+
 	// Do an unauth check. This will cause EGP policies to be checked
 	var auth *logical.Auth
 	var ctErr error
 	auth, _, ctErr = c.CheckToken(ctx, req, true)
+	// Restore the original path so downstream handlers (and audit logs) see
+	// the caller's original casing, not the normalized form.
+	req.Path = originalPath
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -1627,6 +2156,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
+	}
+
+	// Login requests are never served from a loaded snapshot.
+	if req.RequiresSnapshotID != "" {
+		return logical.ErrorResponse("snapshot operations are not supported for login requests"), nil, logical.ErrInvalidRequest
 	}
 
 	// The token store uses authentication even when creating a new token,
@@ -2155,10 +2689,80 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 		resp.AddWarning(warning)
 	}
 
-	_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+	// LoginCreateToken skips malformed legacy policy names instead of failing
+	// authentication. We drop only malformed names and continue with remaining
+	// valid policy names (plus the default policy when enabled), so stale stored
+	// policy data does not block login.
+	validatedTokenPolicies := make([]string, 0, len(auth.Policies))
+	for _, policyName := range auth.Policies {
+		if isReservedRootPolicy(policyName) {
+			return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+		}
+	}
+	for _, policyName := range auth.Policies {
+		validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+		if err != nil {
+			c.Logger().Debug(
+				"skipping invalid token policy name during token creation",
+				"policy_name", policyName,
+				"error", err,
+			)
+			continue
+		}
+		validatedTokenPolicies = append(validatedTokenPolicies, validatedPolicyName)
+	}
+	auth.Policies = validatedTokenPolicies
+
+	// LoginCreateToken skips malformed legacy policy names instead of failing
+	// authentication. We drop only malformed names and continue with remaining
+	// valid policy names (plus the default policy when enabled), so stale stored
+	// policy data does not block login.
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 	if err != nil {
 		return false, nil, ErrInternalError
 	}
+
+	if entity != nil {
+		groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+		if err != nil {
+			c.logger.Error("failed to fetch group policies", "error", err)
+			return false, nil, ErrInternalError
+		}
+		for _, policyNames := range groupPolicies {
+			for _, policyName := range policyNames {
+				if isReservedRootPolicy(policyName) {
+					return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+				}
+			}
+		}
+	}
+
+	validatedIdentityPolicies := make(map[string][]string, len(identityPolicies))
+	for nsID, policyNames := range identityPolicies {
+		for _, policyName := range policyNames {
+			if isReservedRootPolicy(policyName) {
+				return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+			}
+		}
+		validatedPolicyNames := make([]string, 0, len(policyNames))
+		for _, policyName := range policyNames {
+			validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+			if err != nil {
+				c.Logger().Debug(
+					"skipping invalid identity policy name during token creation",
+					"namespace_id", nsID,
+					"policy_name", policyName,
+					"error", err,
+				)
+				continue
+			}
+			validatedPolicyNames = append(validatedPolicyNames, validatedPolicyName)
+		}
+		if len(validatedPolicyNames) > 0 {
+			validatedIdentityPolicies[nsID] = validatedPolicyNames
+		}
+	}
+	identityPolicies = validatedIdentityPolicies
 
 	auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
 	allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
@@ -2167,7 +2771,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	// this on auth.Policies including derived ones from Identity before
 	// actually making the token.
 	for _, policy := range allPolicies {
-		if policy == "root" {
+		if isReservedRootPolicy(policy) {
 			return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
 		}
 		if strutil.StrListContains(nonAssignablePolicies, policy) {
@@ -2198,6 +2802,10 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 		return false, nil, err
 	default:
 		return false, logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if entity != nil {
+		c.identityStore.recordEntityActivity(entity.ID, entity.NamespaceID, time.Now(), auth.ExpirationTime())
 	}
 
 	auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies[ns.ID], policyutil.DoNotAddDefaultPolicy)
@@ -2545,6 +3153,49 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, en
 	return mfaAny, nil
 }
 
+func (c *Core) registerAuthLeaseForToken(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth, role string) error {
+	// Populate the client token, accessor, and TTL
+	auth.ClientToken = te.ID
+	auth.Accessor = te.Accessor
+	auth.TTL = te.TTL
+	auth.Orphan = te.Parent == ""
+
+	switch auth.TokenType {
+	case logical.TokenTypeBatch:
+		// Ensure it's not marked renewable since it isn't
+		auth.Renewable = false
+	case logical.TokenTypeService, logical.TokenTypeEnt, logical.TokenTypeSCIM:
+		if auth.TokenType == logical.TokenTypeEnt {
+			// Ensure it's not marked renewable since enterprise tokens are not renewable
+			auth.Renewable = false
+		}
+		// Register with the expiration manager
+		if err := c.expiration.RegisterAuth(ctx, te, auth, role); err != nil {
+			return err
+		}
+		if te.ExternalID != "" {
+			auth.ClientToken = te.ExternalID
+		}
+		// Successful login, remove any entry from userFailedLoginInfo map
+		// if it exists. This is done for service tokens only.
+		if auth.TokenType == logical.TokenTypeService && auth.Alias != nil {
+			loginUserInfoKey := FailedLoginUser{
+				aliasName:     auth.Alias.Name,
+				mountAccessor: auth.Alias.MountAccessor,
+			}
+
+			// We don't need to try to delete the lockedUsers storage entry, since we're
+			// processing a login request. If a login attempt is allowed, it means the user is
+			// unlocked and we only add storage entry when the user gets locked.
+			if err := updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
 // role is the login role used as part of the creation of the token entry. If not
@@ -2586,46 +3237,12 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		c.logger.Error("failed to create token", "error", err)
 		return possiblyWrapOverloadedError("failed to create token", err)
 	}
-
-	// Populate the client token, accessor, and TTL
-	auth.ClientToken = te.ID
-	auth.Accessor = te.Accessor
-	auth.TTL = te.TTL
-	auth.Orphan = te.Parent == ""
-
-	switch auth.TokenType {
-	case logical.TokenTypeBatch:
-		// Ensure it's not marked renewable since it isn't
-		auth.Renewable = false
-	case logical.TokenTypeService:
-		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(ctx, &te, auth, role); err != nil {
-			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
-				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
-			}
-			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
-			return possiblyWrapOverloadedError("failed to register token lease during login request", err)
+	if err := c.registerAuthLeaseForToken(ctx, &te, auth, role); err != nil {
+		if revokeErr := c.tokenStore.revokeOrphan(ctx, te.ID); revokeErr != nil {
+			c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", revokeErr)
 		}
-		if te.ExternalID != "" {
-			auth.ClientToken = te.ExternalID
-		}
-		// Successful login, remove any entry from userFailedLoginInfo map
-		// if it exists. This is done for service tokens (for oss) here.
-		// For ent it is taken care by registerAuth RPC calls.
-		if auth.Alias != nil {
-			loginUserInfoKey := FailedLoginUser{
-				aliasName:     auth.Alias.Name,
-				mountAccessor: auth.Alias.MountAccessor,
-			}
-
-			// We don't need to try to delete the lockedUsers storage entry, since we're
-			// processing a login request. If a login attempt is allowed, it means the user is
-			// unlocked and we only add storage entry when the user gets locked.
-			err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true)
-			if err != nil {
-				return err
-			}
-		}
+		c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
+		return possiblyWrapOverloadedError("failed to register token lease during login request", err)
 	}
 	return nil
 }
@@ -2693,7 +3310,7 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 
 // PopulateTokenEntry looks up req.ClientToken in the token store and uses
 // it to set other fields in req.  Does nothing if ClientToken is empty
-// or a JWT token, or for service tokens that don't exist in the token store.
+// or an Enterprise token, or for service tokens that don't exist in the token store.
 // Should be called with read stateLock held.
 func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) error {
 	if req.ClientToken == "" {
@@ -2704,7 +3321,7 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	// doesn't exist because the request may be to an unauthenticated
 	// endpoint/login endpoint where a bad current token doesn't matter, or
 	// a token from a Vault version pre-accessors. We ignore errors for
-	// JWTs.
+	// Enterprise tokens.
 	token := req.ClientToken
 	var err error
 	req.InboundSSCToken = token
@@ -2754,8 +3371,6 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 		if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
 			return err
 		}
-		// If we have two dots but the second char is a dot it's a vault
-		// token of the form s.SOMETHING.nsid, not a JWT
 		if !IsJWT(token) {
 			return fmt.Errorf("error performing token check: %w", err)
 		}
@@ -2813,11 +3428,12 @@ func DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return nil, fmt.Errorf("not service token")
 	}
 
-	// Consider the suffix of the token only when unmarshalling
+	// Consider the suffix of the token only when unmarshalling.
+	// Both "hvs." and "scm." are 4 characters, so token[4:] strips either prefix.
 	suffixToken := token[4:]
 
 	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
@@ -2842,7 +3458,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return token, nil
 	}
 	// Check token length to guess if this is an server side consistent token or not.
@@ -2869,10 +3485,14 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return token, nil
 	}
 	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
+	if err != nil {
+		c.logger.Debug("unable to calculate token signature", "error", err)
+		return token, nil
+	}
 	if !hmac.Equal(hm, signedToken.Hmac) {
 		// As above, don't return an error so that the request is handled like normal,
 		// and handled by the node that received it.
-		c.logger.Debug("token mac is incorrect", "token", signedToken.Token)
+		c.logger.Debug("token mac is incorrect")
 		return token, nil
 	}
 
@@ -2884,6 +3504,19 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	// Disregard SSCT on perf-standbys for non-raft storage
 	if c.perfStandby && c.getRaftBackend() == nil {
+		return plainToken.Random, nil
+	}
+
+	// Performance primary service tokens are not valid on performance secondaries.
+	// SSCT does not encode token-origin cluster, so on performance secondary active
+	// nodes we should not require the token's encoded local_index to be satisfied by
+	// the secondary's local WAL before normal token lookup runs. Let normal token
+	// lookup/ACL evaluation return the expected 403.
+	//
+	// Keep perf standby behavior unchanged so missing local state can still use the
+	// existing 412/forwarding semantics.
+	if c.IsPerfSecondary() && !c.perfStandby && !isPerfStandby {
+		c.logger.Debug("skipping server-side consistency check for performance primary service token on performance secondary")
 		return plainToken.Random, nil
 	}
 

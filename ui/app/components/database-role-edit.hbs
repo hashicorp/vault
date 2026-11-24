@@ -2,26 +2,22 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-<PageHeader as |p|>
-  <p.top>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq @mode "create")}}
-        Create Role
-      {{else if (eq @mode "edit")}}
-        Edit Role
-      {{else}}
-        {{@model.id}}
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+
+<Page::Header @title={{this.title}}>
+  <:breadcrumbs>
+    <KeyValueHeader
+      @path="vault.cluster.secrets.backend.show"
+      @mode={{@mode}}
+      @root={{this.breadcrumbs}}
+      @showCurrent={{true}}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
 {{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if @model.canDelete}}
+      {{#if @capabilities.canDelete}}
         <ConfirmAction
           @buttonText="Delete role"
           class="toolbar-button"
@@ -33,31 +29,31 @@
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if (and @model.canRotateRoleCredentials (eq @model.type "static"))}}
+      {{#if (and @capabilities.canRotateRoleCredentials (eq @model.type "static"))}}
         <Hds::Button
           @text="Rotate credentials"
           @color="secondary"
           class="toolbar-button"
-          {{on "click" (fn this.rotateRoleCred @model.id)}}
+          {{on "click" (fn this.rotateRoleCred @model.name)}}
         />
       {{/if}}
       {{#if
         (or
-          (and (eq @model.type "static") @model.canGetCredentials)
-          (and (eq @model.type "dynamic") @model.canGenerateCredentials)
+          (and (eq @model.type "static") @capabilities.canGetCredentials)
+          (and (eq @model.type "dynamic") @capabilities.canGenerateCredentials)
         )
       }}
         <Hds::Button
           @text={{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
           @color="secondary"
           class="toolbar-button"
-          {{on "click" (fn this.generateCreds @model.id @model.type)}}
+          {{on "click" (fn this.generateCreds @model.name @model.type)}}
           data-test-button={{@model.type}}
         />
       {{/if}}
-      {{#if @model.canEditRole}}
+      {{#if @capabilities.canEditRole}}
         <ToolbarSecretLink
-          @secret={{concat "role/" @model.id}}
+          @secret={{concat "role/" @model.name}}
           @mode="edit"
           @backend={{@model.backend}}
           @replace={{true}}
@@ -69,7 +65,7 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  {{#each @model.showFields as |attr|}}
+  {{#each this.showFields as |attr|}}
     {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
@@ -110,7 +106,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <form {{on "submit" this.handleCreateEditRole}}>
       <MessageError @errorMessage={{this.errorMessage}} />
-      {{#each @model.fieldAttrs as |attr|}}
+      {{#each this.fieldAttrs as |attr|}}
         {{#if (eq @mode "edit")}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else if (not-eq attr.options.readOnly true)}}
@@ -141,19 +137,23 @@
         {{/if}}
       {{/each}}
       {{#if @model.database}}
-        <DatabaseRoleSettingForm
-          @attrs={{@model.roleSettingAttrs}}
-          @roleType={{@model.type}}
-          @model={{@model}}
-          @mode={{@mode}}
-          @dbParams={{await this.databaseParams}}
-          @modelValidations={{this.modelValidations}}
-        />
+        {{#let (await this.databaseParams) as |dbParams|}}
+          {{#if dbParams}}
+            <DatabaseRoleSettingForm
+              @attrs={{this.roleSettingAttrs}}
+              @roleType={{@model.type}}
+              @model={{@model}}
+              @mode={{@mode}}
+              @dbParams={{dbParams}}
+              @modelValidations={{this.modelValidations}}
+            />
+          {{/if}}
+        {{/let}}
       {{else}}
-        <EmptyState
-          @title="No database connection selected"
-          @message="Choose a connection to be able to configure a role type."
-        />
+        <Hds::ApplicationState class="bottom-padding-32 is-marginless" as |A|>
+          <A.Header data-test-empty-state-title @title="No database connection selected" @titleTag="h2" />
+          <A.Body data-test-empty-state-message @text="Choose a connection to be able to configure a role type." />
+        </Hds::ApplicationState>
       {{/if}}
       <div class="field is-fullwidth box is-bottomless">
         <Hds::ButtonSet>

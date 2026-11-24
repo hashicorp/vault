@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package raft
@@ -21,9 +21,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
@@ -35,7 +35,7 @@ import (
 	raftwal "github.com/hashicorp/raft-wal"
 	walmetrics "github.com/hashicorp/raft-wal/metrics"
 	"github.com/hashicorp/raft-wal/verifier"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -526,12 +526,12 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			return nil, fmt.Errorf("failed to check if raft.db already exists: %w", err)
 		}
 
-		if backendConfig.RaftWal && raftDbExists {
-			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
-			backendConfig.RaftWal = false
+		if backendConfig.LogStore == "raft_wal" && raftDbExists {
+			logger.Warn("existing raft.db detected; using BoltDB instead of raft-wal.")
+			backendConfig.LogStore = "raft_boltdb"
 		}
 
-		if backendConfig.RaftWal {
+		if backendConfig.LogStore == "raft_wal" {
 			raftWalPath := filepath.Join(raftBasePath, raftWalDir)
 			if err := EnsurePath(raftWalPath, true); err != nil {
 				return nil, err
@@ -895,14 +895,22 @@ func makeLogVerifyReportFn(logger log.Logger) verifier.ReportFn {
 	}
 }
 
+// CollectMetrics emits per-node Raft storage telemetry. The
+// raft_storage.log_store gauge is 1 and is labeled with this node's peer ID
+// and actual opened backend (raft_wal or raft_boltdb).
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	var stats map[string]string
 	var logStoreStats *bolt.Stats
+	var logStoreType string
 
 	b.l.RLock()
-	if boltStore, ok := b.stableStore.(*raftboltdb.BoltStore); ok {
-		bss := boltStore.Stats()
+	switch store := b.stableStore.(type) {
+	case *raftboltdb.BoltStore:
+		bss := store.Stats()
 		logStoreStats = &bss
+		logStoreType = "raft_boltdb"
+	case *raftwal.WAL:
+		logStoreType = "raft_wal"
 	}
 
 	if b.raft != nil {
@@ -922,6 +930,14 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 			Name:  "peer_id",
 			Value: b.localID,
 		},
+	}
+
+	if logStoreType != "" {
+		logStoreLabels := append(labels, metrics.Label{
+			Name:  "log_store",
+			Value: logStoreType,
+		})
+		sink.SetGaugeWithLabels([]string{"raft_storage", "log_store"}, 1, logStoreLabels)
 	}
 
 	if stats != nil {
@@ -1079,6 +1095,9 @@ func ApplyConfigSettings(logger log.Logger, parsedConf map[string]string, config
 		multiplier, err = strconv.Atoi(multiplierRaw)
 		if err != nil {
 			return err
+		}
+		if multiplier <= 0 {
+			return fmt.Errorf("performance_multiplier must be greater than 0")
 		}
 	}
 	config.ElectionTimeout *= time.Duration(multiplier)
@@ -2013,7 +2032,7 @@ func (b *RaftBackend) validateCommandEntrySizes(command *LogData) (uint64, error
 		if op.OpType == putOp {
 			entrySize := b.entrySizeLimitForPath(op.Key)
 			if len(op.Value) > int(entrySize) {
-				return 0, fmt.Errorf("%s, max value size for key %s is %d, got %d", physical.ErrValueTooLarge, op.Key, entrySize, len(op.Value))
+				return 0, fmt.Errorf("%w, max value size for key %s is %d, got %d", physical.ErrValueSize, op.Key, entrySize, len(op.Value))
 			}
 			if entrySize > largestEntryLimit {
 				largestEntryLimit = entrySize
@@ -2336,6 +2355,16 @@ func (b *RaftBackend) ReloadConfig(config raft.ReloadableConfig) error {
 		}
 	}
 	return nil
+}
+
+// UsesRaftWAL reports whether the underlying store is raft-wal, regardless of
+// log cache or verifier wrappers.
+func (b *RaftBackend) UsesRaftWAL() bool {
+	if b.stableStore == nil {
+		return false
+	}
+	_, ok := b.stableStore.(*raftwal.WAL)
+	return ok
 }
 
 // GetStorageConfig returns a map with the raft configuration from the storage stanza in the config file.

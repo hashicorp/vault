@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -69,16 +69,19 @@ func pathStaticRoles(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathStaticRolesRead,
+				Summary:   "Return the configuration for a named static IAM role.",
 				Responses: roleResponse,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathStaticRolesWrite,
+				Summary:                     "Create or update a named static IAM role.",
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
 				Responses:                   roleResponse,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback:                    b.pathStaticRolesDelete,
+				Summary:                     "Delete a named static IAM role.",
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
 				Responses: map[int][]framework.Response{
@@ -100,6 +103,7 @@ func pathListStaticRoles(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathStaticRolesList,
+				Summary:  "List the configured static IAM roles.",
 			},
 		},
 		HelpSynopsis:    pathStaticRolesHelpSyn,
@@ -128,6 +132,11 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, fmt.Errorf("failed to decode configuration for static role %q: %w", roleName, err)
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSStaticRoleRead, map[string]interface{}{
+		"role_name":       roleName.(string),
+		"rotation_period": config.RotationPeriod.String(),
+	})
 
 	return &logical.Response{
 		Data: formatResponse(config),
@@ -260,6 +269,11 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		}
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSStaticRoleWrite, map[string]interface{}{
+		"role_name":       config.Name,
+		"rotation_period": config.RotationPeriod.String(),
+	})
+
 	return &logical.Response{
 		Data: formatResponse(config),
 	}, nil
@@ -299,7 +313,18 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 		return nil, fmt.Errorf("couldn't delete key from queue: %w", err)
 	}
 
-	return nil, req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))
+	err = req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete role %q from storage: %w", roleName.(string), err)
+	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSStaticRoleDelete, map[string]interface{}{
+		"role_name":       roleName.(string),
+		"rotation_period": cfg.RotationPeriod.String(),
+	})
+
+	// ignore-nil-nil-function-check
+	return nil, nil
 }
 
 func (b *backend) pathStaticRolesList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -334,7 +359,7 @@ func (b *backend) validateIAMUserExists(ctx context.Context, storage logical.Sto
 	b.iamClient = c
 
 	// we don't really care about the content of the result, just that it's not an error
-	out, err := c.GetUser(&iam.GetUserInput{
+	out, err := c.GetUser(ctx, &iam.GetUserInput{
 		UserName: aws.String(entry.Username),
 	})
 	if err != nil || out.User == nil {

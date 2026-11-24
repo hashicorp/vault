@@ -4,14 +4,13 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
@@ -37,6 +36,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
       return render(
         hbs`<Page::Overview
           @promptConfig={{this.promptConfig}}
+          @isSelfManaged={{this.isSelfManaged}}
           @secretsEngine={{this.secretsEngine}}
           @roles={{this.roles}}
           @breadcrumbs={{this.breadcrumbs}}
@@ -46,15 +46,6 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
         }
       );
     };
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-        // Disable color contrast check for navigation tabs
-        'color-contrast': { enabled: false },
-      },
-    });
   });
 
   test('it should render tab page header', async function (assert) {
@@ -196,5 +187,45 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
     assert
       .dom('[data-test-overview-card-container="Accounts checked-out"]')
       .exists('AccountsCheckedOut component still renders when library discovery fails');
+  });
+
+  test('it should display "None" when library request returns a 404', async function (assert) {
+    // Override server to return empty 404 response for library requests
+    this.apiLibraryStub.rejects(getErrorResponse());
+    await this.renderComponent();
+    assert.dom('[data-test-libraries-error]').doesNotExist();
+    assert.dom('[data-test-libraries-count]').hasText('None');
+  });
+
+  test('it should only offer to create a role when the token can create one', async function (assert) {
+    const permissions = this.owner.lookup('service:permissions');
+    const beneathStub = sinon.stub(permissions, 'hasPermissionBeneath').returns(false);
+    const createLink = (card) => `[data-test-overview-card-container="${card}"] .hds-link-standalone`;
+
+    await this.renderComponent();
+    assert.dom(createLink('Roles')).doesNotExist('Roles Create new is hidden without create');
+    assert.dom(createLink('Libraries')).exists('Libraries Create new is unchanged');
+
+    beneathStub.withArgs(`${this.backend}/static-role`, ['create']).returns(true);
+    await this.renderComponent();
+    assert.dom(createLink('Roles')).exists('Roles Create new renders when a role can be created');
+  });
+
+  test('it should require static role create to offer Create new on a self-managed mount', async function (assert) {
+    this.isSelfManaged = true;
+    const beneathStub = sinon
+      .stub(this.owner.lookup('service:permissions'), 'hasPermissionBeneath')
+      .returns(false);
+    beneathStub.withArgs(`${this.backend}/role`, ['create']).returns(true);
+    const rolesCreateLink = '[data-test-overview-card-container="Roles"] .hds-link-standalone';
+
+    await this.renderComponent();
+    assert
+      .dom(rolesCreateLink)
+      .doesNotExist('Roles Create new is hidden when only dynamic roles can be created');
+
+    beneathStub.withArgs(`${this.backend}/static-role`, ['create']).returns(true);
+    await this.renderComponent();
+    assert.dom(rolesCreateLink).exists('Roles Create new renders when static roles can be created');
   });
 });

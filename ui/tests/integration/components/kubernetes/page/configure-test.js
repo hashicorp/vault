@@ -4,13 +4,12 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import KubernetesConfigForm from 'vault/forms/secrets/kubernetes/config';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
@@ -48,13 +47,6 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-        'nested-interactive': { enabled: false },
-      },
-    });
     this.renderComponent = () =>
       render(hbs`<Page::Configure @form={{this.form}} @breadcrumbs={{this.breadcrumbs}} />`, {
         owner: this.engine,
@@ -64,9 +56,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
   test('it should display proper options when toggling radio cards', async function (assert) {
     await this.renderComponent();
 
-    assert
-      .dom('[data-test-radio-card="local"] input')
-      .isChecked('Local cluster radio card is checked by default');
+    assert.dom('[data-test-radio-card="local"]').isChecked('Local cluster radio card is checked by default');
     assert
       .dom('[data-test-config] p')
       .hasText(
@@ -141,7 +131,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     this.form = this.editForm;
     await this.renderComponent();
 
-    assert.dom('[data-test-radio-card="manual"] input').isChecked('Manual config radio card is checked');
+    assert.dom('[data-test-radio-card="manual"]').isChecked('Manual config radio card is checked');
     assert
       .dom('[data-test-input="kubernetes_host"]')
       .hasValue(this.existingConfig.kubernetes_host, 'Host field is populated');
@@ -166,7 +156,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     await this.renderComponent();
 
-    assert.dom('[data-test-radio-card="local"] input').isChecked('Local cluster radio card is checked');
+    assert.dom('[data-test-radio-card="local"]').isChecked('Local cluster radio card is checked');
     assert
       .dom('[data-test-icon="check-circle-fill"]')
       .hasClass('has-text-success', 'Icon is displayed for success state with correct styling');

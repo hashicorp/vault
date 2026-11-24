@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -20,6 +22,61 @@ var (
 	respErrEmptyPluginName = "empty plugin name"
 	respErrEmptyName       = "empty name attribute given"
 )
+
+const displayNameTruncateWarning = "username_template references .DisplayName without a " +
+	"truncate function. Consider applying the truncate function to bound the generated username length." +
+	" Example : {{.DisplayName | truncate 16}})."
+
+var reTruncatePipe = regexp.MustCompile(`\|\s*truncate\b`)
+
+// displayNameTemplateWarning inspects a username_template for references to
+// .DisplayName that are not guarded by a truncate function. Because DisplayName
+// comes from user-controlled input (e.g. an OIDC/JWT name claim), an unbounded
+// reference can produce unexpectedly long database usernames.
+// Returns a non-empty advisory warning string when found, otherwise "".
+func displayNameTemplateWarning(connectionDetails map[string]interface{}) string {
+	// username_template is optional — no key means no custom template, nothing to check.
+	raw, ok := connectionDetails["username_template"]
+	if !ok {
+		return ""
+	}
+	tpl, ok := raw.(string)
+	if !ok || tpl == "" {
+		return ""
+	}
+	// Fast path: if the string ".DisplayName" doesn't appear anywhere in the
+	// template, no action can reference it — skip the loop entirely.
+	if !strings.Contains(tpl, ".DisplayName") {
+		return ""
+	}
+
+	// Walk the template one {{ action }} at a time, advancing tpl forward.
+	// Return a warning if any .DisplayName action is found without a truncate pipe,
+	// or return empty string if the template is exhausted or malformed.
+	for {
+		start := strings.Index(tpl, "{{")
+		if start == -1 {
+			return ""
+		}
+		rest := tpl[start+2:]
+		end := strings.Index(rest, "}}")
+		if end == -1 {
+			return ""
+		}
+		action := strings.TrimSpace(rest[:end])
+		tpl = rest[end+2:]
+
+		if strings.HasPrefix(action, "/*") {
+			continue
+		}
+		if !strings.Contains(action, ".DisplayName") {
+			continue
+		}
+		if !reTruncatePipe.MatchString(action) {
+			return displayNameTruncateWarning
+		}
+	}
+}
 
 // DatabaseConfig is used by the Factory function to configure a Database
 // object.

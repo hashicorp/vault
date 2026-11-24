@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,7 +11,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { encodeString } from 'vault/utils/b64';
-import errorMessage from 'vault/utils/error-message';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 /**
  * @module TransitKeyActions
@@ -90,9 +90,9 @@ const SUCCESS_MESSAGE_FOR_ACTION = {
 };
 
 export default class TransitKeyActions extends Component {
-  @service store;
   @service flashMessages;
   @service router;
+  @service api;
 
   @tracked isModalActive = false;
   @tracked errors = null;
@@ -102,10 +102,17 @@ export default class TransitKeyActions extends Component {
     super(...arguments);
     assert('@key is required for TransitKeyActions components', this.args.key);
 
-    if (this.firstSupportedAction === 'export' || this.args.selectedAction === 'export') {
-      this.props.exportKeyType = this.args.key.exportKeyTypes[0];
-      this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
+    this.props = { ...STARTING_TRANSIT_PROPS, ...this.exportDefaults };
+  }
+
+  get exportDefaults() {
+    if ((this.args.selectedAction || this.firstSupportedAction) !== 'export') {
+      return {};
     }
+    return {
+      exportKeyType: this.args.key.exportKeyTypes[0],
+      exportKeyVersion: this.args.key.validKeyVersions.at(-1),
+    };
   }
 
   get keyIsRSA() {
@@ -114,7 +121,7 @@ export default class TransitKeyActions extends Component {
   }
 
   get firstSupportedAction() {
-    return this.args.key.supportedActions[0];
+    return this.args.key.supportedActions[0]?.name;
   }
 
   handleSuccess(resp, options, action) {
@@ -126,7 +133,7 @@ export default class TransitKeyActions extends Component {
       this.props = { ...this.props, ...resp.data };
 
       // While we do not pass ciphertext as a value to the JsonEditor, so that navigating from rewrap to decrypt will not show ciphertext in the editor, we still want to clear it from the props after rewrapping.
-      if (action === 'rewrap' && !this.args.key.supportsEncryption) {
+      if (action === 'rewrap' && !this.args.key.supports_encryption) {
         this.props.ciphertext = null;
       }
     }
@@ -150,7 +157,7 @@ export default class TransitKeyActions extends Component {
       (obj, key) => ({ ...obj, [key]: this.props[key] }),
       {}
     );
-    this.props = { ...STARTING_TRANSIT_PROPS, ...transferredProps };
+    this.props = { ...STARTING_TRANSIT_PROPS, ...transferredProps, ...this.exportDefaults };
   }
 
   compactData(data) {
@@ -193,6 +200,8 @@ export default class TransitKeyActions extends Component {
     }
     const { backend, id } = this.args.key;
     const action = this.args.selectedAction || this.firstSupportedAction;
+    // The wrap TTL picker already explains an over-limit value; Vault would reject the request.
+    if (action === 'export' && isDurationOverMax(options.wrapTTL)) return;
     const { ...formData } = data || {};
     if (!this.props.encodedBase64) {
       if (action === 'encrypt' && !!formData.plaintext) {
@@ -211,13 +220,43 @@ export default class TransitKeyActions extends Component {
     const payload = formData ? this.compactData(formData) : null;
 
     try {
-      const resp = yield this.store
-        .adapterFor('transit-key')
-        .keyAction(action, { backend, id, payload }, options);
-
+      let resp;
+      if (action === 'encrypt') {
+        resp = yield this.api.secrets.transitEncrypt(id, backend, payload);
+      } else if (action === 'decrypt') {
+        resp = yield this.api.secrets.transitDecrypt(id, backend, payload);
+      } else if (action === 'datakey') {
+        resp = yield this.api.secrets.transitGenerateDataKey(id, payload.param, backend, {
+          ...payload,
+        });
+      } else if (action === 'rewrap') {
+        resp = yield this.api.secrets.transitRewrap(id, backend, payload);
+      } else if (action === 'sign') {
+        resp = yield this.api.secrets.transitSign(id, backend, payload);
+      } else if (action === 'verify') {
+        resp = yield this.api.secrets.transitVerify(id, backend, payload);
+      } else if (action === 'hmac') {
+        resp = yield this.api.secrets.transitGenerateHmac(id, backend, payload);
+      } else if (action === 'export') {
+        const [type, version] = payload.param;
+        // if wrap ttl is present, the header needs to be set on the request for the api service to return the wrapped token in response - otherwise it would ignore and return data keys
+        const overrideOptions = options.wrapTTL
+          ? { headers: { 'X-Vault-Wrap-TTL': options.wrapTTL }, wrapTTL: options.wrapTTL }
+          : {};
+        resp = version
+          ? yield this.api.secrets.transitExportKeyVersion(
+              id,
+              `${type}-key`,
+              version,
+              backend,
+              overrideOptions
+            )
+          : yield this.api.secrets.transitExportKey(id, `${type}-key`, backend, overrideOptions);
+      }
       this.handleSuccess(resp, options, action);
     } catch (e) {
-      this.errors = errorMessage(e);
+      const { message } = yield this.api.parseError(e);
+      this.errors = message;
     }
   }
 }

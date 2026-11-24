@@ -8,12 +8,13 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/owner';
+import { SECRET_TYPE_CONFIGS, getSecretTypeFromAccessor } from 'sync/utils/secret-type-config';
 
 import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner, CapabilitiesMap } from 'vault/app-types';
-import type { Destination, AssociatedSecret } from 'vault/sync';
+import type { Destination, AssociatedSecret, SecretType } from 'vault/sync';
 
 interface Args {
   destination: Destination;
@@ -35,6 +36,35 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   get paginationQueryParams() {
     return (page: number) => ({ page });
+  }
+
+  @action
+  getSecretType(association: AssociatedSecret): SecretType | null {
+    return association.accessor ? getSecretTypeFromAccessor(association.accessor) : null;
+  }
+
+  getConfig(association: AssociatedSecret) {
+    const secretType = this.getSecretType(association);
+    return secretType ? SECRET_TYPE_CONFIGS[secretType] : null;
+  }
+
+  @action
+  getRoute(association: AssociatedSecret): string {
+    return this.getConfig(association)?.route || 'kvSecretOverview';
+  }
+
+  @action
+  getModels(association: AssociatedSecret): string[] {
+    const config = this.getConfig(association);
+    if (config) {
+      return config.getModels(association.mount, association.secret_name);
+    }
+    return [association.mount, association.secret_name];
+  }
+
+  @action
+  getQuery(association: AssociatedSecret): Record<string, string> | undefined {
+    return this.getConfig(association)?.getQuery?.();
   }
 
   @action

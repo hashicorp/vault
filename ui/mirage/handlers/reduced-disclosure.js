@@ -12,7 +12,10 @@ export default function (server) {
   );
   server.get('/sys/seal-status', (schema, req) => {
     // When reduced disclosure is active, the version is only returned when a valid token is used
-    const overrides = req.requestHeaders['X-Vault-Token']
+    const hasToken = Object.entries(req.requestHeaders).some(
+      ([header, value]) => header.toLowerCase() === 'x-vault-token' && value
+    );
+    const overrides = hasToken
       ? { cluster_name: '', build_date: '' }
       : { version: '', cluster_name: '', build_date: '' };
     return modifyPassthroughResponse(req, overrides);

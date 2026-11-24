@@ -31,7 +31,6 @@ export default class ControlGroupService extends Service {
   unmarkTokenForUnwrap(): void;
   tokenForUrl(url: string): { token: string; accessor: string; creationTime: string } | null;
   isRequestedPathLocked(response: ApiResponse, wrapTtl?: string | null): boolean;
-  checkForControlGroup(callbackArgs: unknown, response: ApiResponse, wrapTtl?: string): Promise<unknown>;
   saveTokenFromError(error: WrapInfo): void;
   logFromError(error: WrapInfo): ControlGroupErrorLog;
 }

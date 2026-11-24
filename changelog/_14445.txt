@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix secrets to secrets-engines redirect for bookmarked URLs.
+```

@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import uuid from 'core/utils/uuid';
 
-import type { OktaVerifyApiResponse, UsernameLoginResponse } from 'vault/vault/auth/methods';
+import type { AuthResponseAuthKey } from 'vault/auth/methods';
 
 /**
  * @module Auth::Form::Okta
@@ -34,14 +34,15 @@ export default class AuthFormOkta extends AuthBase {
 
     // If an Okta MFA challenge is configured for the end user this request resolves when it is completed.
     // If a user fails the MFA challenge (e.g. Okta number challenge) this POST login request fails.
-    const { auth } = (await this.api.auth.oktaLogin(username, path, {
+    const response = await this.api.auth.oktaLogin(username, path, {
       nonce,
       password,
-    })) as UsernameLoginResponse;
+    });
+    const auth = response as AuthResponseAuthKey;
 
     return this.normalizeAuthResponse(auth, {
       authMountPath: path,
-      displayName: auth?.metadata?.username,
+      displayName: auth?.metadata?.['username'],
       token: auth.client_token,
       ttl: auth.lease_duration,
     });
@@ -66,8 +67,8 @@ export default class AuthFormOkta extends AuthBase {
   @action
   async requestOktaVerify(nonce: string, mountPath: string) {
     try {
-      const { data } = (await this.api.auth.oktaVerify(nonce, mountPath)) as OktaVerifyApiResponse;
-      return data.correct_answer;
+      const { correct_answer } = await this.api.auth.oktaVerify(nonce, mountPath);
+      return correct_answer;
     } catch (e) {
       const { status, message } = await this.api.parseError(e);
       if (status === 404) {

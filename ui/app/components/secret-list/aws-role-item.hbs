@@ -9,8 +9,8 @@
   data-test-secret-link={{@item.id}}
   @encode={{true}}
 >
-  <div class="columns is-mobile">
-    <div class="column is-10">
+  <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+    <LF.Item @grow={{true}} @shrink={{true}}>
       <LinkTo
         @route={{concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root")}}
         @model={{@item.id}}
@@ -21,8 +21,8 @@
           <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
         </div>
       </LinkTo>
-    </div>
-    <div class="column has-text-right">
+    </LF.Item>
+    <LF.Item>
       <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
         <dd.ToggleIcon
           @icon="more-horizontal"
@@ -30,47 +30,37 @@
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
-        {{#if @item.generatePath.isPending}}
-          <dd.Generic class="has-text-center">
-            <LoadingDropdownOption />
-          </dd.Generic>
-        {{else if @item.canGenerate}}
+        {{#if @item.canGenerate}}
           <dd.Interactive
             @route="vault.cluster.secrets.backend.credentials"
             @model={{@item.id}}
             data-test-role-aws-link="generate"
           >Generate credentials</dd.Interactive>
         {{/if}}
-        {{#if @item.updatePath.isPending}}
-          <dd.Generic class="has-text-center">
-            <LoadingDropdownOption />
-          </dd.Generic>
-        {{else}}
-          {{#if @item.canRead}}
-            <dd.Interactive
-              @route="vault.cluster.secrets.backend.show"
-              @model={{@item.id}}
-              data-test-role-ssh-link="show"
-            >Details</dd.Interactive>
-          {{/if}}
-          {{#if @item.canEdit}}
-            <dd.Interactive
-              @route="vault.cluster.secrets.backend.edit"
-              @model={{@item.id}}
-              data-test-role-ssh-link="edit"
-            >Edit</dd.Interactive>
-          {{/if}}
-          {{#if @item.canDelete}}
-            <dd.Interactive
-              @color="critical"
-              {{on "click" (fn (mut this.showConfirmModal) true)}}
-              data-test-aws-role-delete={{@item.id}}
-            >Delete</dd.Interactive>
-          {{/if}}
+        {{#if @item.canRead}}
+          <dd.Interactive
+            @route="vault.cluster.secrets.backend.show"
+            @model={{@item.id}}
+            data-test-role-ssh-link="show"
+          >Details</dd.Interactive>
+        {{/if}}
+        {{#if @item.canEdit}}
+          <dd.Interactive
+            @route="vault.cluster.secrets.backend.edit"
+            @model={{@item.id}}
+            data-test-role-ssh-link="edit"
+          >Edit</dd.Interactive>
+        {{/if}}
+        {{#if @item.canDelete}}
+          <dd.Interactive
+            @color="critical"
+            {{on "click" (fn (mut this.showConfirmModal) true)}}
+            data-test-aws-role-delete={{@item.id}}
+          >Delete</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>
-    </div>
-  </div>
+    </LF.Item>
+  </Hds::Layout::Flex>
 </LinkedBlock>
 
 {{#if this.showConfirmModal}}

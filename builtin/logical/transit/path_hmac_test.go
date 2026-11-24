@@ -244,6 +244,8 @@ func TestTransit_HMAC(t *testing.T) {
 			t.Fatalf("expected invalid request error, got %v", err)
 		}
 	}
+	// Verify the total successful transit requests (36 per case * 2 cases)
+	require.Equal(t, uint64(72), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 func TestTransit_batchHMAC(t *testing.T) {
@@ -393,12 +395,16 @@ func TestTransit_batchHMAC(t *testing.T) {
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
+	// do not increment the counter for failed HMAC verify operations
 
 	batchHMACVerifyResponseItems = resp.Data["batch_results"].([]batchResponseHMACItem)
 
 	if batchHMACVerifyResponseItems[0].Valid {
 		t.Fatalf("expected error validating hmac\nreq\n%#v\nresp\n%#v", *req, *resp)
 	}
+
+	// Verify the total successful transit requests
+	require.Equal(t, uint64(5), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 // TestHMACBatchResultsFields checks that responses to HMAC verify requests using batch_input
@@ -413,8 +419,6 @@ func TestHMACBatchResultsFields(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	cores := cluster.Cores
 
@@ -487,4 +491,7 @@ func TestHMACBatchResultsFields(t *testing.T) {
 		require.Contains(t, result, "reference")
 		require.Contains(t, result, "valid")
 	}
+
+	// We expect 4 successful requests (2 for batch HMAC generation, 2 for batch verification)
+	require.Equal(t, uint64(4), cores[0].GetInMemoryTransitDataProtectionCallCounts())
 }

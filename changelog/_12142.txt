@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes login form so `?with=<path>` query param correctly displays only the specified mount when multiple mounts of the same auth type are configured with `listing_visibility="unauth"`
+```

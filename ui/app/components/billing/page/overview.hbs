@@ -1,0 +1,64 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Billing metrics">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:description>
+    <Hds::Text::Body>
+      Data reflects usage across this Vault cluster. Billing metrics determine license utilization.
+    </Hds::Text::Body>
+  </:description>
+</Page::Header>
+
+<Billing::DateRange
+  @months={{this.months}}
+  @onDateChange={{this.onDateChange}}
+  @selectedDateOption={{this.selectedDate}}
+  @isSelectedDateInvalid={{this.isSelectedDateInvalid}}
+  @isCurrentMonth={{this.isCurrentMonth}}
+/>
+
+<Hds::Layout::Flex @direction="row" @gap="16" @wrap={{true}} class="has-top-margin-s">
+  <Hds::Layout::Flex::Item @basis="30%" @grow={{true}} @shrink={{true}}>
+    <Billing::SummaryCard @title="Summary" @normalizedMetricData={{this.normalizedMetricData}} />
+
+    <Hds::Card::Container class="has-padding-m has-top-margin-m" @level="mid" @hasBorder={{true}}>
+      <Hds::Text::Display @tag="h2" @size="400" @weight="medium" class="has-bottom-margin-m">
+        Resources
+      </Hds::Text::Display>
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @text="How are billing metrics calculated?"
+        @iconPosition="trailing"
+        @href={{doc-link "/vault/gui/billing-metrics"}}
+      />
+    </Hds::Card::Container>
+  </Hds::Layout::Flex::Item>
+
+  <Hds::Layout::Flex::Item @basis="60%" @grow={{true}} @shrink={{true}}>
+    <Hds::Layout::Flex
+      @direction="row"
+      @gap="16"
+      @wrap={{true}}
+      @align="center"
+      @justify="space-between"
+      class="has-bottom-margin-s"
+    >
+      <Hds::Text::Display @tag="h2" @weight="medium" @size="400">Details by metric</Hds::Text::Display>
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @text="Learn more about metrics"
+        @href={{doc-link "/vault/gui/billing-metrics"}}
+      />
+    </Hds::Layout::Flex>
+    <Hds::Layout::Flex @direction="column" @gap="16">
+      {{#each-in this.detailsByMetric as |cardTitle cardKey|}}
+        <Billing::MetricCard @title={{cardTitle}} @metrics={{this.metricsForCard cardKey}} />
+      {{/each-in}}
+    </Hds::Layout::Flex>
+  </Hds::Layout::Flex::Item>
+</Hds::Layout::Flex>

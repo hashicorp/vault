@@ -10,12 +10,11 @@ import { action } from '@ember/object';
 
 import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { Breadcrumb, CapabilitiesMap } from 'vault/vault/app-types';
+import type { CapabilitiesMap } from 'vault/vault/app-types';
 
 interface Args {
   capabilities: CapabilitiesMap;
   onCancel: CallableFunction;
-  breadcrumbs: Breadcrumb;
 }
 
 /**
@@ -29,7 +28,6 @@ export default class PkiConfigureCreate extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
 
-  @tracked title = 'Configure PKI';
   @tracked showActionTypes = true;
   @tracked actionType = '';
 
@@ -60,8 +58,7 @@ export default class PkiConfigureCreate extends Component<Args> {
   }
 
   @action
-  onSave(title: string) {
-    this.title = title;
+  onSave() {
     this.showActionTypes = false;
   }
 }

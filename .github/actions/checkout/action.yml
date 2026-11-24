@@ -20,9 +20,12 @@ outputs:
   ref:
     description: The git reference that was checked out.
     value: ${{ steps.ref.outputs.ref }}
+  sha:
+    description: The commit SHA that was checked out.
+    value: ${{ steps.sha.outputs.sha }}
   depth:
     description: The fetch depth that was checked out.
-    value: ${{ steps.ref.outputs.ref }}
+    value: ${{ steps.ref.outputs.depth }}
 
 runs:
   using: composite
@@ -70,8 +73,13 @@ runs:
           echo "ref=${checkout_ref}"
           echo "depth=${fetch_depth}"
         } | tee -a "$GITHUB_OUTPUT"
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         path: ${{ inputs.path }}
         fetch-depth: ${{ steps.ref.outputs.depth }}
         ref: ${{ steps.ref.outputs.ref }}
+    - id: sha
+      shell: bash
+      env:
+        CHECKOUT_PATH: ${{ inputs.path }}
+      run: echo "sha=$(git -C "${CHECKOUT_PATH:-.}" rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"

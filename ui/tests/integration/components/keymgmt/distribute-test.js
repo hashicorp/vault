@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, settled, select } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { hbs } from 'ember-cli-htmlbars';

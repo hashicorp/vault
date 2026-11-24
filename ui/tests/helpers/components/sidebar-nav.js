@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -36,6 +36,7 @@ export const stubFeaturesAndPermissions = (
   if (setCluster) {
     owner.lookup('service:currentCluster').setCluster({
       id: 'foo',
+      name: 'vault',
       anyReplicationEnabled: true,
       usingRaft: true,
     });

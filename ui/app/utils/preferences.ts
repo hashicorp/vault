@@ -1,0 +1,163 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import localStorage from 'vault/lib/local-storage';
+
+/**
+ * Central registry for Vault UI preferences.
+ *
+ * This module is the single source of truth for every preference key name,
+ * its type, and its default value. Consuming components MUST reference this
+ * registry rather than using ad-hoc key string literals.
+ *
+ * Keys follow the namespaced convention `vault:prefs:<name>`. Reads and writes
+ * go through the existing local-storage module (`vault/lib/local-storage`);
+ * there is no separate storage abstraction layer. Reading a key that is absent
+ * from localStorage returns the documented default defined here.
+ */
+
+export const NAMESPACE = 'vault:prefs';
+
+interface PreferenceDefinition {
+  key: string;
+  type: 'boolean';
+  default: boolean;
+}
+
+export const PREFERENCES: Record<string, PreferenceDefinition> = {
+  // Opt-in consent for anonymous usage telemetry. Fails safe: defaults off
+  // until the user explicitly opts in. Per-browser (localStorage only).
+  telemetryConsent: {
+    key: `${NAMESPACE}:telemetryConsent`,
+    type: 'boolean',
+    default: false,
+  },
+};
+
+export type PreferenceName = keyof typeof PREFERENCES;
+
+function resolve(name: PreferenceName): PreferenceDefinition {
+  const def = PREFERENCES[name];
+  if (!def) {
+    throw new Error(`[preferences] Unknown preference "${name}". Register it in app/utils/preferences.ts.`);
+  }
+  return def;
+}
+
+// ---------------------------------------------------------------------------
+// String preferences
+// ---------------------------------------------------------------------------
+
+interface StringPreferenceDefinition {
+  key: string;
+  type: 'string';
+  default: string;
+}
+
+export const STRING_PREFERENCES: Record<string, StringPreferenceDefinition> = {
+  // The user's self-identified role. Empty string means "not yet chosen".
+  // Stored in localStorage only; used to personalise future UX and, when the
+  // user has opted into telemetry, forwarded to Segment as a discrete event.
+  persona: {
+    key: `${NAMESPACE}:persona`,
+    type: 'string',
+    default: '',
+  },
+  theme: {
+    key: `${NAMESPACE}:theme`,
+    type: 'string',
+    default: 'system',
+  },
+};
+
+export type StringPreferenceName = keyof typeof STRING_PREFERENCES;
+
+function resolveString(name: StringPreferenceName): StringPreferenceDefinition {
+  const def = STRING_PREFERENCES[name];
+  if (!def) {
+    throw new Error(
+      `[preferences] Unknown string preference "${name}". Register it in app/utils/preferences.ts.`
+    );
+  }
+  return def;
+}
+
+export function getStringPreference(name: StringPreferenceName): string {
+  const def = resolveString(name);
+  try {
+    const stored = localStorage.getItem(def.key);
+    return stored === null || stored === undefined ? def.default : stored;
+  } catch {
+    return def.default;
+  }
+}
+
+export function setStringPreference(name: StringPreferenceName, value: string): void {
+  const { key } = resolveString(name);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Cannot persist (storage unavailable). No-op.
+  }
+}
+
+export function getPreference(name: PreferenceName): boolean {
+  const def = resolve(name);
+  try {
+    const stored = localStorage.getItem(def.key);
+    return stored === null || stored === undefined ? def.default : stored;
+  } catch {
+    return def.default;
+  }
+}
+
+/**
+ * Whether a value has been explicitly stored for this preference, as opposed to
+ * falling back to its default. Consent gating needs this to tell "user has never
+ * decided" (show the banner) apart from "user explicitly declined" (stay quiet).
+ * Unreadable storage is treated as "not stored" (safe default).
+ */
+export function hasPreference(name: PreferenceName): boolean {
+  const def = resolve(name);
+  try {
+    const stored = localStorage.getItem(def.key);
+    return stored !== null && stored !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+export function setPreference(name: PreferenceName, value: boolean): void {
+  const { key } = resolve(name);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Cannot persist (storage unavailable). Hence a no-op
+  }
+}
+
+// Stable per-browser anonymous analytics id, used as the Segment user identifier
+// for token-based access (which has no entityId). The value stored here is the
+// RAW, unprefixed id; the `vault-` realm prefix is applied only at identify()
+// time, never persisted.
+const ANALYTICS_USER_ID_KEY = `${NAMESPACE}:analyticsUserId`;
+
+/**
+ * Returns a stable anonymous id for this browser, generating and persisting one
+ * on first use so the same token user keeps the same Segment userId across page
+ * loads and sessions. Fails safe: if localStorage is unavailable (private mode,
+ * quota, blocked), returns a fresh in-memory uuid rather than throwing.
+ */
+export function getOrCreateAnalyticsUserId(): string {
+  try {
+    const existing = localStorage.getItem(ANALYTICS_USER_ID_KEY);
+    if (existing) return existing;
+    const generated = crypto.randomUUID();
+    localStorage.setItem(ANALYTICS_USER_ID_KEY, generated);
+    return generated;
+  } catch {
+    return crypto.randomUUID();
+  }
+}

@@ -6,6 +6,7 @@ package pki
 import (
 	"bytes"
 	"context"
+	"crypto/mldsa"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/pem"
@@ -100,6 +101,11 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 								Description: `AuthorityKeyID of certificate`,
 								Required:    false,
 							},
+							"private_key_parameter_set": {
+								Type:        framework.TypeString,
+								Description: `The ML-DSA parameter set of the private key, if applicable.`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -111,6 +117,7 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 	}
 
 	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addJKSPrivateKeyAlias(ret.Fields)
 	return ret
 }
 
@@ -405,7 +412,15 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
-			`the "format" path parameter must be "pem", "der", or "pem_bundle"`), nil
+			`the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`), nil
+	}
+
+	if format == "pkcs12_bundle" {
+		// Cast to encoder type and validate it is a permitted value
+		_, err := validatePKCS12Encoder(data.Get("pkcs12_encoder").(string))
+		if err != nil {
+			return logical.ErrorResponse(`invalid "pkcs12_encoder" parameter: %v`, err), nil
+		}
 	}
 
 	var caErr error
@@ -484,7 +499,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	b.pkiCertificateCounter.AddIssuedCertificate(!role.NoStore)
+	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
+	b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(!role.NoStore, parsedBundle.Certificate)
 
 	if useCSR {
 		if role.UseCSRCommonName && data.Get("common_name").(string) != "" {
@@ -592,6 +608,13 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 		if includeKey {
 			respData["private_key"] = cb.PrivateKey
 			respData["private_key_type"] = cb.PrivateKeyType
+			if pub, ok := parsedBundle.Certificate.PublicKey.(*mldsa.PublicKey); ok {
+				parameterSet, err := getMLDSAParameterSet(pub)
+				if err != nil {
+					return nil, err
+				}
+				respData["private_key_parameter_set"] = parameterSet
+			}
 		}
 
 	case "pem_bundle":
@@ -603,6 +626,13 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 		if includeKey {
 			respData["private_key"] = cb.PrivateKey
 			respData["private_key_type"] = cb.PrivateKeyType
+			if pub, ok := parsedBundle.Certificate.PublicKey.(*mldsa.PublicKey); ok {
+				parameterSet, err := getMLDSAParameterSet(pub)
+				if err != nil {
+					return nil, err
+				}
+				respData["private_key_parameter_set"] = parameterSet
+			}
 		}
 
 	case "der":
@@ -616,7 +646,44 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 		if includeKey {
 			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			respData["private_key_type"] = cb.PrivateKeyType
+			if pub, ok := parsedBundle.Certificate.PublicKey.(*mldsa.PublicKey); ok {
+				parameterSet, err := getMLDSAParameterSet(pub)
+				if err != nil {
+					return nil, err
+				}
+				respData["private_key_parameter_set"] = parameterSet
+			}
 		}
+
+	case "pkcs12_bundle":
+		password := data.Get("pkcs12_password").(string)
+		encoder := data.Get("pkcs12_encoder").(string)
+		caCerts := x509Certificates(caChainGen.chain)
+		// Pass parsedBundle.PrivateKey as is. It should be nil for signed certs and set for issued certs.
+		pkcs12Bytes, err := EncodeToPKCS12(encoder, parsedBundle.PrivateKey, parsedBundle.Certificate, caCerts, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
+		}
+		respData["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
+		respData["issuing_ca"] = signingCB.Certificate
+
+	case "jks_bundle":
+		var alias string
+		if _, ok := data.Schema["jks_private_key_alias"]; ok {
+			// Issue endpoints define jks_private_key_alias (defaults to "1")
+			// Sign endpoints do not define this field, so alias stays empty.
+			alias = data.Get("jks_private_key_alias").(string)
+		}
+		password := data.Get("jks_password").(string)
+		caCerts := x509Certificates(caChainGen.chain)
+		// Pass parsedBundle.PrivateKey as is. It should be nil for signed certs and set for issued certs.
+		jksBytes, err := EncodeToJKS(parsedBundle.PrivateKey, parsedBundle.Certificate, caCerts, alias, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to JKS format: %w", err)
+		}
+		respData["certificate"] = base64.StdEncoding.EncodeToString(jksBytes)
+		respData["issuing_ca"] = signingCB.Certificate
+
 	default:
 		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
@@ -695,7 +762,7 @@ func (b *backend) issueSignEmptyCert(ctx context.Context, req *logical.Request, 
 		KeyType:           "ec", // We need more tests with "ec"
 	}
 	schema := map[string]*framework.FieldSchema{}
-	schema = addNonCACommonFields(addIssueAndSignCommonFields(schema))
+	schema = addNonCACommonFields(schema)
 	emptyData := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"ttl":        "300s",

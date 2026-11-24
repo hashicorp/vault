@@ -39,6 +39,7 @@ type RevocationInfo struct {
 	RevocationTime    int64            `json:"revocation_time"`
 	RevocationTimeUTC time.Time        `json:"revocation_time_utc"`
 	CertificateIssuer issuing.IssuerID `json:"issuer_id"`
+	ReasonCode        int              `json:"reason_code"`
 }
 
 func (ri *RevocationInfo) AssociateRevokedCertWithIsssuer(revokedCert *x509.Certificate, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {

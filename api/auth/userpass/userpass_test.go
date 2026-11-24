@@ -36,6 +36,7 @@ func testHTTPServer(
 }
 
 func init() {
+	// nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- runs in init(), no *testing.T is available here.
 	os.Setenv("VAULT_TOKEN", "")
 }
 
@@ -49,10 +50,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name()) // clean up
-	err = os.Setenv(passwordEnvVar, allowedPassword)
-	if err != nil {
-		t.Fatalf("error writing password to env var: %v", err)
-	}
+	t.Setenv(passwordEnvVar, allowedPassword)
 
 	if _, err := tmpfile.Write(content); err != nil {
 		t.Fatalf("error writing to temp file: %v", err)

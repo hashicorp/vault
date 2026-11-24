@@ -16,7 +16,7 @@ export default class KvSecretMetadataRoute extends Route {
       return await this.api.secrets.kvV2ReadMetadata(path, backend);
     } catch (error) {
       const { response } = await this.api.parseError(error);
-      if (response.isControlGroupError) {
+      if (response?.isControlGroupError) {
         throw response;
       }
       // if users can read secret data they can make an explicit request to retrieve secret data in the component

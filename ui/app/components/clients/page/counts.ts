@@ -7,55 +7,55 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { filterVersionHistory } from 'core/utils/client-count-utils';
+import { filterVersionHistory } from 'core/utils/client-counts/helpers';
 
-import type AdapterError from '@ember-data/adapter/error';
 import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
-import type ClientsActivityModel from 'vault/models/clients/activity';
-import type ClientsConfigModel from 'vault/models/clients/config';
-import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type { VersionHistory } from 'vault/client-counts';
+import type { Activity } from 'vault/client-counts/activity-api';
+import type { InternalClientActivityReadConfigurationResponse } from '@hashicorp/vault-client-typescript';
 
 interface Args {
-  activity: ClientsActivityModel;
-  activityError?: AdapterError;
-  config: ClientsConfigModel;
-  endTimestamp: string; // ISO format
+  activity: Activity;
+  config: InternalClientActivityReadConfigurationResponse;
+  canUpdateConfig: boolean;
+  endTimestamp: Date;
   onFilterChange: CallableFunction;
-  startTimestamp: string; // ISO format
-  versionHistory: ClientsVersionHistoryModel[];
+  startTimestamp: Date;
+  versionHistory: VersionHistory[];
+  responseTimestamp: Date;
 }
 
 export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 
+  get trackingDisabled() {
+    const { enabled } = this.args.config;
+    return enabled === 'disable' || enabled === 'default-disabled';
+  }
+
   get formattedStartDate() {
-    return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
+    const { startTimestamp } = this.args;
+    return startTimestamp ? parseAPITimestamp(startTimestamp, 'MMMM yyyy') : null;
   }
 
   get formattedEndDate() {
-    return this.args.endTimestamp ? parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy') : null;
-  }
-
-  get formattedBillingStartDate() {
-    if (this.args.config?.billingStartTimestamp) {
-      return this.args.config.billingStartTimestamp.toISOString();
-    }
-    return null;
+    const { endTimestamp } = this.args;
+    return endTimestamp ? parseAPITimestamp(endTimestamp, 'MMMM yyyy') : null;
   }
 
   // passed into page-header for the export modal alert
   get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    return filterVersionHistory(versionHistory, activity?.startTime, activity?.endTime);
+    return filterVersionHistory(versionHistory, activity?.start_time, activity?.end_time);
   }
 
   get upgradeExplanations() {
     if (this.upgradesDuringActivity.length) {
-      return this.upgradesDuringActivity.map((upgrade: ClientsVersionHistoryModel) => {
+      return this.upgradesDuringActivity.map((upgrade: VersionHistory) => {
         let explanation;
-        const date = parseAPITimestamp(upgrade.timestampInstalled, 'MMM d, yyyy');
+        const date = parseAPITimestamp(upgrade.timestamp_installed, 'MMM d, yyyy');
         const version = upgrade.version || '';
         switch (true) {
           case version.includes('1.9'):

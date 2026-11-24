@@ -8,9 +8,10 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { restartableTask } from 'ember-concurrency';
+import { canCreateRole } from 'ldap/utils/capabilities-helper';
 import {
-  LdapLibraryListListEnum,
-  LdapLibraryListLibraryPathListEnum,
+  SecretsApiLdapLibraryListListEnum,
+  SecretsApiLdapLibraryListLibraryPathListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 import type {
@@ -25,10 +26,12 @@ import type { Breadcrumb, CapabilitiesMap } from 'vault/vault/app-types';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
+import type PermissionsService from 'vault/services/permissions';
 
 interface Args {
   roles: Array<LdapRole>;
   promptConfig: boolean;
+  isSelfManaged?: boolean;
   secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
 }
@@ -44,6 +47,7 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly capabilities: CapabilitiesService;
   @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly permissions: PermissionsService;
 
   @tracked selectedRole: LdapRole | undefined;
   @tracked librariesStatus: Array<LdapLibraryAccountStatus> = [];
@@ -55,6 +59,10 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
     super(owner, args);
     this.fetchLibraries.perform();
     this.fetchLibrariesStatus.perform();
+  }
+
+  get canCreateRole() {
+    return canCreateRole(this.permissions, this.secretMountPath.currentPath, this.args.isSelfManaged);
   }
 
   get roleOptions() {
@@ -97,8 +105,12 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
       );
       this.checkInCapabilities = await this.capabilities.fetch(paths);
     } catch (error) {
-      // Hierarchical discovery failed - display inline error
-      this.librariesError = 'Unable to load complete library information. Please try refreshing the page.';
+      const { status } = await this.api.parseError(error);
+      // Only set error message if status is not a 404 which just means an empty response.
+      if (status !== 404) {
+        // Hierarchical discovery failed - display inline error
+        this.librariesError = 'Unable to load complete library information. Please try refreshing the page.';
+      }
       this.allLibraries = [];
     }
   });
@@ -143,9 +155,9 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
       ? await this.api.secrets.ldapLibraryListLibraryPath(
           pathToLibrary,
           currentPath,
-          LdapLibraryListLibraryPathListEnum.TRUE
+          SecretsApiLdapLibraryListLibraryPathListEnum.TRUE
         )
-      : await this.api.secrets.ldapLibraryList(currentPath, LdapLibraryListListEnum.TRUE);
+      : await this.api.secrets.ldapLibraryList(currentPath, SecretsApiLdapLibraryListListEnum.TRUE);
 
     const libraries =
       keys?.map((name) => {

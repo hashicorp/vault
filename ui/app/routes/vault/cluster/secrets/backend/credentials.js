@@ -5,25 +5,19 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import ControlGroupError from 'vault/lib/control-group-error';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'totp'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',
-  pathHelp: service('path-help'),
   router: service(),
-  store: service(),
+  api: service(),
 
   beforeModel(transition) {
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
     // redirect if the backend type does not support credentials
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendType)) {
       return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
-    }
-    // hydrate model if backend type is ssh
-    if (backendType === 'ssh') {
-      this.pathHelp.hydrateModel('ssh-otp-credential', backendPath);
     }
 
     // assign back button route
@@ -33,49 +27,82 @@ export default Route.extend({
     }
   },
 
-  getDatabaseCredential(backend, secret, roleType = '') {
-    return this.store.queryRecord('database/credential', { backend, secret, roleType }).catch((error) => {
-      if (error instanceof ControlGroupError) {
-        throw error;
+  // Fetches credentials with their resolved type without swallowing request failures.
+  async getDatabaseCredentialByType(backend, secret, roleType) {
+    if (roleType === 'static') {
+      const { last_vault_rotation, lease_duration, data } =
+        await this.api.secrets.databaseReadStaticRoleCredentials(secret, backend);
+      const { rsa_private_key, ...rest } = data;
+      return {
+        last_vault_rotation,
+        lease_duration,
+        ...rest,
+        ...(rsa_private_key !== undefined ? { rsaPrivateKey: rsa_private_key } : {}),
+        roleType: 'static',
+      };
+    } else {
+      const { data, lease_id, lease_duration } = await this.api.secrets.databaseGenerateCredentials(
+        secret,
+        backend
+      );
+      const { rsa_private_key: rsaPrivateKey, ...rest } = data;
+      return {
+        ...rest,
+        ...(rsaPrivateKey !== undefined ? { rsaPrivateKey } : {}),
+        lease_id,
+        lease_duration,
+        roleType: 'dynamic',
+      };
+    }
+  },
+
+  async getDatabaseCredential(backend, secret, roleType = '') {
+    try {
+      if (roleType === 'static' || roleType === 'dynamic') {
+        return await this.getDatabaseCredentialByType(backend, secret, roleType);
+      }
+
+      // Overview permits entering a role name without knowing its type or having permission to read it.
+      const [staticResp, dynamicResp] = await Promise.allSettled([
+        this.getDatabaseCredentialByType(backend, secret, 'static'),
+        this.getDatabaseCredentialByType(backend, secret, 'dynamic'),
+      ]);
+      if (staticResp.status === 'fulfilled') return staticResp.value;
+      if (dynamicResp.status === 'fulfilled') return dynamicResp.value;
+
+      const { status: staticStatus, response: staticError } = await this.api.parseError(staticResp.reason);
+      const { status: dynamicStatus, response: dynamicError } = await this.api.parseError(dynamicResp.reason);
+      if (dynamicError?.isControlGroupError) throw dynamicResp.reason;
+      if (staticError?.isControlGroupError) throw staticResp.reason;
+      throw staticStatus < dynamicStatus ? dynamicResp.reason : staticResp.reason;
+    } catch (error) {
+      const { response, status, message, path } = await this.api.parseError(error);
+      if (response?.isControlGroupError) {
+        throw response;
       }
       // Unless it's a control group error, we want to pass back error info
       // so we can render it on the GenerateCredentialsDatabase component
-      const status = error?.httpStatus;
-      let title;
-      let message = `We ran into a problem and could not continue: ${
-        error?.errors ? error.errors[0] : 'See Vault logs for details.'
-      }`;
-      if (status === 403) {
-        // 403 is forbidden
-        title = 'You are not authorized';
-        message =
-          "Role wasn't found or you do not have permissions. Ask your administrator if you think you should have access.";
-      }
-      return {
-        errorHttpStatus: status,
-        errorTitle: title,
-        errorMessage: message,
-      };
-    });
+      return { ...response, status, message, path };
+    }
   },
 
   async getAwsRole(backend, id) {
     try {
-      const role = await this.store.queryRecord('role-aws', { backend, id });
-      return role;
+      return await this.api.secrets.awsReadRole(id, backend);
     } catch (e) {
-      // swallow error, non-essential data
-      return;
+      const { status } = await this.api.parseError(e);
+      if (status === 403) return;
+      throw e;
     }
   },
 
   async getTotpKey(backend, keyName) {
     try {
-      const key = await this.store.queryRecord('totp-key', { id: keyName, backend });
-      return key;
+      const { data } = await this.api.secrets.totpReadKey(keyName, backend);
+      return data || {};
     } catch (e) {
       // swallow error, non-essential data
-      return;
+      return {};
     }
   },
 
@@ -100,19 +127,11 @@ export default Route.extend({
       roleName: role,
       roleType,
       dbCred,
-      awsRoleType: awsRole?.credentialType,
+      awsRoleType: awsRole?.credential_type,
     };
   },
 
   resetController(controller) {
     controller.reset();
-  },
-
-  actions: {
-    willTransition() {
-      // we do not want to save any of the credential information in the store.
-      // once the user navigates away from this page, remove all credential info.
-      this.store.unloadAll('database/credential');
-    },
   },
 });

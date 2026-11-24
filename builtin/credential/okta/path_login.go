@@ -55,9 +55,20 @@ automatically generate a nonce.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
-			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+				Summary:  "Authenticate with Okta credentials.",
+				Responses: map[int][]framework.Response{
+					200: {{
+						Description: "OK",
+						Fields:      framework.AuthLoginResponseFields(),
+					}},
+				},
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLoginAliasLookahead,
+			},
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -94,7 +105,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse(fmt.Sprintf("provider %s is not among the supported ones %v", preferredProvider, b.getSupportedProviders())), nil
 	}
 
-	defer b.verifyCache.Delete(nonce)
+	defer b.verifyCache.Delete(nonce) // ttlcache Delete is a no-op if key doesn't exist
 
 	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp, nonce, preferredProvider)
 	// Handle an internal error
@@ -197,7 +208,8 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 func pathVerify(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `verify/(?P<nonce>.+)`,
+		Pattern:      `verify/(?P<nonce>.+)`,
+		HelpSynopsis: "Retrieve the number verification challenge for a pending Okta login request.",
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixOkta,
 			OperationVerb:   "verify",
@@ -212,6 +224,18 @@ retrieve the number verification challenge for the matching request.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathVerify,
+				Summary:  "Return the number verification challenge for a pending Okta login.",
+				Responses: map[int][]framework.Response{
+					200: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"correct_answer": {
+								Type:        framework.TypeInt,
+								Description: "The correct answer for the number verification challenge.",
+							},
+						},
+					}},
+				},
 			},
 		},
 	}
@@ -220,14 +244,14 @@ retrieve the number verification challenge for the matching request.`,
 func (b *backend) pathVerify(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	nonce := d.Get("nonce").(string)
 
-	correctRaw, ok := b.verifyCache.Get(nonce)
-	if !ok {
+	item := b.verifyCache.Get(nonce)
+	if item == nil {
 		return nil, nil
 	}
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"correct_answer": correctRaw.(int),
+			"correct_answer": item.Value(),
 		},
 	}
 

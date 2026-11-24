@@ -671,3 +671,7 @@ quality "vault_version_release" {
 quality "vault_billing_start_date" {
   description = "Vault's billing start date has adjusted to the latest billing year"
 }
+
+quality "vault_license_update_ibm" {
+  description = "Vault updates the cluster license to an IBM PAO license and it is in effect"
+}

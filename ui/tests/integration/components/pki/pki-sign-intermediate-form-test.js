@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import PkiIssuersSignIntermediateForm from 'vault/forms/secrets/pki/issuers/sign-intermediate';
 
 const selectors = {
@@ -113,5 +114,23 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
         assert.dom(`${GENERAL.infoRowValue(label)} a`).exists(`${label} is a link`);
       }
     });
+  });
+
+  test('it blocks a Not valid after TTL longer than Vault supports', async function (assert) {
+    assert.expect(4);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('csr'), 'my-csr');
+    await fillIn(GENERAL.ttl.input('TTL'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('TTL'), 'd');
+    await click(selectors.saveButton);
+
+    assert.dom(TTL_PICKER.error).hasText('TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.true(this.signStub.notCalled, 'the intermediate is not signed');
+
+    await fillIn(GENERAL.ttl.input('TTL'), '106751');
+    await click(selectors.saveButton);
+    assert.true(this.signStub.calledOnce, 'the intermediate is signed once the TTL is valid');
+    assert.strictEqual(this.signStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
   });
 });

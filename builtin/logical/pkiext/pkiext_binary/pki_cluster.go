@@ -6,15 +6,15 @@ package pkiext_binary
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
+	"github.com/hashicorp/vault/helper/testhelpers/testimages"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/dnstest"
 )
 
 type VaultPkiCluster struct {
@@ -23,17 +23,11 @@ type VaultPkiCluster struct {
 }
 
 func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
-	binary := os.Getenv("VAULT_BINARY")
-	if binary == "" {
-		t.Skip("only running docker test when $VAULT_BINARY present")
-	}
+	repo, tag := testimages.GetImageRepoAndTag(t, false)
 
 	opts := &docker.DockerClusterOptions{
-		ImageRepo: "docker.mirror.hashicorp.services/hashicorp/vault",
-		// We're replacing the binary anyway, so we're not too particular about
-		// the docker image version tag.
-		ImageTag:    "latest",
-		VaultBinary: binary,
+		ImageRepo: repo,
+		ImageTag:  tag,
 		ClusterOptions: testcluster.ClusterOptions{
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",

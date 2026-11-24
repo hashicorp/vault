@@ -8,12 +8,13 @@ import { set, computed } from '@ember/object';
 import { service } from '@ember/service';
 import { readOnly } from '@ember/object/computed';
 import { task, timeout } from 'ember-concurrency';
+import { INTERNAL_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
 
 export default Component.extend({
   'data-test-component': 'path-filter-config',
   attributeBindings: ['data-test-component'],
   namespace: service(),
-  store: service(),
+  api: service(),
   config: null,
   namespaces: readOnly('namespace.accessibleNamespaces'),
   lastOptions: null,
@@ -30,15 +31,14 @@ export default Component.extend({
   },
 
   fetchMountsForNamespace: task(function* (ns) {
-    const adapter = this.store.adapterFor('application');
     const secret = [];
     const auth = [];
-    const mounts = ns
-      ? yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns })
-      : yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
+    const mounts = yield this.api.sys.internalUiListEnabledVisibleMounts(
+      ns ? this.api.buildHeaders({ namespace: ns }) : undefined
+    );
 
     ['secret', 'auth'].forEach((key) => {
-      for (const [id, info] of Object.entries(mounts.data[key])) {
+      for (const [id, info] of Object.entries(mounts[key])) {
         let longId;
         if (key === 'auth') {
           longId = ns ? `${ns}/auth/${id}` : `auth/${id}`;
@@ -120,12 +120,11 @@ export default Component.extend({
 
   // singleton mounts are not eligible for per-mount-filtering
   singletonMountTypes: computed(function () {
-    return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity', 'ns_token'];
+    return ['cubbyhole', 'token', 'ns_system', 'ns_identity', 'ns_token', ...INTERNAL_ENGINE_TYPES];
   }),
 
   actions: {
     async pathsChanged(paths) {
-      // set paths on the model
       set(this.config, 'paths', paths);
 
       // if dropdown is empty or has options without groupName, re-fetch

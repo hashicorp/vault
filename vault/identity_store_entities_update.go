@@ -9,16 +9,19 @@ import (
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // EntityBuilder is used to construct or update an identity.Entity.
 type EntityBuilder struct {
-	store  *IdentityStore
-	entity *identity.Entity
-	isNew  bool
-	err    error
+	store          *IdentityStore
+	entity         *identity.Entity
+	isNew          bool
+	originalSCIMID string
+	modifiedFields []string
+	err            error
 }
 
 // NewEntityBuilder creates a new builder instance.
@@ -45,6 +48,10 @@ func (b *EntityBuilder) WithID(id string) *EntityBuilder {
 	if b.err != nil || id == "" {
 		return b
 	}
+	if IsEphemeralEntityID(id) {
+		b.err = errEphemeralEntityID(id)
+		return b
+	}
 
 	entity, err := b.store.MemDBEntityByID(id, true)
 	if err != nil {
@@ -57,31 +64,8 @@ func (b *EntityBuilder) WithID(id string) *EntityBuilder {
 	}
 
 	b.entity = entity
+	b.originalSCIMID = b.entity.ScimClientID
 	b.isNew = false
-	return b
-}
-
-// WithExternalID handles logic related to the external_id.
-func (b *EntityBuilder) WithExternalID(ctx context.Context, externalID string) *EntityBuilder {
-	if b.err != nil || externalID == "" {
-		return b
-	}
-
-	entityByExternalID, err := b.store.MemDBEntityByExternalID(ctx, externalID, true)
-	if err != nil {
-		b.err = err
-		return b
-	}
-
-	if entityByExternalID != nil {
-		// An entity with this external ID already exists, so we'll update it.
-		b.entity = entityByExternalID
-		b.isNew = false
-	} else {
-		// No entity found, so we're just setting the external ID on the current one.
-		b.entity.ExternalID = externalID
-	}
-
 	return b
 }
 
@@ -103,6 +87,7 @@ func (b *EntityBuilder) WithName(ctx context.Context, name string) *EntityBuilde
 	case b.isNew:
 		// We haven't loaded an entity yet, but one with this name exists. Let's update it.
 		b.entity = entityByName
+		b.originalSCIMID = b.entity.ScimClientID
 		b.isNew = false
 	case b.entity.ID == entityByName.ID:
 		// The loaded entity and the one found by name are the same. No-op.
@@ -112,6 +97,9 @@ func (b *EntityBuilder) WithName(ctx context.Context, name string) *EntityBuilde
 		return b
 	}
 
+	if b.entity.Name != name {
+		b.modifiedFields = append(b.modifiedFields, "name")
+	}
 	b.entity.Name = name
 	return b
 }
@@ -121,11 +109,31 @@ func (b *EntityBuilder) WithPolicies(policies []string) *EntityBuilder {
 	if b.err != nil {
 		return b
 	}
-	if strutil.StrListContainsCaseInsensitive(policies, "root") {
+	for _, policy := range policies {
+		if isReservedRootPolicy(policy) {
+			b.err = fmt.Errorf("policies cannot contain root")
+			return b
+		}
+	}
+
+	validatedPolicies := make([]string, 0, len(policies))
+	for _, policy := range policies {
+		canonicalPolicy, err := policyutil.ValidatePolicyName(policy)
+		if err != nil {
+			b.err = fmt.Errorf("invalid policy name %q: %w", policy, err)
+			return b
+		}
+		validatedPolicies = append(validatedPolicies, canonicalPolicy)
+	}
+	if strutil.StrListContainsCaseInsensitive(validatedPolicies, "root") {
 		b.err = fmt.Errorf("policies cannot contain root")
 		return b
 	}
-	b.entity.Policies = strutil.RemoveDuplicates(policies, false)
+	dedupedPolicies := strutil.RemoveDuplicates(validatedPolicies, false)
+	if !strutil.EquivalentSlices(b.entity.Policies, dedupedPolicies) {
+		b.modifiedFields = append(b.modifiedFields, "policies")
+	}
+	b.entity.Policies = dedupedPolicies
 	return b
 }
 
@@ -134,14 +142,24 @@ func (b *EntityBuilder) WithDisabled(disabled bool) *EntityBuilder {
 	if b.err != nil {
 		return b
 	}
+	if b.entity.Disabled != disabled {
+		b.modifiedFields = append(b.modifiedFields, "disabled")
+	}
 	b.entity.Disabled = disabled
 	return b
 }
 
 // WithMetadata sets the metadata for the entity.
+// The original entity's value for duplicate_of_canonical_id will be preserved.
 func (b *EntityBuilder) WithMetadata(metadata map[string]string) *EntityBuilder {
 	if b.err != nil {
 		return b
+	}
+	if value, ok := b.entity.Metadata[duplicateCanonicalIDMetadataKey]; ok {
+		metadata[duplicateCanonicalIDMetadataKey] = value
+	}
+	if !strutil.EqualStringMaps(b.entity.Metadata, metadata) {
+		b.modifiedFields = append(b.modifiedFields, "metadata")
 	}
 	b.entity.Metadata = metadata
 	return b
@@ -161,6 +179,10 @@ func (b *EntityBuilder) Build(ctx context.Context) (*logical.Response, error) {
 	// If any previous step set an error, return it immediately.
 	if b.err != nil {
 		return logical.ErrorResponse(b.err.Error()), nil
+	}
+
+	if err := b.store.scimResourceCheck(ctx, b.entity, b.originalSCIMID, b.isNew, b.modifiedFields); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
 	}
 
 	// Sanitize and persist the entity
@@ -201,9 +223,6 @@ func (b *EntityBuilder) FromFieldData(ctx context.Context, d *framework.FieldDat
 	if id, ok := d.GetOk("id"); ok {
 		b.WithID(id.(string))
 	}
-	if externalID, ok := d.GetOk("external_id"); ok {
-		b.WithExternalID(ctx, externalID.(string))
-	}
 	if name, ok := d.GetOk("name"); ok {
 		b.WithName(ctx, name.(string))
 	}
@@ -242,7 +261,51 @@ func (b *EntityBuilder) Upsert(ctx context.Context) (*identity.Entity, error) {
 	return b.entity, nil
 }
 
+// validateEntityNamePathSelectors ensures the id selector cannot retarget an
+// entity/name update away from the entity referenced by the path name.
+func (i *IdentityStore) validateEntityNamePathSelectors(ctx context.Context, d *framework.FieldData) *logical.Response {
+	rawName, ok := d.GetOk("name")
+	if !ok || rawName.(string) == "" {
+		return nil
+	}
+	rawID, hasID := d.GetOk("id")
+	if !hasID || rawID.(string) == "" {
+		return nil
+	}
+
+	entityByName, err := i.MemDBEntityByName(ctx, rawName.(string), true)
+	if err != nil {
+		return logical.ErrorResponse(err.Error())
+	}
+	if entityByName == nil || entityByName.ID != rawID.(string) {
+		return logical.ErrorResponse("invalid id for entity name path")
+	}
+	return nil
+}
+
+// EntityUpdateCommon creates or updates an entity from request field data. Returns (nil, nil) when
+// no changes are needed, which is the correct idempotent behavior for this operation.
 func (i *IdentityStore) EntityUpdateCommon(ctx context.Context, d *framework.FieldData) (*logical.Response, error) {
+	return NewEntityBuilder(i).
+		FromFieldData(ctx, d).
+		Build(ctx)
+}
+
+// EntityIDUpdateCommon creates or updates an entity from the entity/id path
+// after validating that selector fields cannot retarget the addressed entity.
+func (i *IdentityStore) EntityIDUpdateCommon(ctx context.Context, d *framework.FieldData) (*logical.Response, error) {
+	return NewEntityBuilder(i).
+		FromFieldData(ctx, d).
+		Build(ctx)
+}
+
+// EntityNameUpdateCommon creates or updates an entity from the entity/name path
+// after validating that selector fields cannot retarget the addressed entity.
+func (i *IdentityStore) EntityNameUpdateCommon(ctx context.Context, d *framework.FieldData) (*logical.Response, error) {
+	if resp := i.validateEntityNamePathSelectors(ctx, d); resp != nil {
+		return resp, nil
+	}
+
 	return NewEntityBuilder(i).
 		FromFieldData(ctx, d).
 		Build(ctx)

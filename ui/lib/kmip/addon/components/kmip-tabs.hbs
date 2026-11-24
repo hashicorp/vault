@@ -1,0 +1,36 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if @configRoute}}
+  <Mount::ConfigureTabs
+    @configRoute={{@configRoute}}
+    @displayName="KMIP"
+    @path={{@path}}
+    @externalRoute="secretsGeneralSettingsConfiguration"
+  />
+{{else}}
+  <nav class="tabs">
+    <ul>
+      {{#if @isCredentials}}
+        <li>
+          <LinkTo @route="credentials.index" @models={{array @scope @role}} data-test-kmip-link-credentials="true">
+            Credentials
+          </LinkTo>
+        </li>
+        <li>
+          <LinkTo @route="role" @models={{array @scope @role}} data-test-kmip-link-role-details="true">
+            Details
+          </LinkTo>
+        </li>
+      {{else}}
+        <li>
+          <LinkTo @route="scopes.index" data-test-kmip-tab="scopes">
+            Scopes
+          </LinkTo>
+        </li>
+      {{/if}}
+    </ul>
+  </nav>
+{{/if}}

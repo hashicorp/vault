@@ -1,0 +1,3 @@
+```release-note:improvement
+events (enterprise): Forward event notifications from primary to secondary clusters
+```

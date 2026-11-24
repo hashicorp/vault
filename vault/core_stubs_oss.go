@@ -8,11 +8,7 @@ package vault
 import (
 	"context"
 	"fmt"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
-
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
 func (c *Core) entInitWALPassThrough() func() {
 	return nil
@@ -36,6 +32,10 @@ func (c *Core) EntGetLicenseState() (*LicenseState, error) {
 
 func (c *Core) EntGetLicense() (string, error) {
 	return "", nil
+}
+
+func (c *Core) EntReloadLicenseAndConfig(mockLicenseConfigChange *LicensingEntitlementSelectionConfig) error {
+	return nil
 }
 
 func (c *Core) EntReloadLicense() error {
@@ -110,6 +110,10 @@ func (c *Core) GetCurrentWALHeader() string {
 	return ""
 }
 
+func (c *Core) IsReplicated(secondaryID, namespacePath, mountPathRelative string) bool {
+	return false
+}
+
 func (c *Core) SecretsSyncLicensedActivated() bool { return false }
 
 func (c *Core) IsMultisealEnabled() bool { return false }
@@ -123,6 +127,8 @@ func (c *Core) GetReplicationLagMillisIgnoreErrs() int64 { return 0 }
 func (c *Core) ReloadOverloadController() {}
 
 func (c *Core) EntSetupUIDefaultAuth(ctx context.Context) error { return nil }
+
+func (c *Core) EntSetupUIChecklistState() {}
 
 // entGetPluginCacheDir returns empty string and an error indicating that this is an
 // enterprise-only feature. This is used to prevent the use of the plugin cache
@@ -149,11 +155,9 @@ func (c *Core) IsMountTypeAllowed(mountType string) bool {
 	return true
 }
 
-func (c *Core) GetPkiCertificateCounter() logical.PkiCertificateCounter {
-	return logical.NewNullPkiCertificateCounter()
-}
-
 // IsFlagEnabled returns true if the named flag is set in HCL config feature_flags.
 func (c *Core) IsFlagEnabled(name string) bool {
 	return false
 }
+
+func (c *Core) entStartSecureHubConnect(ctx context.Context) {}

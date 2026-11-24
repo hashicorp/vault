@@ -111,6 +111,11 @@ func MarshalSealWrappedValue(wrappedEntryValue *SealWrappedValue) ([]byte, error
 		return wrappedEntryValue.marshal()
 	}
 
+	// Why do we serialize a BlobInfo in this case? We do it because we don't want to change
+	// the stored structure on a cluster unless it is really necessary to do so. The reason
+	// for that is to avoid possible complications during an upgrade from a pre seal HA version
+	// of Vault (versions before 1.15). See VAULT-45755.
+
 	return proto.Marshal(wrappedEntryValue.value.Slots[0])
 }
 

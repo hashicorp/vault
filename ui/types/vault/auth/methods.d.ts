@@ -41,6 +41,12 @@ interface AuthResponseDataKey extends SharedAuthResponseData {
 }
 
 // METHOD SPECIFIC RESPONSES
+export interface CertLoginApiResponse extends ApiResponse {
+  auth: AuthResponseAuthKey & {
+    metadata: { cert_name: string; common_name: string };
+  };
+}
+
 export interface GithubLoginApiResponse extends ApiResponse {
   auth: AuthResponseAuthKey & {
     metadata: { org: string; username: string };
@@ -59,10 +65,6 @@ export interface OidcApiResponse extends ApiResponse {
 
 export interface JwtOidcAuthUrlResponse extends ApiResponse {
   data: { auth_url: string };
-}
-
-export interface OktaVerifyApiResponse extends ApiResponse {
-  data: { correct_answer: number };
 }
 
 export interface SamlLoginApiResponse extends ApiResponse {
@@ -90,8 +92,16 @@ export interface UsernameLoginResponse extends ApiResponse {
 export type UserLockoutConfig = {
   lockout_threshold?: string;
   lockout_duration?: string;
-  lockout_counter_reset?: string;
+  lockout_counter_reset_duration?: string;
   lockout_disable?: boolean;
+};
+
+// The lockout settings as returned for an existing mount, with durations in seconds.
+export type UserLockoutConfigResponse = {
+  user_lockout_threshold?: number;
+  user_lockout_duration?: number;
+  user_lockout_counter_reset_duration?: number;
+  user_lockout_disable?: boolean;
 };
 
 export type AuthMethodFormData = AuthEnableMethodRequest & {

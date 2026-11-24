@@ -5,6 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 
 /**
  * This route is responsible for fetching all configuration data.
@@ -30,7 +31,9 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   fetchConfig(type, id) {
     // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
-    switch (type) {
+    // Use effective type to handle external plugin mappings
+    const effectiveType = getEffectiveEngineType(type);
+    switch (effectiveType) {
       case 'aws':
         return this.fetchAwsConfigs(id);
       case 'azure':
@@ -48,15 +51,13 @@ export default class SecretsBackendConfigurationRoute extends Route {
       const error = await this.parseApiError(e);
       if (error.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
-        return {};
+        return undefined;
       }
       throw error;
     };
 
-    const { data: configRoot } = await this.api.secrets
-      .awsReadRootIamCredentialsConfiguration(path)
-      .catch(handleError);
-    const { data: configLease } = await this.api.secrets.awsReadLeaseConfiguration(path).catch(handleError);
+    const configRoot = await this.api.secrets.awsReadRootIamCredentialsConfiguration(path).catch(handleError);
+    const configLease = await this.api.secrets.awsReadLeaseConfiguration(path).catch(handleError);
 
     const WIF_FIELDS = ['role_arn', 'identity_token_audience', 'identity_token_ttl'];
     const issuer = await this.checkIssuer(configRoot, WIF_FIELDS);
@@ -71,9 +72,17 @@ export default class SecretsBackendConfigurationRoute extends Route {
       const { data: azureConfig } = await this.api.secrets.azureReadConfiguration(path);
       const WIF_FIELDS = ['identity_token_audience', 'identity_token_ttl'];
       const issuer = await this.checkIssuer(azureConfig, WIF_FIELDS);
-      // azure config endpoint returns 200 with default values if engine has not been configured yet
-      // all values happen to be falsy so we can just check if any are truthy
-      const isConfigured = Object.values(azureConfig).some((value) => value);
+      // azure config endpoint returns 200 with default values if engine has not been configured yet.
+      // Check for actual configuration fields (subscription_id, tenant_id, client_id, environment, root_password_ttl, WIF fields).
+      const CONFIG_FIELDS = [
+        'subscription_id',
+        'tenant_id',
+        'client_id',
+        'environment',
+        'root_password_ttl',
+        ...WIF_FIELDS,
+      ];
+      const isConfigured = azureConfig && CONFIG_FIELDS.some((field) => Boolean(azureConfig[field]));
       if (isConfigured) {
         return Object.assign({}, azureConfig, issuer);
       }

@@ -1,0 +1,26 @@
+/**
+ * Copyright IBM Corp. 2025, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.ssu-cluster-replication {
+  padding: 16px;
+}
+
+.ssu-cluster-replication__list-row__badge {
+  margin: 0 0.25rem;
+  text-transform: capitalize;
+}
+
+.ssu-cluster-replication__list-row__title {
+  display: block;
+  margin: 16px 0;
+}
+
+.ssu-cluster-replication__list-row__title:first-of-type {
+  margin-top: 32px;
+}
+
+.ssu-cluster-replication__list-row__title:last-of-type {
+  margin-bottom: 0;
+}

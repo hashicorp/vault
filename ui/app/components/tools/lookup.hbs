@@ -3,16 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Lookup Token
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header
+  @title="Lookup token"
+  @description="Inspect the metadata of a response-wrapping token, such as its creation time and TTL without revealing the underlying secret."
+>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.lookupData}}
-  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  <div class="box is-fullwidth is-paddingless is-marginless">
     {{#each-in this.lookupData as |key value|}}
       {{#let (if (eq key "creation_ttl") "Creation TTL" (to-label key)) as |label|}}
         <InfoTableRow @label={{label}} @value={{value}} />
@@ -28,7 +29,7 @@
   </div>
 {{else}}
   <form {{on "submit" this.handleSubmit}}>
-    <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="box is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="lookup" />
       <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field">

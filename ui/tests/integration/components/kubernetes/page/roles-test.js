@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
@@ -55,8 +55,10 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   test('it should render tab page header and config cta', async function (assert) {
     this.promptConfig = true;
     await this.renderComponent();
-    assert.dom('.title svg').hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
-    assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
+    assert
+      .dom(GENERAL.icon('kubernetes-color'))
+      .hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('kubernetes-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-roles-action]')
       .doesNotExist('Create role', 'Toolbar action does not render when not configured');

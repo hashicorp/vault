@@ -3,23 +3,27 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{this.title}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{this.title}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label=this.title)}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
-<EmptyState
-  @title="Upgrade to use {{this.featureName}}"
-  @message="You will need {{this.minimumEdition}} with {{this.featureName}} included to use this feature."
->
-  <Hds::Link::Standalone
-    @icon="chevron-right"
-    @iconPosition="trailing"
-    @text="Vault Enterprise"
-    @href="https://www.hashicorp.com/products/vault/enterprise?source=vaultui_{{this.featureName}}"
-    data-test-upgrade-link
+<Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+  <A.Header @title="Upgrade to use {{this.featureName}}" @titleTag="h2" data-test-empty-state-title />
+  <A.Body
+    @text="You will need {{this.minimumEdition}} with {{this.featureName}} included to use this feature."
+    data-test-empty-state-message
   />
-</EmptyState>
+  <A.Footer data-test-empty-state-actions as |F|>
+    <F.LinkStandalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Vault Enterprise"
+      @href="https://www.hashicorp.com/products/vault/enterprise?source=vaultui_{{this.featureName}}"
+      data-test-upgrade-link
+    />
+  </A.Footer>
+</Hds::ApplicationState>

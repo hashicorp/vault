@@ -20,7 +20,6 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	// Set up the cluster.  This will trigger an Initialize(); we sleep briefly
 	// awaiting its completion.
 	cluster := setupAwsTestCluster(t, ctx)
-	defer cluster.Cleanup()
 	time.Sleep(time.Second)
 	core := cluster.Cores[0]
 
@@ -112,12 +111,10 @@ func setupAwsTestCluster(t *testing.T, _ context.Context) *vault.TestCluster {
 		HandlerFunc: vaulthttp.Handler,
 	})
 
-	cluster.Start()
 	if len(cluster.Cores) != 1 {
 		t.Fatalf("expected exactly one core")
 	}
 	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
 
 	// load the auth plugin
 	if err := core.Client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{

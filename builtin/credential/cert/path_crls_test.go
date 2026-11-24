@@ -5,12 +5,18 @@ package cert
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -55,14 +62,87 @@ func TestCRLFetch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error: %s", err)
 	}
-	connState, err := testConnState("test-fixtures/keys/cert.pem",
-		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+
+	// Generate CA certificate
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
-	caPEM, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+
+	caTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "Test CA",
+		},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	caCertBytes, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
 	require.NoError(t, err)
-	caKeyPEM, err := ioutil.ReadFile("test-fixtures/keys/key.pem")
+
+	caCert, err := x509.ParseCertificate(caCertBytes)
 	require.NoError(t, err)
-	certPEM, err := ioutil.ReadFile("test-fixtures/keys/cert.pem")
+
+	caPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caCertBytes,
+	})
+
+	caKeyBytes, err := x509.MarshalECPrivateKey(caKey)
+	require.NoError(t, err)
+
+	caKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: caKeyBytes,
+	})
+
+	// Generate client certificate
+	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	clientTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+		},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost", "test.example.com"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	clientCertBytes, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, &clientKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: clientCertBytes,
+	})
+
+	clientKeyBytes, err := x509.MarshalECPrivateKey(clientKey)
+	require.NoError(t, err)
+
+	clientKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: clientKeyBytes,
+	})
+
+	// Create tls.Certificate from PEM data
+	tlsCert, err := tls.X509KeyPair(certPEM, clientKeyPEM)
+	require.NoError(t, err)
+
+	// Create CA cert pool
+	rootCAs := x509.NewCertPool()
+	rootCAs.AppendCertsFromPEM(caPEM)
+
+	// Create connection state with generated certificates
+	connState, err := testConnStateWithCert(tlsCert, rootCAs)
+	require.NoError(t, err)
 
 	caBundle, err := certutil.ParsePEMBundle(string(caPEM))
 	require.NoError(t, err)
@@ -80,7 +160,7 @@ func TestCRLFetch(t *testing.T) {
 		Number:             big.NewInt(1),
 		ThisUpdate:         time.Now(),
 		NextUpdate:         time.Now().Add(50 * time.Millisecond),
-		SignatureAlgorithm: x509.SHA1WithRSA,
+		SignatureAlgorithm: x509.ECDSAWithSHA256,
 	}
 
 	var crlBytesLock sync.Mutex
@@ -203,4 +283,97 @@ func TestCRLFetch(t *testing.T) {
 		}
 		return nil
 	})
+
+	// Set MLDSA CRL. Register an ML-DSA CA as a trusted cert so we can show
+	// that an ML-DSA client can log in before the CRL is loaded and is
+	// rejected once the CRL revokes its serial.
+	ca := newMLDSATestCert(t, mldsa.MLDSA44(), "test-ca", true, nil)
+	clientCert := newMLDSATestCert(t, mldsa.MLDSA65(), "test-client", false, &ca)
+	crlDER := newMLDSATestCRL(t, ca, false, clientCert.Template.SerialNumber)
+
+	mldsaCRLServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(crlDER)
+	}))
+	t.Cleanup(mldsaCRLServer.Close)
+
+	mldsaRootCAs := x509.NewCertPool()
+	require.True(t, mldsaRootCAs.AppendCertsFromPEM(ca.Pem))
+	mldsaConnState, err := testConnStateWithCert(clientCert.TLSCert, mldsaRootCAs)
+	require.NoError(t, err)
+	mldsaLoginReq := &logical.Request{
+		Connection: &logical.Connection{ConnState: &mldsaConnState},
+		Storage:    storage,
+		Auth:       &logical.Auth{},
+	}
+
+	resp, err = b.pathCertWrite(context.Background(), req, &framework.FieldData{
+		Raw: map[string]interface{}{
+			"name":        "mldsa",
+			"certificate": string(ca.Pem),
+			"policies":    "foo,bar",
+		},
+		Schema: pathCerts(b).Fields,
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError(), "got error: %#v", resp)
+
+	resp, err = b.pathLogin(context.Background(), mldsaLoginReq, empty_login_fd)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.False(t, resp.IsError(), "ML-DSA login should succeed before the CRL is loaded: %#v", resp)
+
+	fd = &framework.FieldData{
+		Raw: map[string]interface{}{
+			"name": "testcrl",
+			"url":  mldsaCRLServer.URL,
+		},
+		Schema: pathCRLs(b).Fields,
+	}
+	resp, err = b.pathCRLWrite(context.Background(), req, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatalf("got error: %#v", *resp)
+	}
+
+	b.crlUpdateMutex.Lock()
+	mldsaSerials := b.crls["testcrl"].Serials
+	b.crlUpdateMutex.Unlock()
+	require.Len(t, mldsaSerials, 1)
+	require.Contains(t, mldsaSerials, clientCert.Template.SerialNumber.String())
+
+	resp, err = b.pathLogin(context.Background(), mldsaLoginReq, empty_login_fd)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.True(t, resp.IsError(), "ML-DSA login should fail once its serial is revoked: %#v", resp)
+}
+
+func newMLDSATestCRL(t *testing.T, issuer certhelpers.Certificate, pemEncode bool, serials ...*big.Int) []byte {
+	t.Helper()
+
+	entries := make([]x509.RevocationListEntry, 0, len(serials))
+	for _, serial := range serials {
+		entries = append(entries, x509.RevocationListEntry{
+			SerialNumber:   serial,
+			RevocationTime: time.Now(),
+		})
+	}
+
+	crlBytes, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
+		Number:                    big.NewInt(1),
+		ThisUpdate:                time.Now(),
+		NextUpdate:                time.Now().Add(24 * time.Hour),
+		RevokedCertificateEntries: entries,
+	}, issuer.TLSCert.Leaf, issuer.TLSCert.PrivateKey.(crypto.Signer))
+	require.NoError(t, err)
+
+	parsed, err := x509.ParseRevocationList(crlBytes)
+	require.NoError(t, err)
+	require.NoError(t, parsed.CheckSignatureFrom(issuer.TLSCert.Leaf), "CRL should carry a valid ML-DSA signature")
+
+	if !pemEncode {
+		return crlBytes
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: crlBytes})
 }

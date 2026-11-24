@@ -5,7 +5,6 @@ package logging
 
 import (
 	"errors"
-	"os"
 	"reflect"
 	"testing"
 )
@@ -39,9 +38,6 @@ func Test_ParseLogFormat(t *testing.T) {
 }
 
 func Test_ParseEnv_VAULT_LOG_FORMAT(t *testing.T) {
-	oldVLF := os.Getenv("VAULT_LOG_FORMAT")
-	defer os.Setenv("VAULT_LOG_FORMAT", oldVLF)
-
 	testParseEnvLogFormat(t, "VAULT_LOG_FORMAT")
 }
 
@@ -59,7 +55,7 @@ func testParseEnvLogFormat(t *testing.T, name string) {
 	}
 
 	for i, e := range env {
-		os.Setenv(name, e)
+		t.Setenv(name, e)
 		if lf := ParseEnvLogFormat(); formats[i] != lf {
 			t.Errorf("expected %s, got %s", formats[i], lf)
 		}

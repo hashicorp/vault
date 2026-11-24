@@ -9,7 +9,7 @@ import { fillInLoginFields, formatAuthMounts } from 'vault/tests/helpers/auth/au
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { module, test } from 'qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import setupTestContext from './setup-test-context';
 import sinon from 'sinon';
@@ -126,6 +126,20 @@ module('Integration | Component | auth | page | listing visibility', function (h
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my_oidc/');
+      assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+      assert.dom(GENERAL.backButton).doesNotExist();
+    });
+
+    test('it treats direct link as only mount when multiple mounts are tuned with listing_visibility="unauth"', async function (assert) {
+      this.directLinkData = { path: 'userpass2/', type: 'userpass' };
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.authForm('userpass')).exists;
+      assert.dom(AUTH_FORM.tabBtn('userpass')).hasText('Userpass', 'it renders tab for type');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('userpass2/');
       assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();

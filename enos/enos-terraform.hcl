@@ -11,6 +11,7 @@ terraform_cli "dev" {
   provider_installation {
     dev_overrides = {
       "registry.terraform.io/hashicorp-forge/enos" = try(abspath("../../terraform-provider-enos/dist"), null)
+      "registry.terraform.io/hashicorp-forge/fyre" = try(abspath("../../terraform-provider-fyre/dist"), null)
     }
     direct {}
   }
@@ -31,6 +32,25 @@ terraform "default" {
     enos = {
       source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.0"
+    }
+  }
+}
+
+terraform "fyre" {
+  required_version = ">= 1.2.0"
+
+  required_providers {
+    docker = {
+      source = "kreuzwerker/docker"
+    }
+
+    enos = {
+      source  = "registry.terraform.io/hashicorp-forge/enos"
+      version = ">= 0.4.0"
+    }
+
+    fyre = {
+      source = "registry.terraform.io/hashicorp-forge/fyre"
     }
   }
 }

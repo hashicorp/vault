@@ -52,6 +52,17 @@ type TokenParams struct {
 	AliasMetadata map[string]string `json:"alias_metadata" mapstructure:"alias_metadata"`
 }
 
+func parseAndValidateTokenPolicies(policiesRaw interface{}) ([]string, error) {
+	policies := policyutil.ParsePolicies(policiesRaw)
+	for _, policy := range policies {
+		if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+			return nil, fmt.Errorf("invalid token policy %q: %w", policy, err)
+		}
+	}
+
+	return policies, nil
+}
+
 // AddTokenFields adds fields to an existing role. It panics if it would
 // overwrite an existing field.
 func AddTokenFields(m map[string]*framework.FieldSchema) {
@@ -76,7 +87,7 @@ func AddTokenFieldsWithAllowList(m map[string]*framework.FieldSchema, allowed []
 
 // TokenFields provides a set of field schemas for the parameters
 func TokenFields() map[string]*framework.FieldSchema {
-	return entTokenFields(map[string]*framework.FieldSchema{
+	return map[string]*framework.FieldSchema{
 		"token_bound_cidrs": {
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
@@ -160,7 +171,16 @@ func TokenFields() map[string]*framework.FieldSchema {
 				Group: "Tokens",
 			},
 		},
-	})
+
+		"alias_metadata": {
+			Type:        framework.TypeKVPairs,
+			Description: "The metadata to be tied to generated entity alias. This should be a list or map containing the metadata in key value pairs",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "Token Alias Metadata",
+				Group: "Tokens",
+			},
+		},
+	}
 }
 
 // ParseTokenFields provides common field parsing functionality into a TokenFields struct
@@ -196,7 +216,11 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	}
 
 	if policiesRaw, ok := d.GetOk("token_policies"); ok {
-		t.TokenPolicies = policiesRaw.([]string)
+		policies, err := parseAndValidateTokenPolicies(policiesRaw)
+		if err != nil {
+			return err
+		}
+		t.TokenPolicies = policies
 	}
 
 	if tokenTypeRaw, ok := d.GetOk("token_type"); ok {
@@ -241,7 +265,10 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		return errors.New("'token_ttl' cannot be greater than 'token_max_ttl'")
 	}
 
-	t.entParseTokenFields(d)
+	t.AliasMetadata = make(map[string]string)
+	if tokenMetadataRaw, ok := d.GetOk("alias_metadata"); ok {
+		t.AliasMetadata = tokenMetadataRaw.(map[string]string)
+	}
 
 	return nil
 }
@@ -266,7 +293,10 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 		m["token_bound_cidrs"] = []string{}
 	}
 
-	t.entPopulateTokenData(m)
+	m["alias_metadata"] = map[string]string{}
+	if len(t.AliasMetadata) > 0 {
+		m["alias_metadata"] = t.AliasMetadata
+	}
 }
 
 // PopulateTokenAuth populates Auth with parameters
@@ -282,7 +312,17 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.TTL = t.TokenTTL
 	auth.NumUses = t.TokenNumUses
 
-	t.entPopulateTokenAuth(auth)
+	if len(t.AliasMetadata) > 0 && auth.Alias != nil {
+		if auth.Alias.CustomMetadata == nil {
+			auth.Alias.CustomMetadata = map[string]string{}
+		}
+		for k, v := range t.AliasMetadata {
+			if _, ok := auth.Alias.CustomMetadata[k]; !ok {
+				// Do not override metadata with the same key added by the caller
+				auth.Alias.CustomMetadata[k] = v
+			}
+		}
+	}
 }
 
 func DeprecationText(param string) string {
@@ -336,7 +376,11 @@ func upgradeStringSliceValue(d *framework.FieldData, oldKey, newKey string, oldV
 		if ok {
 			// Special case: if we're looking at "token_policies" parse the policies
 			if newKey == "token_policies" {
-				*oldVal = policyutil.ParsePolicies(raw)
+				policies, err := parseAndValidateTokenPolicies(raw)
+				if err != nil {
+					return err
+				}
+				*oldVal = policies
 			} else {
 				*oldVal = raw.([]string)
 			}

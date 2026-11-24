@@ -1,0 +1,3 @@
+```release-note:bug
+secret/pki: Fix ACME order finalize race condition where concurrent requests could double-issue certificates and orphan one from order-keyed tracking
+```

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -15,9 +15,10 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
+	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -56,15 +57,15 @@ type CreateBackportReq struct {
 	// If the directory is configured it either must exist. When unset, a
 	// temporary directory will be created and used automatically.
 	RepoDir string
-
-	// ReleaseVersionConfigPath is the path to .release/versions.hcl. We use this
-	// file to determine which branches are active so that we can automatically
-	// determine which origins to backport depending on the given tags.
-	ReleaseVersionConfigPath string
-	// ReleaseRecurseDepth defined how many directories back we're allowed to
-	// scan to search for .release/versions.hcl. This is incompatible with
-	// ReleaseVersionConfigPath.
-	ReleaseRecurseDepth uint
+	// VersionsDecodeRes is the result of decoding the versions configuration.
+	// We use this to determine which branches are active so that we can
+	// automatically determine which origins to backport depending on the given
+	// tags.
+	VersionsDecodeRes *releases.DecodeRes
+	// DecodeRes is the result of decoding the pipeline configuration. We use this
+	// for changed file  groupings so we know which files to exclude when doing
+	// and enterprise -> ce backport.
+	ConfigDecodeRes *config.DecodeRes
 
 	// CEExclude are changed files groups for files that ought to be excluded
 	// when creating CE backports. E.g. ["enterprise"]
@@ -85,6 +86,14 @@ type CreateBackportReq struct {
 	// BackportLabelPrefix is the backport label prefix. E.g. "backport". This
 	// should only be used for testing before the new workflow is active.
 	BackportLabelPrefix string
+
+	// BackportFailedLabel is the label to apply to the original pull request
+	// when one or more backport attempts fail. E.g. "backport-failed". When
+	// empty, no label is applied.
+	BackportFailedLabel string
+
+	// WorkflowURL is the URL of the GitHub Actions workflow run triggering the backport.
+	WorkflowURL string
 }
 
 // NewCreateBackportReqOpt is a functional option to set fields when calling
@@ -121,16 +130,13 @@ type CreateBackportAttempt struct {
 // CreateBackportPRReq.
 func NewCreateBackportReq(opts ...NewCreateBackportReqOpt) *CreateBackportReq {
 	req := &CreateBackportReq{
-		Owner:               "hashicorp",
-		Repo:                "vault-enterprise",
-		ReleaseRecurseDepth: 3,
-		CEExclude:           changed.FileGroups{changed.FileGroupEnterprise},
-		CEBranchPrefix:      "ce",
-		CEAllowInactiveGroups: changed.FileGroups{
-			changed.FileGroupChangelog,
-		},
-		BaseOrigin:          "origin",
-		BackportLabelPrefix: "backport",
+		Owner:                 "hashicorp",
+		Repo:                  "vault-enterprise",
+		CEAllowInactiveGroups: changed.FileGroups{},
+		CEExclude:             changed.FileGroups{changed.FileGroup("enterprise")},
+		CEBranchPrefix:        "ce",
+		BaseOrigin:            "origin",
+		BackportLabelPrefix:   "backport",
 	}
 
 	for _, opt := range opts {
@@ -147,80 +153,95 @@ func WithCreateBackportReqOwner(owner string) NewCreateBackportReqOpt {
 	}
 }
 
-// WithCreateBrackportReqRepo sets the Repo
-func WithCreateBrackportReqRepo(repo string) NewCreateBackportReqOpt {
+// WithCreateBackportReqRepo sets the Repo
+func WithCreateBackportReqRepo(repo string) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.Repo = repo
 	}
 }
 
-// WithCreateBrackportReqRepoDir sets the RepoDir
-func WithCreateBrackportReqRepoDir(dir string) NewCreateBackportReqOpt {
+// WithCreateBackportReqRepoDir sets the RepoDir
+func WithCreateBackportReqRepoDir(dir string) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.RepoDir = dir
 	}
 }
 
-// WithCreateBrackportReqPullNumber sets the PullNumber
-func WithCreateBrackportReqPullNumber(number uint) NewCreateBackportReqOpt {
+// WithCreateBackportReqPullNumber sets the PullNumber
+func WithCreateBackportReqPullNumber(number uint) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.PullNumber = number
 	}
 }
 
-// WithCreateBrackportReqBaseOrigin sets the BaseOrigin
-func WithCreateBrackportReqBaseOrigin(origin string) NewCreateBackportReqOpt {
+// WithCreateBackportReqBaseOrigin sets the BaseOrigin
+func WithCreateBackportReqBaseOrigin(origin string) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.BaseOrigin = origin
 	}
 }
 
-// WithCreateBrackportReqReleaseRecurseDepth sets the ReleaseRecurseDepth
-func WithCreateBrackportReqReleaseRecurseDepth(depth uint) NewCreateBackportReqOpt {
+// WithCreateBackportReqVersionsDecodeRes sets the VersionsDecodeRes
+func WithCreateBackportReqVersionsDecodeRes(res *releases.DecodeRes) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
-		req.ReleaseRecurseDepth = depth
+		req.VersionsDecodeRes = res
 	}
 }
 
-// WithCreateBrackportReqCEExclude sets the CEExclude
-func WithCreateBrackportReqCEExclude(exclude changed.FileGroups) NewCreateBackportReqOpt {
+// WithCreateBackportReqCEExclude sets the CEExclude
+func WithCreateBackportReqCEExclude(exclude changed.FileGroups) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.CEExclude = exclude
 	}
 }
 
-// WithCreateBrackportReqCEBranchPrefix sets the CEBranchPrefix
-func WithCreateBrackportReqCEBranchPrefix(prefix string) NewCreateBackportReqOpt {
+// WithCreateBackportReqCEBranchPrefix sets the CEBranchPrefix
+func WithCreateBackportReqCEBranchPrefix(prefix string) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.CEBranchPrefix = prefix
 	}
 }
 
-// WithCreateBrackportReqAllowInactiveGroups sets the CEAllowInactiveGroups
-func WithCreateBrackportReqAllowInactiveGroups(groups changed.FileGroups) NewCreateBackportReqOpt {
+// WithCreateBackportReqConfigDecodeRes sets the DecodeRes
+func WithCreateBackportReqConfigDecodeRes(res *config.DecodeRes) NewCreateBackportReqOpt {
+	return func(req *CreateBackportReq) {
+		req.ConfigDecodeRes = res
+	}
+}
+
+// WithCreateBackportReqAllowInactiveGroups sets the CEAllowInactiveGroups
+func WithCreateBackportReqAllowInactiveGroups(groups changed.FileGroups) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.CEAllowInactiveGroups = groups
 	}
 }
 
-// WithCreateBrackportReqEntBranchPrefix sets the EntBranchPrefix
-func WithCreateBrackportReqEntBranchPrefix(prefix string) NewCreateBackportReqOpt {
+// WithCreateBackportReqEntBranchPrefix sets the EntBranchPrefix
+func WithCreateBackportReqEntBranchPrefix(prefix string) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.EntBranchPrefix = prefix
 	}
 }
 
-// WithCreateBrackportReqBackportLabelPrefix sets the BackportLabelPrefix
-func WithCreateBrackportReqBackportLabelPrefix(prefix string) NewCreateBackportReqOpt {
+// WithCreateBackportReqBackportLabelPrefix sets the BackportLabelPrefix
+func WithCreateBackportReqBackportLabelPrefix(prefix string) NewCreateBackportReqOpt {
 	return func(req *CreateBackportReq) {
 		req.BackportLabelPrefix = prefix
+	}
+}
+
+// WithCreateBackportReqBackportFailedLabel sets the BackportFailedLabel, which
+// is applied to the original pull request when one or more backport attempts fail.
+func WithCreateBackportReqBackportFailedLabel(label string) NewCreateBackportReqOpt {
+	return func(req *CreateBackportReq) {
+		req.BackportFailedLabel = label
 	}
 }
 
 // Run runs the backport request to create backports for every target branch
 // as needed.
 //
-// If the base references is to an enteprise branch, that is, the base reference
+// If the base references is to an enterprise branch, that is, the base reference
 // branch does not contain the CEBranchPrefix, then a backport to the
 // corresponding CE branch is assumed and will be created.
 //
@@ -229,13 +250,13 @@ func WithCreateBrackportReqBackportLabelPrefix(prefix string) NewCreateBackportR
 //
 // Backport labels should be listed in the same schema as .release/versions.hcl:
 // E.g. "release/1.19.x". The correct backport branches will be used depending
-// on whether or not base branch of the PR is enteprise or CE.
+// on whether or not base branch of the PR is enterprise or CE.
 //
 // Enterprise branches will only ever backport to the corresponding ce branch
 // and to other enterprise branches. When those enterprise branches are merged
 // we'll create the CE backports.
 //
-// There are many factors to conside when backporting to a CE branch. The
+// There are many factors to consider when backporting to a CE branch. The
 // request will automatically inspect the changed files of a PR to determine
 // if the PR contains non-enterprise files that need to be backported. In the
 // event we've only changed enterprise files we'll skip the CE backport.
@@ -245,7 +266,7 @@ func WithCreateBrackportReqBackportLabelPrefix(prefix string) NewCreateBackportR
 // We also factor in whether or not a CE branch is "active". If the branch is
 // inactive we'll skip backporting unless the change includes docs, pipeline
 // changes, or README changes. This allows docs authors to write docs against
-// enteprise branches and have them backported without having to do it manually.
+// enterprise branches and have them backported without having to do it manually.
 //
 // We also do our best to update the source pull request with a comment that
 // outlines each backport and its status.
@@ -263,14 +284,13 @@ func (r *CreateBackportReq) Run(
 ) (res *CreateBackportRes) {
 	res = &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{}}
 
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("owner", r.Owner),
 		slog.String("repo", r.Repo),
 		slog.String("repo-dir", r.RepoDir),
 		slog.Uint64("pull-number", uint64(r.PullNumber)),
 		slog.String("base-origin", r.BaseOrigin),
-		slog.String("config-path", r.ReleaseVersionConfigPath),
-		slog.Uint64("config-path-recurse-depth", uint64(r.ReleaseRecurseDepth)),
 		slog.String("ce-branch-prefix", r.CEBranchPrefix),
 		slog.String("ce-allow-inactive", strings.Join(r.CEAllowInactiveGroups.Groups(), ",")),
 		slog.String("ce-exclude", strings.Join(r.CEExclude.Groups(), ",")),
@@ -299,6 +319,10 @@ func (r *CreateBackportReq) Run(
 		res.Comment, err1 = createPullRequestComment(
 			ctx, github, r.Owner, r.Repo, int(r.PullNumber), res.CommentBody(),
 		)
+
+		// Apply or remove the backport failed label on the original PR depending
+		// on whether any errors occurred during the run.
+		err1 = errors.Join(err1, r.syncBackportFailedLabel(ctx, github, res.Err()))
 
 		// Set our finalized error on our response and also update our returned error
 		res.Error = errors.Join(res.Error, err1)
@@ -343,7 +367,7 @@ func (r *CreateBackportReq) Run(
 	// working directory since the path given could be relative to the original
 	// path.
 	var activeVersions map[string]*releases.Version
-	activeVersions, res.Error = r.getActiveVersions(ctx)
+	activeVersions, res.Error = r.getActiveVersions()
 	if res.Error != nil {
 		return res
 	}
@@ -391,8 +415,10 @@ func (r *CreateBackportReq) Run(
 				Treeish: fmt.Sprintf("%s/%s", r.BaseOrigin, baseRef),
 			})
 			if err != nil {
-				res.Error = errors.Join(res.Error, fmt.Errorf(
-					"resetting repository after failed attempt: %s: %w", resetRes.String(), err),
+				res.Error = errors.Join(
+					res.Error, fmt.Errorf(
+						"resetting repository after failed attempt: %s: %w", resetRes.String(), err,
+					),
 				)
 				// If we can't reset the repository there's no point in trying further
 				// attempts as we must assume something has gone horribly wrong.
@@ -435,6 +461,14 @@ func (r *CreateBackportReq) Validate(ctx context.Context) error {
 		return errors.New("no pull request number or commit SHA has been provided")
 	}
 
+	if err := r.ConfigDecodeRes.Validate(ctx); err != nil {
+		return err
+	}
+
+	if r.ConfigDecodeRes.Config == nil {
+		return errors.New("no pipeline.hcl configuration was provided")
+	}
+
 	if r.CEBranchPrefix == "" {
 		return errors.New("no ce branch prefix has been configured")
 	}
@@ -449,6 +483,16 @@ func (r *CreateBackportReq) Validate(ctx context.Context) error {
 
 	if r.BackportLabelPrefix == "" {
 		return errors.New("no backport label prefix has been configured")
+	}
+
+	// Check for versions decode and validation errors
+	if err := r.VersionsDecodeRes.Validate(ctx); err != nil {
+		return err
+	}
+
+	// Extract and validate VersionsConfig
+	if r.VersionsDecodeRes.Config == nil {
+		return errors.New("no .releases/versions.hcl configuration has been provided")
 	}
 
 	return nil
@@ -479,7 +523,7 @@ func (r *CreateBackportRes) CommentBody() string {
 		return "no backport response has been initialized"
 	}
 
-	t := r.ToTable()
+	t := escapeMarkdownTableColumns(r.ToTable(), 1, 2, 3, 4, 5)
 	err := r.Err()
 	if err == nil {
 		t.SetTitle("Backport workflow completed!")
@@ -542,7 +586,7 @@ func (r *CreateBackportRes) ToTable() table.Writer {
 		if values.PullRequest != nil {
 			row = append(row, values.PullRequest.GetHTMLURL())
 		} else {
-			row = append(row, nil)
+			row = append(row, "")
 		}
 		valErr := ""
 		if values.Error != nil {
@@ -593,7 +637,8 @@ func (r *CreateBackportReq) backportRef(
 	branchName := r.backportBranchNameForRef(ref, prBranch)
 	res.TargetRef = branchName
 	commitSHA := pr.GetMergeCommitSHA()
-	bigCtx := slogctx.Append(ctx,
+	bigCtx := slogctx.Append(
+		ctx,
 		slog.String("target-base-ref", ref),
 		slog.String("target-ref-version", baseRefVersion),
 		slog.String("target-branch", branchName),
@@ -604,7 +649,8 @@ func (r *CreateBackportReq) backportRef(
 	if reason, shouldSkip := r.shouldSkipRef(
 		ctx, baseRefVersion, ref, activeVersions, changedFiles,
 	); shouldSkip {
-		slog.Default().InfoContext(slogctx.Append(bigCtx,
+		slog.Default().InfoContext(slogctx.Append(
+			bigCtx,
 			slog.String("base-ref-version", baseRefVersion),
 			slog.String("target-ref", ref),
 			slog.String("reason", reason),
@@ -656,7 +702,6 @@ func (r *CreateBackportReq) backportRef(
 			Strategy: libgit.MergeStrategyORT,
 			StrategyOptions: []libgit.MergeStrategyOption{
 				libgit.MergeStrategyOptionTheirs,
-				libgit.MergeStrategyOptionIgnoreSpaceChange,
 			},
 		})
 		if err != nil {
@@ -688,24 +733,33 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 
-	prTitle := fmt.Sprintf("Backport %s into %s", pr.GetTitle(), ref)
-	prBody, err := renderEmbeddedTemplate("backport-pr-message.tmpl", struct {
+	// Generate title, removing existing "Backport" prefix to avoid stuttering
+	cleanTitle := pr.GetTitle()
+	if strings.HasPrefix(strings.ToLower(cleanTitle), "backport ") {
+		cleanTitle = strings.TrimSpace(cleanTitle[9:]) // Remove "Backport " prefix
+	}
+	prTitle := fmt.Sprintf("Backport %s into %s", cleanTitle, ref)
+
+	// Choose template based on whether this is a CE backport
+	templateName := "backport-pr-message.tmpl"
+	if r.hasCEPrefix(ref) {
+		templateName = "backport-ce-pr-message.tmpl"
+	}
+
+	prBody, err := renderEmbeddedTemplate(templateName, struct {
 		OriginPullRequest *libgithub.PullRequest
 		Attempt           *CreateBackportAttempt
-	}{pr, res})
+		WorkflowURL       string
+	}{pr, res, r.WorkflowURL})
 	if err != nil {
 		res.Error = fmt.Errorf("creating backport pull request body %w", err)
 		return res
 	}
 	limitedPRBody := limitCharacters(prBody)
-	res.PullRequest, _, err = github.PullRequests.Create(
-		ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
-			Title:    &prTitle,
-			Head:     &branchName,
-			HeadRepo: &r.Repo,
-			Base:     &ref,
-			Body:     &limitedPRBody,
-		},
+
+	// Open as a draft if there was an error, or else proceed normally
+	res.PullRequest, err = r.createBackportPullRequest(
+		ctx, github, prTitle, branchName, ref, limitedPRBody, res.Error != nil,
 	)
 	if err != nil {
 		res.Error = fmt.Errorf("creating backport pull request %w", err)
@@ -727,7 +781,82 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 
+	// Request review from the PR author, or from the assignees when the PR was
+	// opened by the same account that opened the backport.
+	err = addReviewers(
+		ctx,
+		github,
+		r.Owner,
+		r.Repo,
+		int(res.PullRequest.GetNumber()),
+		backportReviewers(pr, res.PullRequest.GetUser().GetLogin()),
+	)
+	if err != nil {
+		res.Error = fmt.Errorf("requesting review on backport pull request %w", err)
+		return res
+	}
+
+	// Copy non-backport labels from the original PR to the backport PR
+	labelsToAdd := filterNonBackportLabels(pr.Labels, r.BackportLabelPrefix)
+	err = addLabelsToIssue(
+		ctx,
+		github,
+		r.Owner,
+		r.Repo,
+		int(res.PullRequest.GetNumber()),
+		labelsToAdd,
+	)
+	if err != nil {
+		res.Error = fmt.Errorf("adding labels to backport PR: %w", err)
+		return res
+	}
+
 	return res
+}
+
+// createBackportPullRequest opens the backport pull request. When draft is
+// true the pull request is opened as a draft.
+func (r *CreateBackportReq) createBackportPullRequest(
+	ctx context.Context,
+	github *libgithub.Client,
+	title string,
+	head string,
+	base string,
+	body string,
+	draft bool,
+) (*libgithub.PullRequest, error) {
+	pr, _, err := github.PullRequests.Create(ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
+		Title:    &title,
+		Head:     &head,
+		HeadRepo: &r.Repo,
+		Base:     &base,
+		Body:     &body,
+		Draft:    &draft,
+	})
+
+	return pr, err
+}
+
+// backportReviewers returns the logins to request reviews from on a backport
+// pull request. We usually request the author of the original pull request.
+// When the original pull request was opened by the same account that opens the
+// backport, e.g. automated plugin updates, GitHub won't allow that account to
+// review its own pull request. In that case we request the people the backport
+// is assigned to instead: the original assignee and whoever merged it.
+func backportReviewers(pr *libgithub.PullRequest, backportAuthor string) []string {
+	author := pr.GetUser().GetLogin()
+	if author != backportAuthor {
+		return []string{author}
+	}
+
+	reviewers := []string{}
+	for _, login := range []string{pr.GetAssignee().GetLogin(), pr.GetMergedBy().GetLogin()} {
+		if login != "" && login != backportAuthor && !slices.Contains(reviewers, login) {
+			reviewers = append(reviewers, login)
+		}
+	}
+
+	return reviewers
 }
 
 // backportCECommitWithPatch backports a commit to the currently checked out
@@ -747,11 +876,13 @@ func (r *CreateBackportReq) backportCECommitWithPatch(
 	files := changed.Files{}
 	for _, file := range changedFiles.Files {
 		if file.Groups.Any(r.CEExclude) {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("file", file.Name()),
 			), "skipping file as it is in one-or-more excluded groups")
 		} else {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("file", file.Name()),
 			), "including changed file")
 			files = append(files, file)
@@ -835,7 +966,8 @@ func (r *CreateBackportReq) determineBackportRefs(
 	labels Labels,
 ) (res []string) {
 	baseRefVersion := r.baseRefVersion(baseRef)
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("labels", strings.Join(labels.Names(), " ")),
 		slog.String("base-ref", baseRef),
 		slog.String("base-ref-version", baseRefVersion),
@@ -860,7 +992,8 @@ func (r *CreateBackportReq) determineBackportRefs(
 		for _, label := range labels.Names() {
 			parts := strings.SplitN(label, "/", 2)
 			if len(parts) != 2 || parts[0] != r.BackportLabelPrefix {
-				slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.Default().DebugContext(slogctx.Append(
+					ctx,
 					slog.String("label", label),
 					slog.String("backport-label-prefix", r.BackportLabelPrefix),
 				), "skipping label because it does not match the backport label prefix")
@@ -868,7 +1001,8 @@ func (r *CreateBackportReq) determineBackportRefs(
 			}
 
 			if parts[1] == baseRefVersion {
-				slog.Default().WarnContext(slogctx.Append(ctx,
+				slog.Default().WarnContext(slogctx.Append(
+					ctx,
 					slog.String("label", label),
 					slog.String("base-ref-version", baseRefVersion),
 				), "skipping label because we cannot backport to the same reference")
@@ -887,7 +1021,8 @@ func (r *CreateBackportReq) determineBackportRefs(
 		for _, label := range labels.Names() {
 			parts := strings.SplitN(label, "/", 2)
 			if len(parts) != 2 || parts[0] != r.BackportLabelPrefix {
-				slog.Default().DebugContext(slogctx.Append(ctx,
+				slog.Default().DebugContext(slogctx.Append(
+					ctx,
 					slog.String("label", label),
 					slog.String("backport-label-prefix", r.BackportLabelPrefix),
 				), "skipping label because it does not match the backport label prefix")
@@ -895,7 +1030,8 @@ func (r *CreateBackportReq) determineBackportRefs(
 			}
 
 			if parts[1] == baseRefVersion {
-				slog.Default().WarnContext(slogctx.Append(ctx,
+				slog.Default().WarnContext(slogctx.Append(
+					ctx,
 					slog.String("label", label),
 					slog.String("base-ref-version", baseRefVersion),
 				), "skipping label because we cannot backport to the same reference")
@@ -907,7 +1043,8 @@ func (r *CreateBackportReq) determineBackportRefs(
 		}
 	}
 
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("refs", strings.Join(res, ",")),
 	), "determined target backport references")
 
@@ -915,19 +1052,11 @@ func (r *CreateBackportReq) determineBackportRefs(
 }
 
 // getActiveVersions gets the active versions from .release/versions.hcl
-func (r *CreateBackportReq) getActiveVersions(
-	ctx context.Context,
-) (map[string]*releases.Version, error) {
-	req := &releases.ListActiveVersionsReq{
-		Recurse:                  r.ReleaseRecurseDepth,
-		ReleaseVersionConfigPath: r.ReleaseVersionConfigPath,
+func (r *CreateBackportReq) getActiveVersions() (map[string]*releases.Version, error) {
+	if r.VersionsDecodeRes == nil || r.VersionsDecodeRes.Config == nil || r.VersionsDecodeRes.Config.ActiveVersion == nil {
+		return nil, fmt.Errorf("no active version are in the .release/versions.hcl")
 	}
-	res, err := req.Run(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return res.VersionsConfig.ActiveVersion.Versions, nil
+	return r.VersionsDecodeRes.Config.ActiveVersion.Versions, nil
 }
 
 // getChangedFiles gets a list of files that changed in the PR and determines
@@ -938,6 +1067,7 @@ func (r *CreateBackportReq) getChangedFiles(
 	github *libgithub.Client,
 ) (*ListChangedFilesRes, error) {
 	req := ListChangedFilesReq{
+		DecodeRes:  r.ConfigDecodeRes,
 		Owner:      r.Owner,
 		Repo:       r.Repo,
 		PullNumber: int(r.PullNumber),
@@ -999,7 +1129,8 @@ func (r *CreateBackportReq) shouldSkipRef(
 	activeVersions map[string]*releases.Version,
 	changedFiles *ListChangedFilesRes,
 ) (string, bool) {
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("base-ref-version", baseRefVersion),
 		slog.String("target-ref", ref),
 	), "determining whether to skip backport")
@@ -1060,4 +1191,23 @@ func (r *CreateBackportReq) shouldSkipRef(
 	return fmt.Sprintf(
 		"could not find branch in active branches configuration: %s", baseRefVersion,
 	), true
+}
+
+// syncBackportFailedLabel applies the BackportFailedLabel to the original PR
+// when runErr is non-nil, and removes it when runErr is nil (clearing any label
+// set by a previous failed run). It is a no-op when BackportFailedLabel is empty.
+func (r *CreateBackportReq) syncBackportFailedLabel(
+	ctx context.Context,
+	github *libgithub.Client,
+	runErr error,
+) error {
+	if r.BackportFailedLabel == "" {
+		return nil
+	}
+
+	if runErr != nil {
+		return addLabelsToIssue(ctx, github, r.Owner, r.Repo, int(r.PullNumber), []string{r.BackportFailedLabel})
+	}
+
+	return removeLabelFromIssue(ctx, github, r.Owner, r.Repo, int(r.PullNumber), r.BackportFailedLabel)
 }

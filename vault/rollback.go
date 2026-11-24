@@ -13,10 +13,10 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	"github.com/gammazero/workerpool"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/namespace"
+	metrics "github.com/hashicorp/go-metrics/compat"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

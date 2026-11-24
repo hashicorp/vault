@@ -19,7 +19,7 @@ func entWrapGenericHandler(core *vault.Core, in http.Handler, props *vault.Handl
 	return wrapGenericHandler(core, in, props)
 }
 
-func entAdditionalRoutes(mux *http.ServeMux, core *vault.Core) {}
+func entDROperationRoutes(mux *http.ServeMux, core *vault.Core) {}
 
 func entAdjustResponse(core *vault.Core, w http.ResponseWriter, req *logical.Request) {
 }

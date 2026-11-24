@@ -1,0 +1,30 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @isOptional={{false}}
+  @setupTime="15 min"
+  @description="Auth methods securely verify the identity of a user or a machine, establishing a trusted identity within Vault and issuing a token tied to a specific set of permissions."
+  @imageAlt="User login with auth method access flow"
+  @imageCaption="Successful authentication yields an authorized token, which the linked policies use to determine whether access is granted or denied."
+  @imageSrc={{img-path "~/methods-intro.png"}}
+>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="cloud-lock">
+      Securely
+      <strong>log users and machines</strong>
+      into Vault by leveraging trusted external identity providers (like LDAP, Cloud IAM, etc.) which your company uses.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="path">
+      Each method is configured as a
+      <strong>separate path</strong>, and the authentication tokens are tied to specific Access Control List (ACL) policies.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="user">
+      Designate separate auth methods for human users (e.g., LDAP, Okta) and other methods for machine accounts (e.g.,
+      AppRole, Kubernetes).
+      <strong>Do not mix</strong>
+      them for better auditability.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>

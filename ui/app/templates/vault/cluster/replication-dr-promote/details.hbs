@@ -4,26 +4,29 @@
 }}
 
 <section class="section">
-  <div class="container is-widescreen">
+  <div class="centered-container is-widescreen">
     <ReplicationPage @model={{this.model}} as |Page|>
       <Page.header @showTabs={{true}} />
       {{#if Page.isDisabled}}
-        <EmptyState
-          @title="Disaster Recovery secondary not set up"
-          @message={{Page.message}}
-          @icon="alert-circle"
-          @bottomBorder={{true}}
-          class="is-shadowless"
-        >
-          <Hds::Link::Standalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
-          <Hds::Link::Standalone
-            @icon="learn-link"
-            @iconPosition="trailing"
-            @color="secondary"
-            @text="Disaster recovery tutorial"
-            @href={{doc-link "/vault/tutorials/enterprise/disaster-recovery"}}
+        <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+          <A.Header
+            @title="Disaster Recovery secondary not set up"
+            @titleTag="h2"
+            @icon="alert-circle"
+            data-test-empty-state-title
           />
-        </EmptyState>
+          <A.Body @text={{Page.message}} data-test-empty-state-message />
+          <A.Footer data-test-empty-state-actions as |F|>
+            <F.LinkStandalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
+            <F.LinkStandalone
+              @icon="learn-link"
+              @iconPosition="trailing"
+              @color="secondary"
+              @text="Disaster recovery tutorial"
+              @href={{doc-link "/vault/tutorials/enterprise/disaster-recovery"}}
+            />
+          </A.Footer>
+        </Hds::ApplicationState>
       {{else}}
         <Page.dashboard
           {{! passing in component to render so that the yielded components are flexible based on the dashboard }}

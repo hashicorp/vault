@@ -5,14 +5,12 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { PkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
 
 /**
  * the overview, roles, issuers, certificates, and key routes all need to be aware of the whether there is a config for the engine
  * if the user has not configured they are prompted to do so in each of the routes
  * decorate the necessary routes to perform the check in the beforeModel hook since that may change what is returned for the model
- *
- * while this decorator is similar to fetch-secrets-engine-config in the core addon, the differences were enough to warrant a specific decorator for pki
  */
 
 export function withConfig() {
@@ -38,7 +36,7 @@ export function withConfig() {
         try {
           await this.api.secrets.pkiListIssuers(
             this.secretMountPath.currentPath,
-            PkiListIssuersListEnum.TRUE
+            SecretsApiPkiListIssuersListEnum.TRUE
           );
           this.pkiMountHasConfig = true;
         } catch (e) {

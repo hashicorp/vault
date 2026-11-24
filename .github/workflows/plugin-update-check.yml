@@ -15,7 +15,7 @@ on:
 
 jobs:
   plugin-update-check:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     env:
       PLUGIN_REPO: "${{inputs.repo}}"
       PLUGIN_BRANCH: "${{inputs.plugin_branch}}"
@@ -23,21 +23,22 @@ jobs:
       RUN_ID: "${{github.run_id}}"
     steps:
       - run: echo "Branch $PLUGIN_BRANCH of $PLUGIN_REPO"
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # We don't use the default token so that checks are executed on the resulting PR
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
 
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
+          cache: "false" # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
           go-version-file: .go-version
 
       - name: update plugin
         run: |
           go get "github.com/$PLUGIN_REPO@$PLUGIN_BRANCH"
-          go mod tidy
+          GOWORK=off go mod tidy
+          go work sync
 
       - name: detect changes
         id: changes
@@ -46,9 +47,13 @@ jobs:
 
       - name: commit/push
         if: steps.changes.outputs.count > 0
+        env:
+          GIT_CONFIG_COUNT: "2"
+          GIT_CONFIG_KEY_0: user.name
+          GIT_CONFIG_VALUE_0: hc-github-team-secure-vault-ecosystem
+          GIT_CONFIG_KEY_1: user.email
+          GIT_CONFIG_VALUE_1: hc-github-team-secure-vault-ecosystem@users.noreply.github.com
         run: |
-          git config user.name hc-github-team-secure-vault-ecosystem
-          git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
           git add .
           git commit -m "Automated dependency upgrades"
           git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"

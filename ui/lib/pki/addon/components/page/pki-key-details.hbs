@@ -52,7 +52,7 @@
   {{/each}}
   {{#if @key.private_key}}
     <InfoTableRow @label="Private key">
-      <CertificateCard @data={{@key.private_key}} />
+      <EncodedDataCard @data={{@key.private_key}} />
     </InfoTableRow>
   {{/if}}
 </div>

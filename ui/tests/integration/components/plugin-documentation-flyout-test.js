@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
@@ -21,7 +21,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     this.isOpen = false;
 
     await render(hbs`
-      <PluginDocumentationFlyout 
+      <PluginDocumentationFlyout
         @isOpen={{this.isOpen}}
         @onClose={{this.onClose}}
       />
@@ -41,7 +41,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     this.displayName = 'AWS';
 
     await render(hbs`
-      <PluginDocumentationFlyout 
+      <PluginDocumentationFlyout
         @isOpen={{this.isOpen}}
         @pluginName={{this.pluginName}}
         @pluginType={{this.pluginType}}
@@ -67,7 +67,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     // No pluginName means this is for external plugins help
 
     await render(hbs`
-      <PluginDocumentationFlyout 
+      <PluginDocumentationFlyout
         @isOpen={{this.isOpen}}
         @onClose={{this.onClose}}
       />
@@ -91,7 +91,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     this.displayName = 'LDAP';
 
     await render(hbs`
-      <PluginDocumentationFlyout 
+      <PluginDocumentationFlyout
         @isOpen={{this.isOpen}}
         @pluginName={{this.pluginName}}
         @pluginType={{this.pluginType}}
@@ -109,7 +109,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     this.isOpen = true;
 
     await render(hbs`
-      <PluginDocumentationFlyout 
+      <PluginDocumentationFlyout
         @isOpen={{this.isOpen}}
         @onClose={{this.onClose}}
       />
@@ -124,7 +124,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     this.pluginName = 'aws';
 
     await render(hbs`
-      <PluginDocumentationFlyout 
+      <PluginDocumentationFlyout
         @isOpen={{this.isOpen}}
         @pluginName={{this.pluginName}}
         @onClose={{this.onClose}}
@@ -152,7 +152,7 @@ module('Integration | Component | plugin-documentation-flyout', function (hooks)
     // No displayName provided
 
     await render(hbs`
-      <PluginDocumentationFlyout 
+      <PluginDocumentationFlyout
         @isOpen={{this.isOpen}}
         @pluginName={{this.pluginName}}
         @onClose={{this.onClose}}

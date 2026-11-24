@@ -1,0 +1,3 @@
+```release-note:bug
+go-plugin: Upgrade go-plugin to fix a bug where file descriptors could be leaked when spawning external plugins
+```

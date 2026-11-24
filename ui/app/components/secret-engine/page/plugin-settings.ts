@@ -79,6 +79,19 @@ export default class PluginSettingsComponent extends Component<Args> {
     }
   }
 
+  get configRoute() {
+    const engine = this.args.model.secretsEngine;
+    const isKvv2 = engine.version === 2 && engine.effectiveEngineType === 'kv';
+    const engineMetadata = engineDisplayData(engine.effectiveEngineType);
+
+    // Kvv2 is configurable but shares metadata with Kvv1 so isConfigurable is left unset
+    if (engineMetadata.isConfigurable || isKvv2) {
+      return engineMetadata.configRoute || 'configuration.plugin-settings';
+    } else {
+      return false;
+    }
+  }
+
   label = (field: string) => {
     const label = toLabel([field]);
     // convert words like id and ttl to uppercase

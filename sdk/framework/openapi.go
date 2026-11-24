@@ -194,6 +194,63 @@ var OASStdRespOK = &OASResponse{
 	Description: "OK",
 }
 
+// AuthLoginResponseFields returns the standard FieldSchema map for the auth
+// object returned by every credential backend login operation. These fields are
+// populated by Vault core from the logical.Auth struct and are identical across
+// all auth methods.
+func AuthLoginResponseFields() map[string]*FieldSchema {
+	return map[string]*FieldSchema{
+		"client_token": {
+			Type:        TypeString,
+			Description: "Token issued by Vault for the authenticated client.",
+		},
+		"accessor": {
+			Type:        TypeString,
+			Description: "Accessor for the client token.",
+		},
+		"policies": {
+			Type:        TypeCommaStringSlice,
+			Description: "List of policies associated with the token.",
+		},
+		"token_policies": {
+			Type:        TypeCommaStringSlice,
+			Description: "List of token policies.",
+		},
+		"metadata": {
+			Type:        TypeMap,
+			Description: "Metadata associated with the token.",
+		},
+		"lease_duration": {
+			Type:        TypeInt64,
+			Description: "Lease duration in seconds.",
+		},
+		"renewable": {
+			Type:        TypeBool,
+			Description: "Whether the token is renewable.",
+		},
+		"entity_id": {
+			Type:        TypeString,
+			Description: "Entity ID associated with the token.",
+		},
+		"token_type": {
+			Type:        TypeString,
+			Description: "Type of the token.",
+		},
+		"orphan": {
+			Type:        TypeBool,
+			Description: "Whether the token is an orphan.",
+		},
+		"mfa_requirement": {
+			Type:        TypeMap,
+			Description: "MFA requirement information.",
+		},
+		"num_uses": {
+			Type:        TypeInt,
+			Description: "Number of uses remaining for the token.",
+		},
+	}
+}
+
 var OASStdRespNoContent = &OASResponse{
 	Description: "empty body",
 }
@@ -1227,26 +1284,30 @@ func hyphenatedToTitleCase(in string) string {
 // cleanedResponse is identical to logical.Response but with nulls
 // removed from from JSON encoding
 type cleanedResponse struct {
-	Secret    *logical.Secret            `json:"secret,omitempty"`
-	Auth      *logical.Auth              `json:"auth,omitempty"`
-	Data      map[string]interface{}     `json:"data,omitempty"`
-	Redirect  string                     `json:"redirect,omitempty"`
-	Warnings  []string                   `json:"warnings,omitempty"`
-	WrapInfo  *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers   map[string][]string        `json:"headers,omitempty"`
-	MountType string                     `json:"mount_type,omitempty"`
+	Secret                        *logical.Secret            `json:"secret,omitempty"`
+	Auth                          *logical.Auth              `json:"auth,omitempty"`
+	Data                          map[string]interface{}     `json:"data,omitempty"`
+	Redirect                      string                     `json:"redirect,omitempty"`
+	Warnings                      []string                   `json:"warnings,omitempty"`
+	WrapInfo                      *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers                       map[string][]string        `json:"headers,omitempty"`
+	MountType                     string                     `json:"mount_type,omitempty"`
+	SupplementalAuditResponseData map[string]any             `json:"supplemental_audit_response_data,omitempty"`
+	SupplementalAuditRequestData  map[string]any             `json:"supplemental_audit_request_data,omitempty"`
 }
 
 func cleanResponse(resp *logical.Response) *cleanedResponse {
 	return &cleanedResponse{
-		Secret:    resp.Secret,
-		Auth:      resp.Auth,
-		Data:      resp.Data,
-		Redirect:  resp.Redirect,
-		Warnings:  resp.Warnings,
-		WrapInfo:  resp.WrapInfo,
-		Headers:   resp.Headers,
-		MountType: resp.MountType,
+		Secret:                        resp.Secret,
+		Auth:                          resp.Auth,
+		Data:                          resp.Data,
+		Redirect:                      resp.Redirect,
+		Warnings:                      resp.Warnings,
+		WrapInfo:                      resp.WrapInfo,
+		Headers:                       resp.Headers,
+		MountType:                     resp.MountType,
+		SupplementalAuditResponseData: resp.SupplementalAuditResponseData,
+		SupplementalAuditRequestData:  resp.SupplementalAuditRequestData,
 	}
 }
 

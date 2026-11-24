@@ -1,0 +1,54 @@
+name: Update UI API Client Dependency
+
+on:
+  repository_dispatch:
+    types: [vct-update]
+
+jobs:
+  update-client-dependency:
+    # we only want to bump the version in enterprise which will get backported to ce
+    if: github.repository == 'hashicorp/vault-enterprise'
+    runs-on: [self-hosted, ubuntu-22.04-x64]
+    permissions:
+      id-token: write # vault-auth
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Make sure we check out correct ref based on PR labels and such
+      - uses: ./.github/actions/checkout
+        id: checkout
+      # Get the elevated github token
+      - name: Vault Authenticate
+        id: vault-auth
+        run: vault-auth
+
+      - name: Fetch secrets
+        id: secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/hashicorp/vault-enterprise/github-token vault-client-typescript | PRIVATE_REPO_GITHUB_TOKEN;
+
+      - name: Setup pnpm
+        uses: ./.github/actions/set-up-pnpm
+
+      - name: Bump vault-client-typescript version
+        working-directory: ./ui
+        run: pnpm up @hashicorp/vault-client-typescript
+
+      - name: Open PR with updated dependency
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}
+          branch: ui/automated-client-update-${{ github.run_id }}
+          title: "[UI][Automated] API Client Dependency Update"
+          body: |
+            This is an automated PR triggered from vault-client-typescript.
+            The API client was updated and the dependency version has been bumped.
+          commit-message: "auto: bumps vault-client-typescript version"
+          base: main
+          labels: ui, pr/no-changelog

@@ -15,11 +15,7 @@ func TestSysHostInfo(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
 
 	// Query against the active node, should get host information back
 	secret, err := cores[0].Client.Logical().Read("sys/host-info")

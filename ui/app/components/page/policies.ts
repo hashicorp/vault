@@ -1,0 +1,184 @@
+/**
+ * Copyright IBM Corp. 2016, 2025
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import Component from '@glimmer/component';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import errorMessage from 'vault/utils/error-message';
+import { PolicyTypes } from 'core/utils/code-generators/policy';
+import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
+
+import type AnalyticsService from 'vault/services/analytics';
+import type ApiService from 'vault/services/api';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type NamespaceService from 'vault/services/namespace';
+import type RouterService from '@ember/routing/router-service';
+import type WizardService from 'vault/services/wizard';
+import type { PaginatedMetadata } from 'core/utils/paginate-list';
+
+interface PolicyModel {
+  name: string;
+  policy: string;
+  capabilities: object;
+  policyType: string;
+}
+
+interface Args {
+  filter: string | null;
+  model: PolicyModel[] & PaginatedMetadata;
+  policyType: string;
+  onRefresh: CallableFunction;
+}
+
+export default class PagePoliciesComponent extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
+  @service declare readonly api: ApiService;
+  @service declare readonly router: RouterService;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly wizard: WizardService;
+  @service declare readonly namespace: NamespaceService;
+
+  @tracked filter = '';
+  @tracked filterFocused = false;
+  // set when clicking 'Delete' from popup menu
+  @tracked policyToDelete = null;
+  @tracked shouldRenderIntroModal = false;
+
+  wizardId = WIZARD_ID_MAP.aclPolicy;
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    this.filter = this.args.filter || '';
+  }
+
+  get description() {
+    const policyType = this.args.policyType;
+    if (policyType === PolicyTypes.ACL) {
+      return 'Define fine-grained rules to explicitly grant or forbid access to specific paths and operations within your cluster. Because Vault is a “default deny” system, if a permission is not granted in a policy, an entity would not have permission.';
+    } else if (policyType === PolicyTypes.EGP) {
+      return 'Use Sentinel to specify policies as code that apply to discrete API paths and enforce organizational compliance standards.';
+    } else if (policyType === PolicyTypes.RGP) {
+      return 'Use Sentinel to specify policies as code that apply to tokens, entities, groups and enforce organizational compliance standards.';
+    }
+    return '';
+  }
+
+  // Check if the filter exactly matches a policy ID
+  get filterMatchesKey(): boolean {
+    const filter = this.filter;
+    const content = this.args.model;
+    return !!(content && content.length && content.find((c: PolicyModel) => c['name'] === filter));
+  }
+
+  // Find the first policy that partially matches the filter (starts with filter)
+  get firstPartialMatch(): PolicyModel | undefined {
+    const filter = this.filter;
+    const content = this.args.model;
+    if (!content) {
+      return undefined;
+    }
+    const filterMatchesKey = this.filterMatchesKey;
+    const re = new RegExp('^' + filter);
+    return filterMatchesKey
+      ? undefined
+      : content.find((key: PolicyModel) => {
+          return re.test(key['name'] as string);
+        });
+  }
+
+  // starting policies are 'default', 'default-ceiling' and if in the root namespace, 'root' or 'hcp-root'
+  get hasOnlyDefaultPolicies() {
+    const expectedLength = this.namespace.inRootNamespace ? 3 : 2;
+    return this.args.model.meta?.total <= expectedLength;
+  }
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page: number) => {
+      return {
+        page,
+      };
+    };
+  }
+
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
+  }
+
+  get showIntroButton() {
+    return this.args.policyType === PolicyTypes.ACL && this.showContent && this.hasOnlyDefaultPolicies;
+  }
+
+  // Show when it is not in a dismissed state and there are no non-default policies and
+  get showWizard() {
+    if (this.args.policyType !== PolicyTypes.ACL) return false;
+    // Use total instead of filtered total to avoid flashing wizard when filtering with no results
+    return !this.wizard.isDismissed(this.wizardId) && this.hasOnlyDefaultPolicies;
+  }
+
+  @action
+  async deletePolicy(policyToDelete: PolicyModel) {
+    try {
+      const policyName = policyToDelete.name;
+      const policyType = this.args.policyType;
+
+      // Use the appropriate sys endpoint based on policy type
+      if (policyType === PolicyTypes.EGP) {
+        await this.api.sys.systemDeletePoliciesEgpName(policyName);
+      } else if (policyType === PolicyTypes.RGP) {
+        await this.api.sys.systemDeletePoliciesRgpName(policyName);
+      } else {
+        await this.api.sys.policiesDeleteAclPolicy(policyName);
+      }
+
+      // Log success and optionally update the UI
+      this.flashMessages.success(`Successfully deleted policy: ${policyName}`);
+
+      // Call the refresh method to update the list
+      this.refreshPolicyList();
+    } catch (error) {
+      const message = errorMessage(error);
+      this.flashMessages.danger(message);
+    }
+    this.policyToDelete = null;
+  }
+
+  @action
+  setFilter(val: string) {
+    this.filter = val;
+  }
+
+  @action
+  setFilterFocus(bool: boolean) {
+    this.filterFocused = bool;
+  }
+
+  @action
+  showIntroPage() {
+    this.analytics.trackEvent(INTRO_REOPEN_CLICKED, {
+      namespace: 'intro-page',
+      action: 'clicked',
+      elementId: 'intro-reopen-button',
+      channel: 'webpage',
+      objectType: 'acl-policy',
+    });
+    // Reset the wizard dismissal state to allow re-entering the wizard
+    this.wizard.reset(this.wizardId);
+    this.shouldRenderIntroModal = true;
+  }
+
+  @action
+  refreshPolicyList() {
+    try {
+      this.args.onRefresh();
+    } catch (error) {
+      this.flashMessages.danger('There was an error refreshing the policy list.');
+    }
+  }
+}

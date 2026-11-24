@@ -3,94 +3,171 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
 import { waitFor } from '@ember/test-waiters';
+import PolicyForm from 'vault/forms/policy';
+import {
+  SystemApiPoliciesListAclPoliciesListEnum,
+  SystemApiSystemListPoliciesRgpListEnum,
+} from '@hashicorp/vault-client-typescript';
+import {
+  performSaveOperation,
+  extractSavedId,
+  findDuplicateNameError,
+  findDuplicateAliasError,
+} from 'vault/utils/identity-helpers';
 
-export default Component.extend({
-  flashMessages: service(),
-  store: service(),
-  'data-test-component': 'identity-edit-form',
-  attributeBindings: ['data-test-component'],
-  model: null,
+export default class IdentityEditFormComponent extends Component {
+  @service flashMessages;
+  @service api;
 
-  // 'create', 'edit', 'merge'
-  mode: 'create',
-  /*
-   * @param Function
-   * @public
-   *
-   * Optional param to call a function upon successfully saving an entity
-   */
-  onSave: () => {},
+  @tracked policies = [];
+  @tracked policyForm;
+  @tracked errorBanner;
 
-  cancelLink: computed('mode', 'model.identityType', function () {
-    const { model, mode } = this;
-    const routes = {
-      'create-entity': 'vault.cluster.access.identity',
-      'edit-entity': 'vault.cluster.access.identity.show',
-      'merge-entity-merge': 'vault.cluster.access.identity',
-      'create-entity-alias': 'vault.cluster.access.identity.aliases',
-      'edit-entity-alias': 'vault.cluster.access.identity.aliases.show',
-      'create-group': 'vault.cluster.access.identity',
-      'edit-group': 'vault.cluster.access.identity.show',
-      'create-group-alias': 'vault.cluster.access.identity.aliases',
-      'edit-group-alias': 'vault.cluster.access.identity.aliases.show',
-    };
-    const key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
-    return routes[key];
-  }),
+  constructor() {
+    super(...arguments);
+    // fetch policies to populate dropdown in form
+    this.fetchPolicies();
+  }
+
+  async fetchPolicies() {
+    const [aclResult, rgpResult] = await Promise.allSettled([
+      this.api.sys.policiesListAclPolicies(SystemApiPoliciesListAclPoliciesListEnum.TRUE),
+      this.api.sys.systemListPoliciesRgp(SystemApiSystemListPoliciesRgpListEnum.TRUE),
+    ]);
+    const aclPolicies = aclResult.status === 'fulfilled' ? aclResult.value.keys : [];
+    const rgpPolicies = rgpResult.status === 'fulfilled' ? rgpResult.value.keys : [];
+    this.policies = [...aclPolicies, ...rgpPolicies]
+      .filter((name) => name !== 'root')
+      .map((policy) => ({ id: policy }));
+  }
+
+  get cancelLink() {
+    const { model, mode } = this.args;
+    const identityType = model?.identityType;
+    const isAlias = model?.form?.identityFormType === 'alias';
+    const pluralType = identityType === 'group' ? 'groups' : 'entities';
+
+    if (mode === 'merge') {
+      return 'vault.cluster.access.identity.entities.index';
+    }
+
+    if (mode === 'create') {
+      return `vault.cluster.access.identity.${pluralType}.index`;
+    }
+
+    if (mode === 'edit') {
+      return isAlias
+        ? `vault.cluster.access.identity.${pluralType}.aliases.show`
+        : `vault.cluster.access.identity.${pluralType}.show`;
+    }
+
+    // Fallback route in unexpected modes.
+    return identityType
+      ? `vault.cluster.access.identity.${pluralType}.show`
+      : `vault.cluster.access.identity.${pluralType}.index`;
+  }
+
+  get cancelModelId() {
+    const { model } = this.args;
+    const isAlias = model?.form?.identityFormType === 'alias';
+    if (isAlias) {
+      return model?.id || model?.canonicalId;
+    }
+    return model?.itemId || model?.id;
+  }
+
+  get deleteNoun() {
+    const isAlias = this.args.model?.form?.identityFormType === 'alias';
+    return isAlias ? 'alias' : this.args.model?.identityType;
+  }
 
   getMessage(model, isDelete = false) {
-    const mode = this.mode;
-    const typeDisplay = humanize([model.identityType]);
-    const action = isDelete ? 'deleted' : 'saved';
+    const mode = this.args.mode;
+    const isAlias = model.form.identityFormType === 'alias';
+    const typeDisplay = isAlias ? humanize(['alias']) : humanize([model.identityType]);
+    const name = model.form?.data?.name;
+
+    if (isDelete) {
+      return name ? `Successfully deleted ${typeDisplay}: ${name}.` : `Successfully deleted ${typeDisplay}.`;
+    }
     if (mode === 'merge') {
       return 'Successfully merged entities';
     }
-    if (model.id) {
-      return `Successfully ${action} ${typeDisplay} ${model.id}.`;
+    if (name) {
+      return `Successfully saved ${typeDisplay}: ${name}.`;
     }
-    return `Successfully ${action} ${typeDisplay}.`;
-  },
+    return `Successfully saved ${typeDisplay}.`;
+  }
 
-  save: task(
-    waitFor(function* () {
-      const model = this.model;
-      const message = this.getMessage(model);
+  save = task(
+    waitFor(async () => {
+      const { model, mode, onSave } = this.args;
+      const { data } = model.form.toJSON();
 
-      try {
-        yield model.save();
-      } catch (err) {
-        // err will display via model state
+      const duplicateNameError =
+        findDuplicateNameError({ model, mode, data }) || findDuplicateAliasError({ model, mode, data });
+      if (duplicateNameError) {
+        this.errorBanner = duplicateNameError;
         return;
       }
-      this.flashMessages.success(message);
-      yield this.onSave({ saveType: 'save', model });
+
+      try {
+        const response = await performSaveOperation({
+          api: this.api,
+          model,
+          mode,
+          data,
+        });
+
+        await onSave({
+          saveType: 'save',
+          model,
+          id: extractSavedId({ mode, data, response, model }),
+        });
+
+        this.flashMessages.success(this.getMessage(model));
+      } catch (err) {
+        const { message } = await this.api.parseError(err);
+        this.errorBanner = message;
+      }
     })
-  ).drop(),
+  );
 
-  willDestroy() {
-    // components are torn down after store is disconnected and will cause an error if attempt to unload record
-    const noTeardown = this.store && !this.store.isDestroying;
-    const model = this.model;
-    if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
-      model.rollbackAttributes();
+  @action
+  async deleteItem(model) {
+    const message = this.getMessage(model, true);
+    const formType = model.form.identityFormType;
+    const identityType = model.identityType;
+    const id = this.cancelModelId;
+
+    try {
+      if (formType === 'alias') {
+        const methodType = identityType === 'group' ? 'groupDeleteAliasById' : 'entityDeleteAliasById';
+        await this.api.identity[methodType](id);
+      } else {
+        const methodType = identityType === 'group' ? 'groupDeleteById' : 'entityDeleteById';
+        await this.api.identity[methodType](id);
+      }
+
+      this.flashMessages.success(message);
+
+      return this.args.onSave({ saveType: 'delete', model });
+    } catch (err) {
+      const { message: errorMessage } = await this.api.parseError(err);
+      this.errorBanner = errorMessage;
+      return undefined;
     }
-    this._super(...arguments);
-  },
+  }
 
-  actions: {
-    deleteItem(model) {
-      const message = this.getMessage(model, true);
-      const flash = this.flashMessages;
-      model.destroyRecord().then(() => {
-        flash.success(message);
-        return this.onSave({ saveType: 'delete', model });
-      });
-    },
-  },
-});
+  @action
+  onCreatePolicy(name) {
+    this.policyForm = new PolicyForm({ name, enforcement_level: 'hard-mandatory' }, { isNew: true });
+  }
+}

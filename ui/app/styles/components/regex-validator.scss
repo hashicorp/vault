@@ -26,6 +26,9 @@
   padding-top: 5px;
   padding-bottom: 4px;
   margin-right: 4px;
+  // foreground-primary (#3b3d45 in light, #dedfe3 in dark) maintains ≥4.5:1
+  // contrast against neutral-200 (#dedfe3 in light, #3b3d45 in dark).
+  color: var(--token-color-foreground-primary);
   span {
     margin-left: 6px;
   }

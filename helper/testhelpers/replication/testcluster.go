@@ -33,6 +33,21 @@ func SetCorePerf(t *testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOp
 	return r
 }
 
+func SetCoreDR(t *testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *testcluster.ReplicationSet {
+	r := NewReplicationSetCore(t, conf, opts, teststorage.InmemBackendSetup)
+	t.Cleanup(r.Cleanup)
+
+	// By default NewTestCluster will mount a kv under secret/.  This isn't
+	// done by docker-based clusters, so remove this to make us more like that.
+	require.Nil(t, r.Clusters["A"].Nodes()[0].APIClient().Sys().Unmount("secret"))
+
+	err := r.StandardDRReplication(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
 func NewReplicationSetCore(t *testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup teststorage.ClusterSetupMutator) *testcluster.ReplicationSet {
 	r := &testcluster.ReplicationSet{
 		Clusters: map[string]testcluster.VaultCluster{},

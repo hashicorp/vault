@@ -1,0 +1,6 @@
+```release-note:security
+vault/sdk: Upgrade `go.opentelemetry.io/otel/sdk` to v1.40.0 to resolve GO-2026-4394
+```
+```release-note:security
+Upgrade `filippo.io/edwards25519` to v1.1.1 to resolve GO-2026-4503
+```

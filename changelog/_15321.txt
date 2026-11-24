@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Add managed key support to Transit rewrap endpoint.
+```

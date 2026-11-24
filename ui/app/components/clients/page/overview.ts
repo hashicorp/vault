@@ -6,15 +6,14 @@
 import Component from '@glimmer/component';
 import { cached, tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { filterTableData, flattenMounts } from 'core/utils/client-count-utils';
+import { filterTableData, flattenMounts } from 'core/utils/client-counts/helpers';
 import { service } from '@ember/service';
 
-import type ClientsActivityModel from 'vault/vault/models/clients/activity';
-import type { ClientFilterTypes } from 'vault/vault/client-counts/activity-api';
+import type { ClientFilterTypes, Activity } from 'vault/client-counts/activity-api';
 import type FlagsService from 'vault/services/flags';
 
 export interface Args {
-  activity: ClientsActivityModel;
+  activity: Activity;
   onFilterChange: CallableFunction;
   filterQueryParams: Record<ClientFilterTypes, string>;
 }
@@ -28,11 +27,11 @@ export default class ClientsOverviewPageComponent extends Component<Args> {
   get byMonthClients() {
     // HVD clusters are billed differently and the monthly total is the important metric.
     if (this.flags.isHvdManaged) {
-      return this.args.activity.byMonth || [];
+      return this.args.activity.by_month || [];
     }
     // For self-managed clusters only the new_clients per month are relevant because clients accumulate over a billing period.
     // (Since "total" per month is not cumulative it's not a useful metric)
-    return this.args.activity.byMonth?.map((m) => m?.new_clients) || [];
+    return this.args.activity.by_month?.map((m) => m?.new_clients) || [];
   }
 
   // Supplies data passed to dropdown filters (except months which is computed below )
@@ -42,7 +41,7 @@ export default class ClientsOverviewPageComponent extends Component<Args> {
     const selectedMonth = this.args.filterQueryParams.month;
     const namespaceData = selectedMonth
       ? this.byMonthClients.find((m) => m.timestamp === selectedMonth)?.namespaces
-      : this.args.activity.byNamespace;
+      : this.args.activity.by_namespace;
 
     // Get the array of "mounts" data nested in each namespace object and flatten
     return flattenMounts(namespaceData || []);

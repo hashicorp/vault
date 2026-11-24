@@ -26,7 +26,7 @@ export default class OpenApiForm<T extends object> extends Form<T> {
     // in that case we will simply bypass dynamic form generation in favor of throwing an error
     if (schema) {
       // create formFieldGroups from the OpenAPI properties
-      const props = expandOpenApiProps(schema.properties as OpenApiProps, 'form');
+      const props = expandOpenApiProps(schema.properties as OpenApiProps);
       const groups: { [groupName: string]: FormField[] } = {};
       // iterate over the properties and organize them into groups
       for (const [name, prop] of Object.entries(props)) {
@@ -66,7 +66,6 @@ export default class OpenApiForm<T extends object> extends Form<T> {
       );
     } else {
       // to aide in development log out an error to the console if the schema is not found
-      // eslint-disable-next-line no-console
       console.error(`OpenApiForm: Schema '${schemaKey}' not found in OpenAPI spec.`);
     }
 

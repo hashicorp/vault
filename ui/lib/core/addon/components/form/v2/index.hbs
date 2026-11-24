@@ -1,0 +1,28 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{! TODO: Add form-level title and description here - AC 12/25 }}
+<Form::V2::Renderer
+  @form={{this.form}}
+  @renderFields={{not @hideFields}}
+  @error={{this.submissionError}}
+  ...attributes
+  as |Form|
+>
+  {{#if (has-block)}}
+    {{! Consumer provided custom content (e.g., wizard buttons) }}
+    {{yield Form this.submitTask}}
+  {{else}}
+    {{! No custom content - render default submit button }}
+    <Form.Section>
+      <Hds::Button
+        @text="Submit"
+        type="submit"
+        disabled={{or (not this.form.isValid) this.submitTask.isRunning}}
+        {{on "click" (perform this.submitTask)}}
+      />
+    </Form.Section>
+  {{/if}}
+</Form::V2::Renderer>

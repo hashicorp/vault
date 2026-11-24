@@ -5,11 +5,12 @@
 
 import { module, test } from 'qunit';
 import sinon from 'sinon';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import timestamp from 'core/utils/timestamp';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
@@ -65,7 +66,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
 
   test('it should display generate credentials form', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-credentials-header]').hasText('Generate credentials');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate credentials');
     assert
       .dom('[data-test-generate-credentials] p')
       .hasText(`This will generate credentials using the role ${this.roleName}.`);
@@ -73,9 +74,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert
       .dom('[data-test-generate-credentials] .is-size-8')
       .hasText('The namespace in which to generate the credentials.');
-    assert.dom('[data-test-toggle-label] .title').hasText('ClusterRoleBinding');
+    assert.dom('[data-test-toggle-label="kubernetes-clusterRoleBinding"]').hasText('ClusterRoleBinding');
     assert
-      .dom('[data-test-toggle-label] .description')
+      .dom('[data-test-toggle-helper-text="kubernetes-clusterRoleBinding"]')
       .hasText(
         'Generate a ClusterRoleBinding to grant permissions across the whole cluster instead of within a namespace. This requires the Vault role to have kubernetes_role_type set to ClusterRole.'
       );
@@ -118,7 +119,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
       this.generateStub.calledWith(this.roleName, this.backend, payload),
       'Generate credentials request made'
     );
-    assert.dom('[data-test-credentials-header]').hasText('Credentials');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Credentials');
     assert.dom('[data-test-k8-alert-title]').hasText('Warning');
     assert
       .dom('[data-test-k8-alert-message]')
@@ -139,5 +140,82 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert
       .dom(GENERAL.infoRowValue('Lease ID'))
       .hasText('kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38');
+  });
+
+  test('it blocks a TTL longer than Vault supports', async function (assert) {
+    assert.expect(5);
+
+    await this.renderComponent();
+    await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Time-to-Live (TTL)'), 'd');
+    await click('[data-test-generate-credentials-button]');
+
+    assert
+      .dom(TTL_PICKER.error)
+      .hasText('Time-to-Live (TTL) is too large. Maximum allowed value is 106,751 days.');
+    assert.true(this.generateStub.notCalled, 'no credentials are requested');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Generate credentials', 'the form stays open');
+
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '106751');
+    await click('[data-test-generate-credentials-button]');
+    assert.true(this.generateStub.calledOnce, 'credentials are requested once the TTL is valid');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
+  });
+
+  test('it blocks a TTL too long to be stored as a number', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '9'.repeat(400));
+    await fillIn(TTL_PICKER.unitInputByLabel('Time-to-Live (TTL)'), 'd');
+    await click('[data-test-generate-credentials-button]');
+
+    assert.dom(TTL_PICKER.error).exists('the picker shows its error');
+    assert.true(this.generateStub.notCalled, 'no credentials are requested');
+  });
+
+  test("it uses the role's default when an over-limit TTL was turned off", async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('Time-to-Live (TTL)'), 'd');
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await click('[data-test-generate-credentials-button]');
+
+    assert.true(this.generateStub.calledOnce, 'credentials are requested');
+    assert.strictEqual(
+      this.generateStub.firstCall.args[2].ttl,
+      '',
+      'no TTL is sent, so the role default is used'
+    );
+  });
+
+  // Existing behaviour, kept as it was before the max-duration checks.
+  test('it keeps sending a valid TTL that was turned off', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await fillIn(GENERAL.ttl.input('Time-to-Live (TTL)'), '2');
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
+    await click('[data-test-generate-credentials-button]');
+
+    assert.true(this.generateStub.calledOnce, 'credentials are requested');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '2s', 'the entered TTL is still sent');
+  });
+
+  test('it sends no TTL when the picker is left off', async function (assert) {
+    assert.expect(2);
+
+    await this.renderComponent();
+    await click('[data-test-generate-credentials-button]');
+
+    assert.true(this.generateStub.calledOnce, 'credentials are requested');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '', 'no TTL is sent');
   });
 });

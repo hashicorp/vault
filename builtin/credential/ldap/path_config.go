@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/rotation"
@@ -96,6 +97,13 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 			return nil, err
 		}
 
+		// perform schema validation, as NewConfigEntry does not check supported schemas
+		if result.Schema != "" {
+			if !strutil.StrListContains(ldaputil.SupportedSchemas(), result.Schema) {
+				return nil, fmt.Errorf("unsupported schema type %q: must be one of %v", result.Schema, ldaputil.SupportedSchemas())
+			}
+		}
+
 		// No user overrides, return default configuration
 		result.CaseSensitiveNames = new(bool)
 		*result.CaseSensitiveNames = false
@@ -125,6 +133,12 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 	if result.UsePre111GroupCNBehavior == nil {
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = true
+		persistNeeded = true
+	}
+
+	// Upgrade path: Set default schema for configs created before schema field was added
+	if result.Schema == "" {
+		result.Schema = ldaputil.SchemaOpenLDAP
 		persistNeeded = true
 	}
 
@@ -249,7 +263,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 		err := b.System().DeregisterRotationJob(ctx, dr)
 		if err != nil {
-			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
 		}
 	} else if cfg.ShouldRegisterRotationJob() {
 		rotOp = rotation.PerformedRegistration

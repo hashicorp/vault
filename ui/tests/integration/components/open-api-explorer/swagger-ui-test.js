@@ -42,8 +42,6 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-
     this.openApiResponse = this.server.create('open-api-explorer');
     this.server.get('sys/internal/specs/openapi', () => {
       return this.openApiResponse;
@@ -51,7 +49,10 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
 
     this.totalApiPaths = Object.keys(this.openApiResponse.paths).length;
 
-    this.renderComponent = () => render(hbs`<SwaggerUi/>`, { owner: this.engine });
+    this.renderComponent = async () => {
+      await render(hbs`<SwaggerUi/>`, { owner: this.engine });
+      await waitFor(SELECTORS.searchInput);
+    };
   });
 
   test('it renders', async function (assert) {

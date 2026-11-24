@@ -1,0 +1,3 @@
+```release-note:bug
+consumption-billing: Fix bug where SPIFFE JWT token billing units from performance standby nodes were not being forwarded to active nodes for storage, causing billing events on standby nodes to be lost.
+```

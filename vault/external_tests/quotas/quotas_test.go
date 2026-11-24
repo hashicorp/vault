@@ -4,8 +4,11 @@
 package quotas
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -15,7 +18,9 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -31,12 +36,32 @@ path "/auth/token/lookup" {
 `
 )
 
+// panicAuthBackend creates an auth backend that panics when req.Storage is nil during ResolveRoleOperation
+func panicAuthBackend() logical.Factory {
+	return func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return &vault.NoopBackend{
+			BackendType: logical.TypeCredential,
+			RequestHandler: func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+				if req.Operation == logical.ResolveRoleOperation {
+					if req.Storage == nil {
+						// Simulate the panic scenario
+						panic("req.Storage is nil during role resolution")
+					}
+					return &logical.Response{}, nil
+				}
+				return &logical.Response{}, nil
+			},
+		}, nil
+	}
+}
+
 var coreConfig = &vault.CoreConfig{
 	LogicalBackends: map[string]logical.Factory{
 		"pki": pki.Factory,
 	},
 	CredentialBackends: map[string]logical.Factory{
-		"userpass": userpass.Factory,
+		"userpass":  userpass.Factory,
+		"panicauth": panicAuthBackend(),
 	},
 }
 
@@ -139,14 +164,13 @@ func TestQuotas_RateLimit_DupName(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
+
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	// create a rate limit quota w/ 'secret' path
-	_, err := client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
 		"rate": 7.7,
 		"path": "secret",
 	})
@@ -175,14 +199,13 @@ func TestQuotas_RateLimit_DupPath(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
+
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	// create a global rate limit quota
-	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
 		"rate": 10,
 		"path": "",
 	})
@@ -215,12 +238,7 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
 		"rate": 7.7,
@@ -267,12 +285,7 @@ func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
 		"rate": 1,
@@ -296,12 +309,7 @@ func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
 func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	err := client.Sys().Mount("pki", &api.MountInput{
 		Type: "pki",
@@ -385,13 +393,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-
-	vault.TestWaitActive(t, core)
 
 	// create PKI mount
 	err := client.Sys().Mount("pki", &api.MountInput{
@@ -472,13 +474,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-
-	vault.TestWaitActive(t, core)
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
@@ -551,13 +547,7 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	t.Cleanup(cluster.Cleanup)
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-
-	vault.TestWaitActive(t, core)
 
 	testCases := map[string]struct {
 		reqData              map[string]interface{}
@@ -735,8 +725,6 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 func TestQuotas_RateLimit_ZeroRetryRegression(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNode(t, cluster)
 	client := cluster.Cores[0].Client
@@ -765,4 +753,336 @@ func TestQuotas_RateLimit_ZeroRetryRegression(t *testing.T) {
 	}
 	wg.Wait()
 	require.False(t, failed.Load())
+}
+
+// TestQuotas_RateLimit_NilStorage_ResolveRole tests rate limit quota creation
+// with role-based auth backends using external HTTP API calls. This is a
+// blackbox test that verifies the nil storage protection works through the
+// API.
+func TestQuotas_RateLimit_NilStorage_ResolveRole(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	}, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	client := cluster.Cores[0].Client
+
+	// Enable our custom panic auth method which will panic on nil storage
+	err := client.Sys().EnableAuthWithOptions("panicauth", &api.EnableAuthOptions{
+		Type: "panicauth",
+	})
+	require.NoError(t, err)
+
+	// Create a rate limit quota with a role - this should trigger role resolution
+	_, err = client.Logical().Write("sys/quotas/rate-limit/test-quota", map[string]interface{}{
+		"name":     "test-quota",
+		"path":     "auth/panicauth/",
+		"role":     "testuser",
+		"rate":     10.0,
+		"interval": "1s",
+	})
+
+	// This should succeed without panicking due to nil storage protection
+	require.NoError(t, err, "Rate limit quota creation should not fail due to nil storage panic")
+
+	// Verify the quota was created
+	resp, err := client.Logical().Read("sys/quotas/rate-limit/test-quota")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, "test-quota", resp.Data["name"])
+	require.Equal(t, "auth/panicauth/", resp.Data["path"])
+	require.Equal(t, "testuser", resp.Data["role"])
+}
+
+// TestQuotas_RateLimit_RoleResolution_LoginBodyFormats verifies that a
+// role-based rate limit quota counts a login against the quota only when the
+// role can be resolved from the raw request body, however that body is encoded (JSON or URL form-data).
+// Each case replays a sequence of raw login requests against a quota on the
+// "limited" role.
+func TestQuotas_RateLimit_RoleResolution_LoginBodyFormats(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, coreConfig)
+	client := cluster.Cores[0].Client
+
+	const (
+		jsonType = "application/json"
+		formType = "application/x-www-form-urlencoded"
+
+		// The role and secret IDs below are assigned to the roles in the setup
+		// and are what the raw request bodies refer to.
+		limitedRoleID   = "limited-role-id"
+		limitedSecretID = "limited-secret"
+		otherRoleID     = "other-role-id"
+		otherSecretID   = "other-secret"
+
+		ok          = http.StatusOK
+		badRequest  = http.StatusBadRequest
+		tooMany     = http.StatusTooManyRequests
+		serverError = http.StatusInternalServerError
+	)
+
+	type loginRequest struct {
+		contentType string
+		body        string
+	}
+
+	// Valid logins for the limited role, reused by most cases.
+	var (
+		jsonLimited = loginRequest{jsonType, `{"role_id":"limited-role-id","secret_id":"limited-secret"}`}
+		formLimited = loginRequest{formType, `role_id=limited-role-id&secret_id=limited-secret`}
+	)
+
+	type loginStep struct {
+		request loginRequest
+		want    int
+	}
+
+	testCases := []struct {
+		name  string
+		rate  int
+		steps []loginStep
+	}{
+		// Mixed formats share one quota.
+		{
+			name:  "rate 2: json, form, form exceeds",
+			rate:  2,
+			steps: []loginStep{{jsonLimited, ok}, {formLimited, ok}, {formLimited, tooMany}},
+		},
+		{
+			name:  "rate 1: form, json exceeds",
+			rate:  1,
+			steps: []loginStep{{formLimited, ok}, {jsonLimited, tooMany}},
+		},
+		{
+			name:  "rate 2: form x3 exceeds",
+			rate:  2,
+			steps: []loginStep{{formLimited, ok}, {formLimited, ok}, {formLimited, tooMany}},
+		},
+		{
+			name:  "rate 2: json x3 exceeds",
+			rate:  2,
+			steps: []loginStep{{jsonLimited, ok}, {jsonLimited, ok}, {jsonLimited, tooMany}},
+		},
+
+		// Differently encoded logins for the limited role count against the
+		// quota: after one plain login, the variant must be rejected.
+		{
+			name: "pretty-printed json counts",
+			rate: 1,
+			steps: []loginStep{
+				{jsonLimited, ok},
+				{loginRequest{jsonType, `{"role_id": "limited-role-id","secret_id": "limited-secret"}`}, tooMany},
+			},
+		},
+		{
+			name: "json with an extra field counts",
+			rate: 1,
+			steps: []loginStep{
+				{jsonLimited, ok},
+				{loginRequest{jsonType, `{"role_id":"limited-role-id","secret_id":"limited-secret","unused":"x"}`}, tooMany},
+			},
+		},
+		{
+			name:  "json sent with a form content type counts",
+			rate:  1,
+			steps: []loginStep{{jsonLimited, ok}, {loginRequest{formType, jsonLimited.body}, tooMany}},
+		},
+		{
+			name:  "json sent without a content type counts",
+			rate:  1,
+			steps: []loginStep{{jsonLimited, ok}, {loginRequest{"", jsonLimited.body}, tooMany}},
+		},
+		{
+			name: "form with reordered fields counts",
+			rate: 1,
+			steps: []loginStep{
+				{formLimited, ok},
+				{loginRequest{formType, `secret_id=limited-secret&role_id=limited-role-id`}, tooMany},
+			},
+		},
+		{
+			name: "form with a percent-encoded role_id counts",
+			rate: 1,
+			steps: []loginStep{
+				{formLimited, ok},
+				{loginRequest{formType, `role_id=limited%2Drole%2Did&secret_id=limited-secret`}, tooMany},
+			},
+		},
+		{
+			name: "form with an extra field counts",
+			rate: 1,
+			steps: []loginStep{
+				{formLimited, ok},
+				{loginRequest{formType, `role_id=limited-role-id&secret_id=limited-secret&unused=x`}, tooMany},
+			},
+		},
+		{
+			name:  "form with a charset content type counts",
+			rate:  1,
+			steps: []loginStep{{formLimited, ok}, {loginRequest{formType + "; charset=utf-8", formLimited.body}, tooMany}},
+		},
+
+		// Other roles are not counted.
+		{
+			name: "other role json login is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{jsonLimited, ok},
+				{jsonLimited, tooMany},
+				{loginRequest{jsonType, `{"role_id":"other-role-id","secret_id":"other-secret"}`}, ok},
+			},
+		},
+		{
+			name: "other role form login is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{formLimited, ok},
+				{formLimited, tooMany},
+				{loginRequest{formType, `role_id=other-role-id&secret_id=other-secret`}, ok},
+			},
+		},
+
+		// Unresolvable logins are not counted: with a rate of 1, the first valid
+		// login after one must still succeed.
+		{
+			name: "json with an unknown role_id is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{jsonType, `{"role_id":"no-such-role-id","secret_id":"limited-secret"}`}, badRequest},
+				{jsonLimited, ok},
+				{formLimited, tooMany},
+			},
+		},
+		{
+			name: "form with an unknown role_id is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{formType, `role_id=no-such-role-id&secret_id=limited-secret`}, badRequest},
+				{formLimited, ok},
+				{jsonLimited, tooMany},
+			},
+		},
+		// Without a role_id, the quota resolves no role and the request continues, but
+		// user lockout then fails to determine an alias name and the login returns a 500.
+		{
+			name: "json without a role_id is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{jsonType, `{"secret_id":"limited-secret"}`}, serverError},
+				{jsonLimited, ok},
+				{formLimited, tooMany},
+			},
+		},
+		{
+			name: "form without a role_id is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{formType, `secret_id=limited-secret`}, serverError},
+				{formLimited, ok},
+				{jsonLimited, tooMany},
+			},
+		},
+		{
+			name: "json with a misspelled role_id is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{jsonType, `{"roll-idee":"limited-role-id","secret_id":"limited-secret"}`}, serverError},
+				{jsonLimited, ok},
+				{formLimited, tooMany},
+			},
+		},
+		{
+			name: "form with a misspelled role_id is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{formType, `roll-idee=limited-role-id&secret_id=limited-secret`}, serverError},
+				{formLimited, ok},
+				{jsonLimited, tooMany},
+			},
+		},
+		// The JSON limits handler rejects the body with a 500 before role resolution runs.
+		{
+			name: "truncated json is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{jsonType, `{"role_id":"limited-role-id","secret_id":"limited-secret"`}, serverError},
+				{jsonLimited, ok},
+				{formLimited, tooMany},
+			},
+		},
+		{
+			name: "form with an invalid percent escape is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{formType, `role_id=%zz&secret_id=limited-secret`}, badRequest},
+				{formLimited, ok},
+				{jsonLimited, tooMany},
+			},
+		},
+		// An empty body has no role_id, so it fails in user lockout like the cases above.
+		{
+			name: "empty body is not counted",
+			rate: 1,
+			steps: []loginStep{
+				{loginRequest{jsonType, ``}, serverError},
+				{jsonLimited, ok},
+				{formLimited, tooMany},
+			},
+		},
+	}
+
+	for i, tc := range testCases {
+		// Each case gets its own mount and quota so cases don't share rate limit state.
+		mount := fmt.Sprintf("approle-%d", i)
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := client.Sys().EnableAuthWithOptions(mount, &api.EnableAuthOptions{Type: "approle"})
+			require.NoError(t, err)
+
+			roles := map[string][2]string{
+				"limited": {limitedRoleID, limitedSecretID},
+				"other":   {otherRoleID, otherSecretID},
+			}
+			for role, ids := range roles {
+				_, err = client.Logical().Write("auth/"+mount+"/role/"+role, nil)
+				require.NoError(t, err)
+				_, err = client.Logical().Write("auth/"+mount+"/role/"+role+"/role-id", map[string]interface{}{"role_id": ids[0]})
+				require.NoError(t, err)
+				_, err = client.Logical().Write("auth/"+mount+"/role/"+role+"/custom-secret-id", map[string]interface{}{"secret_id": ids[1]})
+				require.NoError(t, err)
+			}
+
+			_, err = client.Logical().Write("sys/quotas/rate-limit/"+mount, map[string]interface{}{
+				"path":     "auth/" + mount,
+				"role":     "limited",
+				"rate":     tc.rate,
+				"interval": "60s",
+			})
+			require.NoError(t, err)
+
+			for n, step := range tc.steps {
+				req := client.NewRequest(http.MethodPost, "/v1/auth/"+mount+"/login")
+				if step.request.contentType != "" {
+					req.Headers = http.Header{"Content-Type": {step.request.contentType}}
+				}
+				req.BodyBytes = []byte(step.request.body)
+
+				resp, err := client.RawRequest(req)
+				if resp == nil {
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+				}
+
+				respBody, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				resp.Body.Close()
+
+				msg := fmt.Sprintf("step %d (%q): %s", n+1, step.request.body, respBody)
+				require.Equal(t, step.want, resp.StatusCode, msg)
+			}
+		})
+	}
 }

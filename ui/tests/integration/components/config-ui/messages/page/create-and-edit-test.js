@@ -35,16 +35,24 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       { isNew: true }
     );
 
+    this.breadcrumbs = [
+      { label: 'Messages', route: 'messages', query: { authenticated: true } },
+      { label: 'Create Message' },
+    ];
+
     this.renderComponent = () =>
-      render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} @messages={{this.messages}} />`, {
-        owner: this.engine,
-      });
+      render(
+        hbs`<Messages::Page::CreateAndEdit @message={{this.message}} @messages={{this.messages}} @breadcrumbs={{this.breadcrumbs}} />`,
+        {
+          owner: this.engine,
+        }
+      );
   });
 
   test('it should display all the create form fields and default radio button values', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(GENERAL.title).hasText('Create message');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create message');
     assert.dom(GENERAL.fieldLabel('authenticated')).hasText('Where should we display this message?');
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).exists();
@@ -150,7 +158,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
     await this.renderComponent();
 
-    assert.dom(GENERAL.title).hasText('Edit message');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit message');
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).isChecked();
     assert.dom(CUSTOM_MESSAGES.radio('modal')).exists();

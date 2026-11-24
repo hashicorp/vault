@@ -11,10 +11,17 @@ import { service } from '@ember/service';
 
 import type Transition from '@ember/routing/transition';
 import type RouterService from '@ember/routing/router-service';
+import FlagsService from 'vault/services/flags';
+
+type TransitionInfo = {
+  routeName?: string;
+  params?: Record<string, unknown>;
+};
 
 // this service tracks the unsaved changes modal state.
 export default class UnsavedChangesService extends Service {
   @service declare readonly router: RouterService;
+  @service declare readonly flags: FlagsService;
 
   @tracked showModal = false;
 
@@ -23,7 +30,7 @@ export default class UnsavedChangesService extends Service {
   @tracked intendedTransition: Transition | undefined; // saved transition from willTransition hook before exiting with unsaved changes
 
   setup(state: Record<string, unknown> | undefined) {
-    // ensure unsaved-changes intendedTransition is intiially set to undefined each time the user transition
+    // ensure unsaved-changes intendedTransition is initially set to undefined each time the user transition
     this.intendedTransition = undefined;
     // set up unsaved-changes service state
     this.currentState = state;
@@ -40,10 +47,10 @@ export default class UnsavedChangesService extends Service {
     return this.changedFields.length > 0;
   }
 
-  get transitionInfo() {
+  get transitionInfo(): TransitionInfo {
     return {
       routeName: this.intendedTransition?.to?.name,
-      params: this.intendedTransition?.to?.params,
+      params: this.intendedTransition?.to?.params as Record<string, unknown> | undefined,
     };
   }
 
@@ -66,7 +73,9 @@ export default class UnsavedChangesService extends Service {
       this.resetUnsavedState();
       this.router.transitionTo(intendedRoute);
     } else {
-      this.router.transitionTo(route);
+      // due to an issue with the routing model not reloading when a route has query params (ie. is in a namespace)
+      // we need to refresh the route to ensure the model is updated
+      this.router.refresh(route);
     }
   }
 }

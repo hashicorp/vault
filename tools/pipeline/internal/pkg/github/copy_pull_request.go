@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -15,8 +15,8 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v74/github"
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	libgithub "github.com/google/go-github/v83/github"
+	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
 )
@@ -57,7 +57,8 @@ func (r *CopyPullRequestReq) Run(
 		SkippedCommits: []*libgithub.RepositoryCommit{},
 	}
 
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("from-owner", r.FromOwner),
 		slog.String("from-repo", r.FromRepo),
 		slog.String("from-origin", r.FromOrigin),
@@ -233,7 +234,8 @@ func (r *CopyPullRequestReq) Run(
 
 		parents := strings.TrimSpace(string(cherryPickRes.Stdout))
 		if len(strings.Split(parents, " ")) > 1 {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("sha", commit.GetSHA()),
 				slog.String("parents", parents),
 			), "skipping merge commit")
@@ -387,7 +389,7 @@ func (r *CopyPullRequestRes) CommentBody(err error) string {
 		return "no copy pull request response has been initialized"
 	}
 
-	t := r.ToTable(err)
+	t := r.ToMarkdownTable(err)
 	if err == nil {
 		t.SetTitle("Copy workflow completed!")
 		return t.RenderMarkdown()
@@ -418,6 +420,11 @@ func (r *CopyPullRequestRes) ToJSON() ([]byte, error) {
 	return b, nil
 }
 
+// ToMarkdownTable escapes error text but leaves our PR links as Markdown.
+func (r *CopyPullRequestRes) ToMarkdownTable(err error) table.Writer {
+	return escapeMarkdownTableColumns(r.ToTable(err), 4)
+}
+
 // ToTable marshals the response to a text table.
 func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 	t := table.NewWriter()
@@ -430,7 +437,7 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 		"From", "To", "Skipped Merge Commits", "Error",
 	})
 
-	row := table.Row{nil, nil}
+	row := table.Row{"", "", ""}
 	if r.Request != nil {
 		from := r.Request.FromOwner + "/" + r.Request.FromRepo
 		if pr := r.OriginPullRequest; pr != nil {
@@ -445,7 +452,7 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 	if err != nil {
 		row = append(row, err.Error())
 	} else {
-		row = append(row, nil)
+		row = append(row, "")
 	}
 	t.AppendRow(row)
 

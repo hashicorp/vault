@@ -3,16 +3,39 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { set } from '@ember/object';
-import { hash } from 'rsvp';
-import Route from '@ember/routing/route';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import { service } from '@ember/service';
-import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
+import { set } from '@ember/object';
+import Route from '@ember/routing/route';
+import { service } from '@ember/service';
+import { filterEnginesByMountCategory, isAddonEngine } from 'core/utils/all-engines-metadata';
+import { paginate } from 'core/utils/paginate-list';
+import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { getEnginePathParam } from 'vault/utils/backend-route-helpers';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { getKeymgmtProviderIcon } from 'vault/utils/keymgmt-provider-utils';
+import { getModelTypeForEngine } from 'vault/utils/model-helpers/secret-engine-helpers';
+import { normalizePath } from 'vault/utils/path-encoding-helpers';
+import { resolve } from 'rsvp';
+import RoleAwsResource from 'vault/resources/aws-role';
+import {
+  SecretsApiKeyManagementListKeysListEnum,
+  SecretsApiKeyManagementListKmsProvidersListEnum,
+  SecretsApiTotpListKeysListEnum,
+  SecretsApiSshListRolesListEnum,
+  SecretsApiAwsListRolesListEnum,
+  SecretsApiDatabaseListConnectionsListEnum,
+  SecretsApiDatabaseListRolesListEnum,
+  SecretsApiDatabaseListStaticRolesListEnum,
+  SecretsApiTransformListTransformationsListEnum,
+  SecretsApiTransformListRolesListEnum,
+  SecretsApiTransformListTemplatesListEnum,
+  SecretsApiTransformListAlphabetsListEnum,
+  SecretsApiTransitListKeysListEnum,
+  SecretsApiKvV1ListListEnum,
+} from '@hashicorp/vault-client-typescript';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -31,10 +54,9 @@ function getValidPage(pageParam) {
 }
 
 export default Route.extend({
-  pagination: service(),
-  store: service(),
+  api: service(),
+  capabilitiesService: service('capabilities'),
   templateName: 'vault/cluster/secrets/backend/list',
-  pathHelp: service('path-help'),
   router: service(),
 
   queryParams: {
@@ -49,57 +71,33 @@ export default Route.extend({
     },
   },
 
-  modelTypeForTransform(tab) {
-    let modelType;
-    switch (tab) {
-      case 'role':
-        modelType = 'transform/role';
-        break;
-      case 'template':
-        modelType = 'transform/template';
-        break;
-      case 'alphabet':
-        modelType = 'transform/alphabet';
-        break;
-      default: // CBS TODO: transform/transformation
-        modelType = 'transform';
-        break;
-    }
-    return modelType;
-  },
-
   secretParam() {
     const { secret } = this.paramsFor(this.routeName);
     return secret ? normalizePath(secret) : '';
   },
 
-  enginePathParam() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return backend;
-  },
-
   beforeModel() {
     const secret = this.secretParam();
-    const backend = this.enginePathParam();
-    const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
+    const backend = getEnginePathParam(this);
     const secretEngine = this.modelFor('vault.cluster.secrets.backend');
     const type = secretEngine?.engineType;
+    const effectiveType = getEffectiveEngineType(type);
     assert('secretEngine.engineType is not defined', !!type);
     // if configuration only, redirect to configuration route
-    if (engineDisplayData(type)?.isOnlyMountable) {
+    if (engineDisplayData(effectiveType)?.isOnlyMountable) {
       return this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
     }
 
     const engineRoute = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: true }).find(
-      (engine) => engine.type === type
+      (engine) => engine.type === effectiveType
     )?.engineRoute;
-    if (!type || !SUPPORTED_BACKENDS.includes(type)) {
+    if (!type || !SUPPORTED_BACKENDS.includes(effectiveType)) {
       return this.router.transitionTo('vault.cluster.secrets');
     }
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    if (isAddonEngine(type, secretEngine.version)) {
+    if (isAddonEngine(effectiveType, secretEngine.version)) {
       if (engineRoute === 'kv.list' && pathIsDirectory(secret)) {
         return this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', backend, secret);
       }
@@ -108,70 +106,625 @@ export default Route.extend({
       // if it's KV v2 but not registered as an addon, it's type generic
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
-    const modelType = this.getModelType(type, tab);
-    return this.pathHelp.hydrateModel(modelType, backend).then(() => {
-      this.store.unloadAll('capabilities');
-    });
+    return resolve();
   },
 
   getModelType(type, tab) {
-    const types = {
-      database: tab === 'role' ? 'database/role' : 'database/connection',
-      transit: 'transit-key',
-      ssh: 'role-ssh',
-      transform: this.modelTypeForTransform(tab),
-      aws: 'role-aws',
-      cubbyhole: 'secret',
-      kv: 'secret',
-      keymgmt: `keymgmt/${tab || 'key'}`,
-      generic: 'secret',
-      totp: 'totp-key',
-    };
-    return types[type];
+    return getModelTypeForEngine(type, { tab });
+  },
+
+  async fetchTransitKeys(backend, page, pageFilter) {
+    let response;
+    try {
+      response = await this.api.secrets.transitListKeys(backend, SecretsApiTransitListKeysListEnum.TRUE);
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return paginate([], { page });
+      }
+      throw error;
+    }
+
+    const keys = response.keys || [];
+    const paths = keys.map((name) => this.capabilitiesService.pathFor('transitKey', { backend, name }));
+    const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+    const items = keys.map((name) => {
+      const path = this.capabilitiesService.pathFor('transitKey', { backend, name });
+      return {
+        id: name,
+        backend,
+        canRead: capabilities[path]?.canRead === true,
+        canEdit: capabilities[path]?.canUpdate === true,
+      };
+    });
+    return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
+  },
+
+  async fetchTotpKeys(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.totpListKeys(backend, SecretsApiTotpListKeysListEnum.TRUE);
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) => this.capabilitiesService.pathFor('totpKey', { backend, name }));
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const keyPath = this.capabilitiesService.pathFor('totpKey', { backend, name });
+        return {
+          id: name,
+          name,
+          backend,
+          canRead: capabilities[keyPath]?.canRead || false,
+          canDelete: capabilities[keyPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchKeysWithCapabilities(backend) {
+    const { keys } = await this.api.secrets.keyManagementListKeys(
+      backend,
+      SecretsApiKeyManagementListKeysListEnum.TRUE
+    );
+
+    // Fetch capabilities for all keys
+    const pathsToFetch = (keys || []).flatMap((keyName) => {
+      const keyPath = this.capabilitiesService.pathFor('keymgmtKey', { backend, name: keyName });
+      return [keyPath];
+    });
+
+    const capabilities = await this.capabilitiesService.fetch(pathsToFetch);
+
+    // Transform string array into objects for list display with capabilities
+    const keysList = (keys || []).map((keyName) => {
+      const keyPath = this.capabilitiesService.pathFor('keymgmtKey', { backend, name: keyName });
+      return {
+        id: keyName,
+        name: keyName,
+        backend,
+        icon: 'key',
+        type: 'key',
+        canRead: capabilities[keyPath]?.canRead || false,
+        canEdit: capabilities[keyPath]?.canUpdate || false,
+        canDelete: capabilities[keyPath]?.canDelete || false,
+      };
+    });
+
+    return { keysList, capabilities };
+  },
+
+  async fetchKeymgmtKeys(backend, page, pageFilter) {
+    try {
+      const { keysList } = await this.fetchKeysWithCapabilities(backend);
+      return paginate(keysList, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchProvidersWithCapabilities(backend) {
+    const { keys: providerNames } = await this.api.secrets.keyManagementListKmsProviders(
+      backend,
+      SecretsApiKeyManagementListKmsProvidersListEnum.TRUE
+    );
+
+    const providersWithData = await Promise.all(
+      (providerNames || []).map(async (providerName) => {
+        const { data } = await this.api.secrets.keyManagementReadKmsProvider(providerName, backend);
+        return {
+          ...data,
+          id: providerName,
+          name: providerName,
+          backend,
+          type: 'provider',
+          icon: getKeymgmtProviderIcon(data.provider),
+        };
+      })
+    );
+
+    const pathsToFetch = providersWithData.map((provider) =>
+      this.capabilitiesService.pathFor('keymgmtProvider', { backend, id: provider.id })
+    );
+    const capabilities = await this.capabilitiesService.fetch(pathsToFetch);
+
+    const providersList = providersWithData.map((provider) => {
+      const providerPath = this.capabilitiesService.pathFor('keymgmtProvider', {
+        backend,
+        id: provider.id,
+      });
+      return {
+        ...provider,
+        canRead: capabilities[providerPath]?.canRead || false,
+        canEdit: capabilities[providerPath]?.canUpdate || false,
+        canDelete: capabilities[providerPath]?.canDelete || false,
+      };
+    });
+
+    return { providersList, capabilities };
+  },
+
+  async fetchKeymgmtProviders(backend, page, pageFilter) {
+    try {
+      const { providersList } = await this.fetchProvidersWithCapabilities(backend);
+      return paginate(providersList, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchSshRolesWithCapabilities(backend) {
+    // Fetch roles and zero-address config in parallel (zero-address may 404 if never configured)
+    const [listResponse, zeroAddressResult] = await Promise.allSettled([
+      this.api.secrets.sshListRoles(backend, SecretsApiSshListRolesListEnum.TRUE),
+      this.api.secrets.sshReadZeroAddressConfigurationRaw({ ssh_mount_path: backend }),
+    ]);
+
+    if (listResponse.status === 'rejected') throw listResponse.reason;
+
+    const roles = this.api.keyInfoToArray(listResponse.value);
+
+    // Build set of zero-address role names from the config endpoint
+    let zeroAddressRoles = new Set();
+    if (zeroAddressResult.status === 'fulfilled') {
+      const body = await zeroAddressResult.value.raw.json();
+      const names = body?.data?.roles;
+      if (Array.isArray(names)) {
+        zeroAddressRoles = new Set(names);
+      }
+    }
+
+    // Build all capability paths for batch fetch
+    const zeroAddressPath = this.capabilitiesService.pathFor('sshZeroAddress', { backend });
+    const rolePaths = roles.map((role) => ({
+      role: this.capabilitiesService.pathFor('sshRole', { backend, id: role.id }),
+      credentials: this.capabilitiesService.pathFor('sshCredentials', { backend, id: role.id }),
+      sign: this.capabilitiesService.pathFor('sshSign', { backend, id: role.id }),
+    }));
+
+    // Fetch all capabilities in a single request
+    const allPaths = [
+      ...rolePaths.flatMap((paths) => [paths.role, paths.credentials, paths.sign]),
+      zeroAddressPath,
+    ];
+    const capabilities = await this.capabilitiesService.fetch(allPaths);
+
+    // Merge role data with capabilities
+    return roles.map((role, index) => {
+      const paths = rolePaths[index];
+      return {
+        ...role,
+        backend,
+        zero_address: zeroAddressRoles.has(role.id),
+        canRead: capabilities[paths.role]?.canRead || false,
+        canEdit: capabilities[paths.role]?.canUpdate || false,
+        canDelete: capabilities[paths.role]?.canDelete || false,
+        canGenerate: capabilities[paths.credentials]?.canUpdate || false,
+        canSign: capabilities[paths.sign]?.canUpdate || false,
+        canEditZeroAddress: capabilities[zeroAddressPath]?.canUpdate || false,
+      };
+    });
+  },
+
+  async fetchSshRoles(backend, page, pageFilter) {
+    try {
+      const roles = await this.fetchSshRolesWithCapabilities(backend);
+      return paginate(roles, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchDatabaseConnections(backend, page, pageFilter) {
+    try {
+      const response = await this.api.secrets.databaseListConnections(
+        backend,
+        SecretsApiDatabaseListConnectionsListEnum.TRUE
+      );
+      const names = response.keys || [];
+      // capabilities are only fetched for the connections on the current page
+      const connections = paginate(
+        names.map((name) => ({ id: name, name, backend })),
+        { page, filter: pageFilter, filterKey: 'name' }
+      );
+      const paths = connections.flatMap(({ name }) => [
+        this.capabilitiesService.pathFor('databaseConnection', { backend, id: name }),
+        this.capabilitiesService.pathFor('databaseReset', { backend, id: name }),
+        this.capabilitiesService.pathFor('databaseRotateRoot', { backend, id: name }),
+      ]);
+      const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+      // assigned in place so the pagination metadata on the array is kept
+      connections.forEach((item) => {
+        const connection = capabilities[`${backend}/config/${item.name}`];
+        const reset = capabilities[`${backend}/reset/${item.name}`];
+        const rotateRoot = capabilities[`${backend}/rotate-root/${item.name}`];
+        Object.assign(item, {
+          canEdit: connection?.canUpdate || false,
+          canReset: reset?.canUpdate || reset?.canCreate || false,
+          canRotateRoot: rotateRoot?.canUpdate || rotateRoot?.canCreate || false,
+        });
+      });
+      return connections;
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) return [];
+      throw await this.databaseListError(error);
+    }
+  },
+
+  // The application route sends control group errors to the approval page. Other errors keep their status
+  // so the error substate can render the not found / forbidden views.
+  async databaseListError(error) {
+    const { message, status, response } = await this.api.parseError(error);
+    if (response?.isControlGroupError) return response;
+    return Object.assign(new Error(message), { httpStatus: status, errors: [message] });
+  },
+
+  // Database roles are either static or dynamic, both are listed together and each is marked with its type.
+  // The list only fails when both requests do.
+  async fetchDatabaseRoles(backend, page, pageFilter) {
+    const [staticResp, dynamicResp] = await Promise.allSettled([
+      this.api.secrets.databaseListStaticRoles(backend, SecretsApiDatabaseListStaticRolesListEnum.TRUE),
+      this.api.secrets.databaseListRoles(backend, SecretsApiDatabaseListRolesListEnum.TRUE),
+    ]);
+
+    if (staticResp.status === 'rejected' && dynamicResp.status === 'rejected') {
+      const [staticError, dynamicError] = await Promise.all([
+        this.api.parseError(staticResp.reason),
+        this.api.parseError(dynamicResp.reason),
+      ]);
+      if (staticError.response?.isControlGroupError) throw staticError.response;
+      // Otherwise the dynamic error decides the outcome. A 404 means the backend has no roles, even when the user
+      // is not allowed to list static roles (403), so the list is empty rather than an error.
+      if (dynamicError.status === 404) return paginate([], { page });
+      throw await this.databaseListError(dynamicResp.reason);
+    }
+
+    const staticNames = staticResp.status === 'fulfilled' ? staticResp.value.keys ?? [] : [];
+    const dynamicNames = dynamicResp.status === 'fulfilled' ? dynamicResp.value.keys ?? [] : [];
+    // capabilities are only fetched for the roles on the current page
+    const roles = paginate(
+      [
+        ...staticNames.map((id) => ({ id, type: 'static', path: 'static-roles', backend })),
+        ...dynamicNames.map((id) => ({ id, type: 'dynamic', path: 'roles', backend })),
+      ],
+      { page, filter: pageFilter, filterKey: 'id' }
+    );
+
+    const paths = roles.flatMap(({ id, type }) => {
+      const params = { backend, id };
+      return [
+        this.capabilitiesService.pathFor(type === 'static' ? 'databaseStaticRole' : 'databaseRole', params),
+        this.capabilitiesService.pathFor(type === 'static' ? 'databaseStaticCreds' : 'databaseCreds', params),
+        this.capabilitiesService.pathFor('databaseRotateRole', params),
+      ];
+    });
+    const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+    // assigned in place so the pagination metadata on the array is kept
+    roles.forEach((item) => {
+      const { id, type, path } = item;
+      const role = capabilities[`${backend}/${path}/${id}`];
+      const creds = capabilities[`${backend}/${type === 'static' ? 'static-creds' : 'creds'}/${id}`];
+      const rotate = capabilities[`${backend}/rotate-role/${id}`];
+      Object.assign(item, {
+        canEditRole: role?.canUpdate || false,
+        canGenerateCredentials: type === 'dynamic' ? creds?.canRead || false : false,
+        canGetCredentials: type === 'static' ? creds?.canRead || false : false,
+        canRotateRoleCredentials: rotate?.canUpdate || false,
+      });
+    });
+    return roles;
+  },
+
+  async fetchAwsRoles(backend, page, pageFilter) {
+    try {
+      const response = await this.api.secrets.awsListRoles(backend, SecretsApiAwsListRolesListEnum.TRUE);
+      const names = response.keys || [];
+      const paths = names.flatMap((name) => [`${backend}/roles/${name}`, `${backend}/creds/${name}`]);
+      const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+      const roles = names.map((name) => {
+        const role = capabilities[`${backend}/roles/${name}`];
+        const credentials = capabilities[`${backend}/creds/${name}`];
+        return new RoleAwsResource(
+          {
+            name,
+            backend,
+            canRead: role?.canRead || false,
+            canEdit: role?.canUpdate || false,
+            canDelete: role?.canDelete || false,
+            canGenerate: credentials?.canUpdate || false,
+          },
+          this
+        );
+      });
+      return paginate(roles, { page, filter: pageFilter, filterKey: 'name' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) return [];
+      throw error;
+    }
+  },
+
+  async fetchTransformTransformations(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListTransformations(
+        backend,
+        SecretsApiTransformListTransformationsListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformTransformation', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformTransformation', { backend, name });
+        return {
+          id: name,
+          name,
+          backend,
+          canRead: capabilities[itemPath]?.canRead || false,
+          canUpdate: capabilities[itemPath]?.canUpdate || false,
+          canDelete: capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchTransformRolesList(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListRoles(
+        backend,
+        SecretsApiTransformListRolesListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformRole', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformRole', { backend, name });
+        return {
+          id: name,
+          name,
+          backend,
+          canRead: capabilities[itemPath]?.canRead || false,
+          canUpdate: capabilities[itemPath]?.canUpdate || false,
+          canDelete: capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchTransformTemplates(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListTemplates(
+        backend,
+        SecretsApiTransformListTemplatesListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformTemplate', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformTemplate', { backend, name });
+        const isBuiltin = name.startsWith('builtin/');
+        return {
+          id: name,
+          name,
+          backend,
+          isBuiltin,
+          canRead: isBuiltin ? false : capabilities[itemPath]?.canRead || false,
+          canUpdate: isBuiltin ? false : capabilities[itemPath]?.canUpdate || false,
+          canDelete: isBuiltin ? false : capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchTransformAlphabets(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListAlphabets(
+        backend,
+        SecretsApiTransformListAlphabetsListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformAlphabet', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformAlphabet', { backend, name });
+        const isBuiltin = name.startsWith('builtin/');
+        return {
+          id: name,
+          name,
+          backend,
+          isBuiltin,
+          canRead: isBuiltin ? false : capabilities[itemPath]?.canRead || false,
+          canUpdate: isBuiltin ? false : capabilities[itemPath]?.canUpdate || false,
+          canDelete: isBuiltin ? false : capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchGenericSecrets(backend, path, page, pageFilter) {
+    let keys;
+    try {
+      const response = await this.api.secrets.kvV1List(path, backend, SecretsApiKvV1ListListEnum.TRUE);
+      keys = response.keys || [];
+    } catch (error) {
+      const { status, response } = await this.api.parseError(error);
+      if (response?.isControlGroupError) {
+        throw response;
+      }
+      if (status === 404) {
+        return paginate([], { page });
+      }
+      throw error;
+    }
+
+    const items = keys.map((name) => {
+      const id = (path ? `${path}${name}` : name) || ' ';
+      const parentKey = parentKeyForKey(id);
+      return {
+        id,
+        backend,
+        isGenericSecret: true,
+        isFolder: keyIsFolder(id),
+        keyWithoutParent: id ? id.replace(parentKey || '', '') : null,
+      };
+    });
+
+    const paginationOptions = { filter: pageFilter, filterKey: 'keyWithoutParent' };
+    let pageItems = paginate(items, { ...paginationOptions, page });
+    const currentPage = pageItems.meta.lastPage ? Math.min(page, pageItems.meta.lastPage) : 1;
+    if (pageItems.meta.currentPage !== currentPage) {
+      pageItems = paginate(items, { ...paginationOptions, page: currentPage });
+    }
+
+    const paths = pageItems.map((item) => `${backend}/${item.id}`);
+    const capabilities = paths.length ? await this.capabilitiesService.fetch(paths, { strict: true }) : {};
+    pageItems.forEach((item, index) => {
+      const itemCapabilities = capabilities[paths[index]];
+      item.canRead = itemCapabilities?.canRead === true;
+      item.canEdit = itemCapabilities?.canUpdate === true;
+      item.canDelete = itemCapabilities?.canDelete === true;
+    });
+
+    return pageItems;
   },
 
   async model(params) {
     const secret = this.secretParam() || '';
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    const modelType = this.getModelType(backendModel.engineType, params.tab);
+    const effectiveType = getEffectiveEngineType(backendModel.engineType);
+    const modelType = this.getModelType(effectiveType, params.tab);
 
-    return hash({
+    let secrets;
+    if (effectiveType === 'transit') {
+      secrets = await this.fetchTransitKeys(backend, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    } else if (effectiveType === 'totp') {
+      const page = getValidPage(params.page);
+      secrets = await this.fetchTotpKeys(backend, page, params.pageFilter);
+      this.set('has404', false);
+    } else if (effectiveType === 'keymgmt') {
+      const page = getValidPage(params.page);
+      const filter = params.pageFilter;
+      secrets =
+        params.tab === 'provider'
+          ? await this.fetchKeymgmtProviders(backend, page, filter)
+          : await this.fetchKeymgmtKeys(backend, page, filter);
+
+      this.set('has404', false);
+    } else if (modelType === 'database/connection') {
+      secrets = await this.fetchDatabaseConnections(backend, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    } else if (modelType === 'database/role') {
+      secrets = await this.fetchDatabaseRoles(backend, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    } else if (effectiveType === 'aws') {
+      secrets = await this.fetchAwsRoles(backend, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    } else if (effectiveType === 'ssh') {
+      const page = getValidPage(params.page);
+      const filter = params.pageFilter;
+      secrets = await this.fetchSshRoles(backend, page, filter);
+      this.set('has404', false);
+    } else if (effectiveType === 'transform') {
+      const page = getValidPage(params.page);
+      const filter = params.pageFilter;
+      const tab = params.tab;
+      if (tab === 'role') {
+        secrets = await this.fetchTransformRolesList(backend, page, filter);
+      } else if (tab === 'template') {
+        secrets = await this.fetchTransformTemplates(backend, page, filter);
+      } else if (tab === 'alphabet') {
+        secrets = await this.fetchTransformAlphabets(backend, page, filter);
+      } else {
+        secrets = await this.fetchTransformTransformations(backend, page, filter);
+      }
+      this.set('has404', false);
+    } else if (modelType === 'secret') {
+      secrets = await this.fetchGenericSecrets(backend, secret, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    }
+
+    return {
       secret,
-      secrets: this.pagination
-        .lazyPaginatedQuery(modelType, {
-          id: secret,
-          backend,
-          responsePath: 'data.keys',
-          page: getValidPage(params.page),
-          pageFilter: params.pageFilter,
-        })
-        .then((model) => {
-          this.set('has404', false);
-          return model;
-        })
-        .catch((err) => {
-          if (backendModel && err.httpStatus === 404) {
-            return [];
-          } else {
-            // else we're throwing and dealing with this in the error action
-            throw err;
-          }
-        }),
-    });
+      secrets,
+    };
   },
 
   setupController(controller, resolvedModel) {
     const secretParams = this.paramsFor(this.routeName);
     const secret = resolvedModel.secret;
     const model = resolvedModel.secrets;
-    const backend = this.enginePathParam();
+    const backend = getEnginePathParam(this);
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const has404 = this.has404;
-    // only clear store cache if this is a new model
-    if (secret !== controller?.baseKey?.id) {
-      this.pagination.clearDataset();
-    }
     controller.set('hasModel', true);
     controller.setProperties({
       model,
@@ -179,7 +732,7 @@ export default Route.extend({
       backend,
       backendModel,
       baseKey: { id: secret },
-      backendType: backendModel.engineType,
+      backendType: getEffectiveEngineType(backendModel.engineType),
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
@@ -207,7 +760,7 @@ export default Route.extend({
   actions: {
     error(error, transition) {
       const secret = this.secretParam();
-      const backend = this.enginePathParam();
+      const backend = getEnginePathParam(this);
       const is404 = error.httpStatus === 404;
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       const hasModel = this.controllerFor(this.routeName).hasModel;
@@ -224,15 +777,11 @@ export default Route.extend({
       return true;
     },
 
-    willTransition(transition) {
+    willTransition() {
       window.scrollTo(0, 0);
-      if (transition.targetName !== this.routeName) {
-        this.pagination.clearDataset();
-      }
       return true;
     },
     reload() {
-      this.pagination.clearDataset();
       this.refresh();
     },
   },

@@ -1,0 +1,6 @@
+```release-note:change
+audit: A new top-level key called `supplemental_audit_data` can now appear within audit entries of type "response" within the request and response data structures. These new fields can contain data that further describe the request/response data and are mainly used for non-JSON based requests and responses to help auditing. The `audit-non-hmac-request-keys` and `audit-non-hmac-response-keys` apply to keys within `supplemental_audit_data` to remove the HMAC of the field values if so desired.
+```
+```release-note:improvement
+secrets/pki: OCSP populate details of the response within the new `supplemental_audit_data` section of audit log response entries. Details such as issuer_id, next_update, ocsp_status, serial_number, revoked_at will appear as hmac values by default unless added to the mount's `audit-non-hmac-response-keys` set of keys. 
+```

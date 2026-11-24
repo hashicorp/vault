@@ -8,19 +8,18 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const { unsealKeys } = VAULT_KEYS;
+const unsealKeys = ['unseal-key-1', 'unseal-key-2', 'unseal-key-3'];
 
 module('Acceptance | unseal', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.unsealCount = 0;
     this.sealed = false;
     return login();
@@ -57,7 +56,7 @@ module('Acceptance | unseal', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
-    await click('[data-test-seal]');
+    await click(GENERAL.button('Seal'));
     await click(GENERAL.confirmButton);
 
     await pollCluster(this.owner);
@@ -66,9 +65,9 @@ module('Acceptance | unseal', function (hooks) {
 
     // unseal
     for (const key of unsealKeys) {
-      await fillIn('[data-test-shamir-key-input]', key);
+      await fillIn(GENERAL.inputByAttr('shamir-key'), key);
 
-      await click('button[type="submit"]');
+      await click(GENERAL.submitButton);
 
       await pollCluster(this.owner);
       await settled();

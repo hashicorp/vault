@@ -49,7 +49,7 @@ func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[s
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 // SignKey wraps SignKeyWithContext using context.Background.
@@ -74,5 +74,5 @@ func (c *SSH) SignKeyWithContext(ctx context.Context, role string, data map[stri
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }

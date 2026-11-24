@@ -13,7 +13,7 @@
       {{on "click" this.downloadCert}}
       data-test-pki-cert-download-button
     />
-    {{#if @canRevoke}}
+    {{#if this.showRevoke}}
       <ConfirmAction
         @buttonText="Revoke certificate"
         class="toolbar-button"
@@ -44,7 +44,7 @@
     {{#if value}}
       {{#if (this.isCertificate field)}}
         <InfoTableRow @label={{this.label field}}>
-          <CertificateCard @data={{value}} />
+          <EncodedDataCard @data={{value}} />
         </InfoTableRow>
       {{else if (eq field "serial_number")}}
         <InfoTableRow @label="Serial number">

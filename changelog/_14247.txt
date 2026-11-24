@@ -1,0 +1,4 @@
+
+```release-note:improvement
+secrets/pki (enterprise): Allow SCEP to use an issuer that is backed by an RSA based PKCS#11 managed key
+```

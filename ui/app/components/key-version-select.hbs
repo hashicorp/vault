@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -10,9 +10,9 @@
       <div class="select is-fullwidth">
         <select name="key_version" id="key_version" onchange={{action this.onVersionChange value="target.value"}}>
           {{#each this.key.keysForEncryption as |version|}}
-            {{#if (eq version this.key.latestVersion)}}
+            {{#if (eq version this.key.latest_version)}}
               <option
-                selected={{if this.key_version (eq version this.key_version) (eq version this.key.latestVersion)}}
+                selected={{if this.key_version (eq version this.key_version) (eq version this.key.latest_version)}}
                 value={{0}}
               >
                 {{version}}
@@ -20,7 +20,7 @@
               </option>
             {{else}}
               <option
-                selected={{if this.key_version (eq version this.key_version) (eq version this.key.latestVersion)}}
+                selected={{if this.key_version (eq version this.key_version) (eq version this.key.latest_version)}}
                 value={{version}}
               >
                 {{version}}

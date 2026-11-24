@@ -1,18 +1,20 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@ember/component';
-import { getOwner } from '@ember/owner';
 import config from '../config/environment';
 import { service } from '@ember/service';
 
 export default Component.extend({
   flashMessages: service(),
   auth: service(),
+  api: service(),
+  router: service(),
 
   useServiceWorker: null,
+  peerToRemove: null,
 
   async init() {
     this._super(...arguments);
@@ -51,16 +53,18 @@ export default Component.extend({
   },
 
   actions: {
-    async removePeer(model) {
-      const { nodeId } = model;
+    async removePeer(server) {
+      const { node_id } = server;
       try {
-        await model.destroyRecord();
+        await this.api.request.post('/sys/storage/raft/remove-peer', { server_id: node_id });
       } catch (e) {
-        const errString = e.errors ? e.errors.join(' ') : e.message || e;
-        this.flashMessages.danger(`There was an issue removing the peer ${nodeId}: ${errString}`);
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(`There was an issue removing the peer ${node_id}: ${message}`);
         return;
       }
-      this.flashMessages.success(`Successfully removed the peer: ${nodeId}.`);
+      this.flashMessages.success(`Successfully removed the peer: ${node_id}.`);
+      // model is a plain array (no live record tracking), so refresh the route to reflect the removal
+      await this.router.refresh('vault.cluster.storage');
     },
 
     downloadViaServiceWorker() {
@@ -77,16 +81,16 @@ export default Component.extend({
       // then forcing a download by clicking a link that has a download attribute
       //
       // this is not the default because
-      const adapter = getOwner(this).lookup('adapter:application');
 
       this.flashMessages.success('The snapshot download has begun.');
       let resp, blob;
       try {
-        resp = await adapter.rawRequest('/v1/sys/storage/raft/snapshot', 'GET');
+        // the snapshot is a binary stream with no generated API method
+        resp = await this.api.request.get('/sys/storage/raft/snapshot');
         blob = await resp.blob();
       } catch (e) {
-        const errString = e.errors ? e.errors.join(' ') : e.message || e;
-        this.flashMessages.danger(`There was an error trying to download the snapshot: ${errString}`);
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(`There was an error trying to download the snapshot: ${message}`);
       }
       const filename = 'snapshot.gz';
       const file = new Blob([blob], { type: 'application/x-gzip' });

@@ -1,0 +1,3 @@
+```release-note:bug
+Proxy/Agent: Fixed a bug where auth method headers accumulated on the shared API client across re-auth cycles.
+```

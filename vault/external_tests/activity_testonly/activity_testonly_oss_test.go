@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-	"github.com/hashicorp/vault/helper/timeutil"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
 	"github.com/hashicorp/vault/vault"
@@ -79,8 +79,6 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    2,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	active := testhelpers.DeriveStableActiveCore(t, cluster)
 	client := active.Client
@@ -369,6 +367,8 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 	now := time.Now().UTC()
 
 	_, err = clientcountutil.NewActivityLogData(client).
@@ -563,8 +563,8 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 			currentMonthClients := monthsResponse[len(monthsResponse)-1]
 
 			// Now verify that the new client totals for ALL namespaces are approximately accurate (there are no namespaces in CE)
-			newClientsError := math.Abs((float64)(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
-			newClientsErrorMargin := newClientsError / (float64)(tt.expectedNewClients)
+			newClientsError := math.Abs(float64(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
+			newClientsErrorMargin := newClientsError / float64(tt.expectedNewClients)
 			expectedAccuracyCalc := (1 - tt.expectedTotalAccuracy) * 100 / 100
 			if newClientsErrorMargin > expectedAccuracyCalc {
 				t.Fatalf("bad accuracy: expected %+v, found %+v", expectedAccuracyCalc, newClientsErrorMargin)
@@ -592,6 +592,8 @@ func TestActivityLog_CountersAPI_NoErrorOnLoadingClientIDsToMemoryFlag_CE(t *tes
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 		"enabled": "enable",
 	})
+	require.NoError(t, err)
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
 	require.NoError(t, err)
 	a := core.GetActivityLog()
 	a.SetEnable(true)

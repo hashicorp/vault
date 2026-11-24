@@ -5,13 +5,12 @@
 
 import { addMinutes } from 'date-fns';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import license from '../../pages/components/license-info';
 import { allFeatures } from 'core/utils/all-features';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const FEATURES = allFeatures();
 
@@ -19,15 +18,6 @@ const component = create(license);
 
 module('Integration | Component | license info', function (hooks) {
   setupRenderingTest(hooks);
-
-  hooks.beforeEach(function () {
-    // Fails on #ember-testing-container
-    setRunOptions({
-      rules: {
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
-  });
 
   test('it renders feature status properly for features associated with license', async function (assert) {
     const now = Date.now();

@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
 import type { KubernetesRole } from 'vault/vault/secrets/kubernetes';
 import type { Breadcrumb } from 'vault/app-types';
@@ -33,6 +34,8 @@ export default class RoleDetailsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
+
+  @tracked showConfirmDeleteModal = false;
 
   label = (field: string) => {
     return (

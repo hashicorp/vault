@@ -1,0 +1,4 @@
+```release-note:improvement
+core (enterprise): enable rotation manager to use configurable retry policies to limit the retry behavior for rotation entries
+and include an orphaning mechanism to handle entries that exceed the maximum retry attempts.
+```

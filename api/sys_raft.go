@@ -28,10 +28,18 @@ type RaftJoinResponse struct {
 	Joined bool `json:"joined"`
 }
 
-// RaftJoinRequest represents the parameters consumed by the raft join API
+// RaftJoinRequest represents the parameters consumed by the raft join API.
+// Auto-join metadata must be configured using raft.retry_join and is rejected
+// in this request.
 type RaftJoinRequest struct {
-	AutoJoin         string `json:"auto_join"`
-	AutoJoinScheme   string `json:"auto_join_scheme"`
+	// Deprecated: Auto-join metadata is not accepted by the Raft join API.
+	// Configure automatic discovery using raft.retry_join.
+	AutoJoin string `json:"auto_join"`
+	// Deprecated: Auto-join metadata is not accepted by the Raft join API.
+	// Configure automatic discovery using raft.retry_join.
+	AutoJoinScheme string `json:"auto_join_scheme"`
+	// Deprecated: Auto-join metadata is not accepted by the Raft join API.
+	// Configure automatic discovery using raft.retry_join.
 	AutoJoinPort     uint   `json:"auto_join_port"`
 	LeaderAPIAddr    string `json:"leader_api_addr"`
 	LeaderCACert     string `json:"leader_ca_cert"`

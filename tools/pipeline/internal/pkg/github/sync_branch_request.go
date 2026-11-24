@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -11,9 +11,13 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
-	libgithub "github.com/google/go-github/v74/github"
-	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	libgithub "github.com/google/go-github/v83/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
+	gitpkg "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
+	gitclient "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
 )
@@ -23,6 +27,7 @@ import (
 //
 // NOTE: We require that both branches exist for the operation to succeed.
 type SyncBranchReq struct {
+	// Repository and branch information
 	FromOwner  string
 	FromRepo   string
 	FromOrigin string
@@ -32,6 +37,11 @@ type SyncBranchReq struct {
 	ToOrigin   string
 	ToBranch   string
 	RepoDir    string
+	// Optional changed files checking
+	DisallowedGroups changed.FileGroups
+	SyncPolicy       string
+	// Mandatory pipeline configuration
+	DecodeRes *config.DecodeRes
 }
 
 // SyncBranchRes is a copy pull request response.
@@ -44,12 +54,13 @@ type SyncBranchRes struct {
 func (r *SyncBranchReq) Run(
 	ctx context.Context,
 	github *libgithub.Client,
-	git *libgit.Client,
+	git *gitclient.Client,
 ) (*SyncBranchRes, error) {
 	var err error
 	res := &SyncBranchRes{Request: r}
 
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("from-owner", r.FromOwner),
 		slog.String("from-repo", r.FromRepo),
 		slog.String("from-origin", r.FromOrigin),
@@ -59,11 +70,14 @@ func (r *SyncBranchReq) Run(
 		slog.String("to-origin", r.ToOrigin),
 		slog.String("to-branch", r.ToBranch),
 		slog.String("repo-dir", r.RepoDir),
+		slog.String("disallowed-groups", r.DisallowedGroups.String()),
+		slog.String("sync-policy", r.SyncPolicy),
 	), "synchronizing branches")
 
 	// Make sure we have required and valid fields
 	err = r.Validate(ctx)
 	if err != nil {
+		res.Error = err
 		return res, err
 	}
 
@@ -97,7 +111,7 @@ func (r *SyncBranchReq) Run(
 	// Check out our branch. Our intialization above will ensure we have a local
 	// reference.
 	slog.Default().DebugContext(ctx, "checking out to-branch")
-	checkoutRes, err := git.Checkout(ctx, &libgit.CheckoutOpts{
+	checkoutRes, err := git.Checkout(ctx, &gitclient.CheckoutOpts{
 		Branch: r.ToBranch,
 	})
 	if err != nil {
@@ -106,8 +120,8 @@ func (r *SyncBranchReq) Run(
 
 	// Add our from upstream as a remote and fetch our from branch.
 	slog.Default().DebugContext(ctx, "adding from upstream and fetching from-branch")
-	remoteRes, err := git.Remote(ctx, &libgit.RemoteOpts{
-		Command: libgit.RemoteCommandAdd,
+	remoteRes, err := git.Remote(ctx, &gitclient.RemoteOpts{
+		Command: gitclient.RemoteCommandAdd,
 		Track:   []string{r.FromBranch},
 		Fetch:   true,
 		Name:    r.FromOrigin,
@@ -118,15 +132,48 @@ func (r *SyncBranchReq) Run(
 		return res, err
 	}
 
-	// Use our remote reference as we haven't created a local reference.
+	// Use our remote reference as our fromBranch as we haven't created a local
+	// reference.
 	fromBranch := "remotes/" + r.FromOrigin + "/" + r.FromBranch
+
+	// Verify that our local branch does not contain any files that are in
+	// disallowed changed files groups.
+	if r.shouldCheckChangedFiles() {
+		slog.Default().DebugContext(ctx, "checking branch history for changed files in disallowed groups")
+
+		checkChangedFiles := gitpkg.CheckChangedFilesReq{
+			// Using the branch option here will inspect the entire history of added
+			// files to the branch to ensure that we don't accidentally have some
+			// disallowed files in the branch history.
+			Branch:              fromBranch,
+			DisallowedGroups:    r.DisallowedGroups,
+			SyncPolicy:          r.SyncPolicy,
+			DecodeRes:           r.DecodeRes,
+			WriteToGithubOutput: false,
+		}
+
+		checkChangedFilesRes, err := checkChangedFiles.Run(ctx, git)
+		if err != nil {
+			return res, fmt.Errorf("checking branch history for changed files: %w", err)
+		}
+
+		if l := len(checkChangedFilesRes.MatchedFiles); l > 0 {
+			return res, fmt.Errorf(
+				"found %d files that matched disallowed-groups %s: %s",
+				l,
+				checkChangedFilesRes.CheckedGroups.String(),
+				strings.Join(checkChangedFilesRes.MatchedFiles.Names(), ", "),
+			)
+		}
+	}
+
 	slog.Default().DebugContext(ctx, "merging from-branch into to-branch")
-	mergeRes, err := git.Merge(ctx, &libgit.MergeOpts{
+	mergeRes, err := git.Merge(ctx, &gitclient.MergeOpts{
 		NoVerify: true,
-		Strategy: libgit.MergeStrategyORT,
-		StrategyOptions: []libgit.MergeStrategyOption{
-			libgit.MergeStrategyOptionTheirs,
-			libgit.MergeStrategyOptionIgnoreSpaceChange,
+		Strategy: gitclient.MergeStrategyORT,
+		StrategyOptions: []gitclient.MergeStrategyOption{
+			gitclient.MergeStrategyOptionTheirs,
+			gitclient.MergeStrategyOptionIgnoreSpaceChange,
 		},
 		IntoName: r.ToBranch,
 		Commit:   fromBranch,
@@ -136,7 +183,7 @@ func (r *SyncBranchReq) Run(
 	}
 
 	slog.Default().DebugContext(ctx, "pushing to-branch")
-	pushRes, err := git.Push(ctx, &libgit.PushOpts{
+	pushRes, err := git.Push(ctx, &gitclient.PushOpts{
 		Repository: r.ToOrigin,
 		Refspec:    []string{r.ToBranch},
 	})
@@ -187,7 +234,25 @@ func (r *SyncBranchReq) Validate(ctx context.Context) error {
 		return errors.New("no github to branch has been provided")
 	}
 
+	if r.shouldCheckChangedFiles() {
+		// Check for decode and validation errors
+		if err := r.DecodeRes.Validate(ctx); err != nil {
+			return err
+		}
+
+		// Make sure tha we actually have configuration
+		if r.DecodeRes.Config == nil {
+			return errors.New("disallowed groups or a sync policy have been provided but no changed files config has been provided")
+		}
+	}
+
 	return nil
+}
+
+// shouldCheckChangedFiles returns whether or not we've been asked to check the
+// branch history for files in disallowed groups.
+func (r *SyncBranchReq) shouldCheckChangedFiles() bool {
+	return len(r.DisallowedGroups) > 0 || r.SyncPolicy != ""
 }
 
 // ToJSON marshals the response to JSON.
@@ -219,7 +284,7 @@ func (r *SyncBranchRes) ToTable(err error) table.Writer {
 		if err != nil {
 			row = append(row, err.Error())
 		} else {
-			row = append(row, nil)
+			row = append(row, "")
 		}
 		t.AppendRow(row)
 	}

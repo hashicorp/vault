@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint-disable no-console */
-
 import validators from 'vault/utils/forms/validators';
 import { get } from '@ember/object';
 
@@ -60,7 +58,9 @@ export const validate = (
         continue;
       }
       // dot notation may be used to define key for nested property
-      const passedValidation = useCustomValidator ? validator(data) : validator(get(data, key), options);
+      const passedValidation = useCustomValidator
+        ? validator(data, options)
+        : validator(get(data, key), options);
 
       if (!passedValidation) {
         // message can also be a function

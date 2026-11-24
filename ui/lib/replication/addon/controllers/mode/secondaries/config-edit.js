@@ -1,59 +1,51 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { alias } from '@ember/object/computed';
+import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Controller from '@ember/controller';
 
-export default Controller.extend({
-  flashMessages: service(),
-  router: service('app-router'),
-  rm: service('replication-mode'),
-  replicationMode: alias('rm.mode'),
-  actions: {
-    resetConfig(config) {
-      if (config.isNew) {
-        config.setProperties({
-          mode: null,
-          paths: [],
-        });
+/** Shares filter submission between create and edit without cached model rollback. */
+export default class ConfigEditController extends Controller {
+  @service api;
+  @service flashMessages;
+  @service('app-router') router;
+  @service('replication-mode') rm;
+
+  get replicationMode() {
+    return this.rm.mode;
+  }
+
+  @action
+  async saveConfig(config) {
+    const isDelete = config.mode === null;
+    const id = config.id;
+    const redirectArgs = isDelete
+      ? ['vault.cluster.replication.mode.secondaries', this.replicationMode]
+      : ['vault.cluster.replication.mode.secondaries.config-show', id];
+
+    try {
+      if (isDelete) {
+        if (!config.isNew) {
+          await this.api.sys.systemDeleteReplicationPerformancePrimaryPathsFilterId(id);
+        }
       } else {
-        config.rollbackAttributes();
+        const { data } = config.toJSON();
+        await this.api.sys.systemWriteReplicationPerformancePrimaryPathsFilterId(id, data);
       }
-    },
-
-    saveConfig(config) {
-      // if the mode is null, we want no filtering, so we should delete any existing config
-      const isDelete = config.mode === null;
-      const flash = this.flashMessages;
-      const id = config.id;
-      const redirectArgs = isDelete
-        ? ['vault.cluster.replication.mode.secondaries', this.replicationMode]
-        : ['vault.cluster.replication.mode.secondaries.config-show', id];
-      const modelMethod = isDelete ? config.destroyRecord : config.save;
-
-      modelMethod
-        .call(config)
-        .then(() => {
-          this.router
-            .transitionTo(...redirectArgs)
-            .followRedirects()
-            .then(() => {
-              flash.success(
-                `The performance mount filter config for the secondary ${id} was successfully ${
-                  isDelete ? 'deleted' : 'saved'
-                }.`
-              );
-            });
-        })
-        .catch((e) => {
-          const errString = e.errors.join('.');
-          flash.error(
-            `There was an error ${isDelete ? 'deleting' : 'saving'} the config for ${id}: ${errString}`
-          );
-        });
-    },
-  },
-});
+      await this.router.transitionTo(...redirectArgs).followRedirects();
+      this.flashMessages.success(
+        `The performance mount filter config for the secondary ${id} was successfully ${
+          isDelete ? 'deleted' : 'saved'
+        }.`
+      );
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(
+        `There was an error ${isDelete ? 'deleting' : 'saving'} the config for ${id}: ${message}`
+      );
+    }
+  }
+}

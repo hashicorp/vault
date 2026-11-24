@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -58,6 +58,17 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
+	// entityMetadataDB is the in-memory database where frequently changing entity updates
+	// like entity last login, or token creation timestamps are stored. These dbs are
+	// separated to prevent frequent changes from affecting the main memdb instance.
+	entityMetadataDB *memdb.MemDB
+
+	// entityMetadataLoadComplete closes only after all entity metadata objects have been
+	// merged into memdb. This indicates vault is ready to 1) handle archive requests 2) flush timestamps
+	entityMetadataLoadComplete chan struct{}
+	entityMetadataLoadLock     sync.Mutex
+	entityMetadataLoadCancel   context.CancelFunc
+
 	// lock is the high-level IdentityStore lock, which protects underlying
 	// state against concurrent modification/access. If needed, callers should
 	// be sure to take this lock **before** (and never after) taking out any of
@@ -100,25 +111,35 @@ type IdentityStore struct {
 	// buckets
 	groupPacker *storagepacker.StoragePacker
 
-	// groupPacker is used to pack multiple group storage entries into 256
+	// tpmPacker is used to pack multiple TPM storage entries into 256
 	// buckets
-	scimConfigPacker *storagepacker.StoragePacker
+	tpmPacker *storagepacker.StoragePacker
 
-	// disableLowerCaseNames indicates whether or not identity artifacts are
-	// operated case insensitively
+	// tpmgroupPacker is used to pack multiple TPMGroup storage entries into 256
+	// buckets
+	tpmgroupPacker *storagepacker.StoragePacker
+
+	// entityMetadataPacker is used to pack entity metadata entries into 256 buckets
+	entityMetadataPacker *storagepacker.StoragePacker
+
+	// disableLowerCaseNames: if true, Vault will NOT automatically resolve all entity names to lowercase,
+	// meaning the Vault Identity Store is operating in case sensitive mode.
 	disableLowerCasedNames bool
 
-	router        *Router
-	redirectAddr  string
-	localNode     LocalNode
-	namespacer    Namespacer
-	metrics       metricsutil.Metrics
-	totpPersister TOTPPersister
-	groupUpdater  GroupUpdater
-	tokenStorer   TokenStorer
-	entityCreator EntityCreator
-	mountLister   MountLister
-	mfaBackend    *LoginMFABackend
+	router                          *Router
+	redirectAddr                    string
+	localNode                       LocalNode
+	namespacer                      Namespacer
+	metrics                         metricsutil.Metrics
+	totpPersister                   TOTPPersister
+	groupUpdater                    GroupUpdater
+	tokenStorer                     TokenStorer
+	entityCreator                   EntityCreator
+	mountLister                     MountLister
+	syntheticAliasAccessorValidator SyntheticAliasAccessorValidator
+	mfaBackend                      *LoginMFABackend
+	billingCounter                  BillingCounter
+	cohortChecker                   AgentRegistryCohortChecker
 
 	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
 	// which is name + accessor
@@ -126,16 +147,24 @@ type IdentityStore struct {
 
 	conflictResolver ConflictResolver
 
-	// renameDuplicates holds the Core reference to feature activation flags, so
-	// we can set and query enablement of the deduplication feature.
-	renameDuplicates       activationflags.ActivationManager
+	// activationManager holds the Core reference to feature activation flags, so
+	// we can set and query enablement of the scim and deduplication feature.
+	activationManager      activationflags.ActivationManager
 	activationErrorHandler Sealer
 
 	// activateDeduplicationDone is a channel used for synchronization in testing
 	activateDeduplicationDone chan struct{}
 
-	// scimEnabled is used to indicate if SCIM paths are enabled and if SCIM operations can be performed.
-	scimEnabled bool
+	// scimCleanupCtx is the context shared by all SCIM client cleanup goroutines.
+	// It is derived from the active context and cancelled on seal/standby.
+	scimCleanupCtx context.Context
+	// scimCleanupCancel cancels all background SCIM client cleanup goroutines.
+	scimCleanupCancel context.CancelFunc
+
+	// scimCleanupNudge tracks running cleanup goroutines by clientID. The value
+	// is a buffered channel (capacity 1) that can be sent to in order to wake
+	// the goroutine early from its backoff sleep.
+	scimCleanupNudge sync.Map // map[string]chan struct{}
 }
 
 type groupDiff struct {
@@ -151,9 +180,17 @@ type casesensitivity struct {
 type LocalNode interface {
 	ReplicationState() consts.ReplicationState
 	HAState() consts.HAState
+	HAStateWithLock() consts.HAState
+	OperatorNamespacePath() string
 }
 
 var _ LocalNode = &Core{}
+
+type BillingCounter interface {
+	IncrementOidcTokenCount(validitySeconds float64, attr logical.MountAttribution)
+}
+
+var _ BillingCounter = &Core{}
 
 type Namespacer interface {
 	NamespaceByID(context.Context, string) (*namespace.Namespace, error)
@@ -193,6 +230,60 @@ type MountLister interface {
 }
 
 var _ MountLister = &Core{}
+
+// AgentRegistryCohortChecker reports whether an agent registry cohort exists,
+// so the identity store can protect the group the cohort owns. The cohort's
+// provider config is in the namespace identified by namespaceID.
+type AgentRegistryCohortChecker interface {
+	agentRegistryCohortExists(ctx context.Context, namespaceID string, cohort *identity.AgentRegistryCohort) (bool, error)
+}
+
+var _ AgentRegistryCohortChecker = &Core{}
+
+// resolvedProfileRef describes the OAuth Resource Server profile that an alias
+// profile reference ('profile_name', 'config_id' or a synthetic 'mount_accessor')
+// resolved to.
+type resolvedProfileRef struct {
+	// Accessor is the profile's synthetic mount accessor.
+	Accessor string
+	// Issuer is the profile's configured issuer, normalized the same way a
+	// caller-supplied issuer is. Aliases must record it because OAuth RS
+	// authentication resolves entities by (issuer, external_id). It is empty for
+	// profiles stored before issuer_id became a required field.
+	Issuer string
+	// Local is true when the backing profile has Local=true.
+	Local bool
+}
+
+type SyntheticAliasAccessorValidator interface {
+	// validateSyntheticAliasAccessor returns (valid, isLocal, err).
+	// valid is true when the accessor is a known synthetic OAuth RS accessor.
+	// isLocal is true when the backing profile has Local=true.
+	validateSyntheticAliasAccessor(context.Context, string) (bool, bool, error)
+	// generateSyntheticAliasAccessor returns (accessor, isLocal, err).
+	// isLocal is true when the backing profile has Local=true.
+	generateSyntheticAliasAccessor(context.Context, string) (string, bool, error)
+	// resolveProfileNameToAccessor looks up an OAuth RS profile by name. ok is
+	// false (and err is nil) when no profile with that name exists. On CE builds
+	// it returns errProfileRefUnsupported, which callers surface as a request
+	// error rather than a failure.
+	resolveProfileNameToAccessor(ctx context.Context, profileName string) (ref resolvedProfileRef, ok bool, err error)
+	// resolveConfigIDToAccessor looks up an OAuth RS profile by config ID. ok is
+	// false (and err is nil) when no profile with that config ID exists. It
+	// returns errInvalidProfileConfigID when configID is malformed, and
+	// errProfileRefUnsupported on CE builds; callers surface both as request
+	// errors rather than failures.
+	resolveConfigIDToAccessor(ctx context.Context, configID string) (ref resolvedProfileRef, ok bool, err error)
+	// resolveAccessorToProfileRef looks up the OAuth RS profile that a synthetic
+	// mount accessor refers to. ok is false (and err is nil) when mountAccessor is
+	// not a synthetic OAuth RS accessor, or names no profile in the request
+	// namespace; both are ordinary outcomes for a caller-supplied accessor, so
+	// neither is reported as an error. It always reports not-found on CE builds,
+	// where synthetic accessors do not exist.
+	resolveAccessorToProfileRef(ctx context.Context, mountAccessor string) (ref resolvedProfileRef, ok bool, err error)
+}
+
+var _ SyntheticAliasAccessorValidator = &Core{}
 
 type Sealer interface {
 	Shutdown() error

@@ -9,7 +9,6 @@ import { action } from '@ember/object';
 import decodeConfigFromJwt from 'replication/utils/decode-config-from-jwt';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import errorMessage from 'vault/utils/error-message';
 import { isPresent } from '@ember/utils';
 import { waitFor } from '@ember/test-waiters';
 
@@ -31,7 +30,7 @@ import { waitFor } from '@ember/test-waiters';
  */
 export default class EnableReplicationFormComponent extends Component {
   @service version;
-  @service store;
+  @service api;
 
   @tracked error = '';
   @tracked showExplanation = false;
@@ -84,13 +83,32 @@ export default class EnableReplicationFormComponent extends Component {
     }, {});
     delete payload.mode;
     try {
-      const resp = yield this.store
-        .adapterFor('cluster')
-        .replicationAction('enable', replicationMode, clusterMode, payload);
+      const resp = yield this.enable(replicationMode, clusterMode, payload);
       yield this.onSuccess(resp, clusterMode);
     } catch (e) {
-      this.error = errorMessage(e, 'Enable replication failed. Check Vault logs for details.');
+      const { message } = yield this.api.parseError(
+        e,
+        'Enable replication failed. Check Vault logs for details.'
+      );
+      this.error = message;
     }
+  }
+
+  enable(replicationMode, clusterMode, payload) {
+    const { sys } = this.api;
+    if (replicationMode === 'dr' && clusterMode === 'primary') {
+      return sys.systemWriteReplicationDrPrimaryEnable(payload);
+    }
+    if (replicationMode === 'dr' && clusterMode === 'secondary') {
+      return sys.systemWriteReplicationDrSecondaryEnable(payload);
+    }
+    if (replicationMode === 'performance' && clusterMode === 'primary') {
+      return sys.systemWriteReplicationPerformancePrimaryEnable(payload);
+    }
+    if (replicationMode === 'performance' && clusterMode === 'secondary') {
+      return sys.systemWriteReplicationPerformanceSecondaryEnable(payload);
+    }
+    throw new Error(`Unsupported replication action: ${replicationMode}/${clusterMode}/enable`);
   }
 
   @action onSubmit(payload, evt) {

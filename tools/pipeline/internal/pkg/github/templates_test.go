@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -8,7 +8,8 @@ import (
 	"io"
 	"testing"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v83/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/golang"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,32 +21,57 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 		expectNotContains []string
 		origin            *libgithub.PullRequest
 		attempt           *CreateBackportAttempt
+		workflowURL       string
 	}{
 		"no error": {
-			expectContains:    []string{"original body"},
-			expectNotContains: []string{"error body"},
+			expectContains:    []string{"original body", "abc123def456"},
+			expectNotContains: []string{"error body", "git cherry-pick", "View workflow run"},
 			origin: &libgithub.PullRequest{
-				Body:     libgithub.Ptr("original body"),
-				Number:   libgithub.Ptr(1234),
-				HTMLURL:  libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
-				MergedBy: &libgithub.User{Login: libgithub.Ptr("my-login")},
+				Body:           libgithub.Ptr("original body"),
+				Number:         libgithub.Ptr(1234),
+				HTMLURL:        libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
+				MergedBy:       &libgithub.User{Login: libgithub.Ptr("my-login")},
+				MergeCommitSHA: libgithub.Ptr("abc123def456"),
 			},
 			attempt: &CreateBackportAttempt{
 				TargetRef: "release/1.19.x",
 			},
 		},
-		"error": {
-			expectContains: []string{"original body", "error body"},
+		"error without workflow url": {
+			expectContains:    []string{"original body", "error body", "abc123def456", "git cherry-pick abc123def456"},
+			expectNotContains: []string{"View workflow run"},
 			origin: &libgithub.PullRequest{
-				Body:     libgithub.Ptr("original body"),
-				Number:   libgithub.Ptr(1234),
-				HTMLURL:  libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
-				MergedBy: &libgithub.User{Login: libgithub.Ptr("my-login")},
+				Body:           libgithub.Ptr("original body"),
+				Number:         libgithub.Ptr(1234),
+				HTMLURL:        libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
+				MergedBy:       &libgithub.User{Login: libgithub.Ptr("my-login")},
+				MergeCommitSHA: libgithub.Ptr("abc123def456"),
 			},
 			attempt: &CreateBackportAttempt{
 				TargetRef: "release/1.19.x",
 				Error:     errors.New("error body"),
 			},
+		},
+		"error with workflow url": {
+			expectContains: []string{
+				"original body",
+				"error body",
+				"abc123def456",
+				"git cherry-pick abc123def456",
+				"[View workflow run](https://github.com/hashicorp/vault-enterprise/actions/runs/12345)",
+			},
+			origin: &libgithub.PullRequest{
+				Body:           libgithub.Ptr("original body"),
+				Number:         libgithub.Ptr(1234),
+				HTMLURL:        libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
+				MergedBy:       &libgithub.User{Login: libgithub.Ptr("my-login")},
+				MergeCommitSHA: libgithub.Ptr("abc123def456"),
+			},
+			attempt: &CreateBackportAttempt{
+				TargetRef: "release/1.19.x",
+				Error:     errors.New("error body"),
+			},
+			workflowURL: "https://github.com/hashicorp/vault-enterprise/actions/runs/12345",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -53,7 +79,8 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 			got, err := renderEmbeddedTemplate("backport-pr-message.tmpl", struct {
 				OriginPullRequest *libgithub.PullRequest
 				Attempt           *CreateBackportAttempt
-			}{test.origin, test.attempt})
+				WorkflowURL       string
+			}{test.origin, test.attempt, test.workflowURL})
 			require.NoError(t, err)
 			for _, c := range test.expectContains {
 				require.Containsf(t, got, c, got)
@@ -109,6 +136,67 @@ func Test_renderEmbeddedTemplate_copyPRMessage(t *testing.T) {
 				test.origin,
 				test.targetRef,
 				test.error,
+			})
+			require.NoError(t, err)
+			for _, c := range test.expectContains {
+				require.Containsf(t, got, c, got)
+			}
+			for _, nc := range test.expectNotContains {
+				require.NotContainsf(t, got, nc, got)
+			}
+		})
+	}
+}
+
+// Test_renderEmbeddedTemplate_syncGoModPRMessage verifies that the sync go-mod
+// PR body renders when the workspace wasn't synced (nil result), and that a
+// failure to sync the workspace is called out as a warning, since the PR would
+// otherwise look complete.
+func Test_renderEmbeddedTemplate_syncGoModPRMessage(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		expectContains    []string
+		expectNotContains []string
+		hasErrors         bool
+		goWorkSum         *golang.GoWorkSumSyncResult
+	}{
+		"workspace not synced": {
+			expectContains:    []string{"go: sync go.mod from hashicorp/vault-enterprise/main to ce/main"},
+			expectNotContains: []string{"go.work.sum"},
+		},
+		"workspace synced": {
+			expectContains:    []string{"go: sync go.mod from hashicorp/vault-enterprise/main to ce/main"},
+			expectNotContains: []string{"go.work.sum"},
+			goWorkSum:         &golang.GoWorkSumSyncResult{Updated: true},
+		},
+		"workspace sync failed": {
+			expectContains: []string{"Warning", "#### Workspace", "Workspace sync error: download failed"},
+			hasErrors:      true,
+			goWorkSum:      &golang.GoWorkSumSyncResult{Error: "download failed"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := renderEmbeddedTemplate("sync-go-mod-pr-message.tmpl", struct {
+				Ticket      string
+				AOwner      string
+				ARepo       string
+				ABranch     string
+				BBranch     string
+				ToBranch    string
+				PathResults []*golang.GoModPathSyncResult
+				HasErrors   bool
+				GoWorkSum   *golang.GoWorkSumSyncResult
+			}{
+				AOwner:    "hashicorp",
+				ARepo:     "vault-enterprise",
+				ABranch:   "main",
+				BBranch:   "ce/main",
+				ToBranch:  "main-into-ce-main",
+				HasErrors: test.hasErrors,
+				GoWorkSum: test.goWorkSum,
 			})
 			require.NoError(t, err)
 			for _, c := range test.expectContains {

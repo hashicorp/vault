@@ -1,0 +1,3 @@
+```release-note:bug
+events (enterprise): Fix panic when replicating lease events.
+```

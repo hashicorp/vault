@@ -1,0 +1,42 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<section data-test-data-privacy-section>
+  <Hds::Text::Display @tag="h2" @size="300" class="has-bottom-margin-s">Data &amp; privacy</Hds::Text::Display>
+
+  <Hds::Text::Body @tag="p" class="has-bottom-margin-s">
+    Help us improve Vault by sharing anonymous usage data on the use of features, navigation patterns, and UI interactions.
+    We never collect personally identifiable information or secret values.</Hds::Text::Body>
+
+  <Hds::Form::Toggle::Field
+    @id="telemetry-consent"
+    class="has-bottom-margin-s"
+    checked={{this.telemetryConsent}}
+    {{on "change" this.updateConsent}}
+    data-test-toggle-input="telemetry-consent"
+    as |F|
+  >
+    <F.Label>Share usage metrics</F.Label>
+  </Hds::Form::Toggle::Field>
+
+  <Hds::Layout::Flex @gap="24" class="has-left-padding-xxs has-left-margin-xl has-top-margin-m" as |LF|>
+    <LF.Item @tag="ul" @grow={{true}} data-test-data-privacy-included>
+      {{#each this.included as |item|}}
+        <li class="is-flex-center has-bottom-margin-xs">
+          <Hds::Icon @name="check" @color="success" @isInline={{true}} />
+          <Hds::Text::Body @tag="span" @size="200" class="has-left-margin-xs">{{item}}</Hds::Text::Body>
+        </li>
+      {{/each}}
+    </LF.Item>
+
+    <LF.Item @tag="ul" @grow={{true}} data-test-data-privacy-excluded>
+      {{#each this.excluded as |item|}}
+        <li class="is-flex-center has-bottom-margin-xs">
+          <Hds::Icon @name="x" @color="critical" @isInline={{true}} />
+          <Hds::Text::Body @tag="span" @size="200" @color="faint" class="has-left-margin-xs">{{item}}</Hds::Text::Body>
+        </li>
+      {{/each}}
+    </LF.Item>
+  </Hds::Layout::Flex>
+</section>

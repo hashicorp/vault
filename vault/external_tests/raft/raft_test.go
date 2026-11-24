@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package rafttests
@@ -12,8 +12,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -24,12 +28,13 @@ import (
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -54,6 +59,36 @@ type RaftClusterOpts struct {
 	EffectiveSDKVersionMap         map[int]string
 	PerNodePhysicalFactoryConfig   map[int]map[string]interface{}
 	DisableMlock                   bool
+}
+
+// TestRaft_Retry_JoinLimiter verifies that only 20 concurrent retry joins are allowed.
+func TestRaft_Retry_JoinLimiter(t *testing.T) {
+	t.Parallel()
+	const maxConcurrentRetryJoins = 20
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+		NumCores:             2, // 1 leader + 1 follower; limiter is per-core, so test repeated joins on one core
+	})
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			LeaderAPIAddr: "https://127.0.0.1:1",
+			Retry:         true,
+		},
+	}
+
+	ctx, cancel := context.WithCancel(namespace.RootContext(context.Background()))
+	defer cancel()
+	followerCore := cluster.Cores[1]
+	for i := 0; i < maxConcurrentRetryJoins; i++ {
+		_, err := followerCore.JoinRaftCluster(ctx, leaderInfos, false)
+		require.NoError(t, err)
+	}
+	_, err := followerCore.JoinRaftCluster(ctx, leaderInfos, false)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "too many concurrent raft retry joins in progress")
 }
 
 func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig, vault.TestClusterOptions) {
@@ -113,7 +148,6 @@ func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vault.TestClusterOptions) {
 	conf, opts := raftClusterBuilder(t, ropts)
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster, &opts
 }
 
@@ -132,10 +166,12 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		},
 	}
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	defer cluster.Cleanup()
-
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	leaderClient := cluster.Cores[0].Client
+
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
 
 	// Write a few keys
 	for i := 0; i < 50; i++ {
@@ -176,7 +212,6 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 		InmemCluster:         true,
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 
@@ -210,7 +245,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 		InmemCluster:         true,
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -244,7 +278,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 	// Unseal the leader and wait for the other cores to unseal
 	cluster.UnsealCore(t, leaderCore)
 	wg.Wait()
-
 	vault.TestWaitActive(t, leaderCore.Core)
 
 	corehelpers.RetryUntil(t, 10*time.Second, func() error {
@@ -266,7 +299,6 @@ func TestRaftChallenge_sameAnswerSameID_concurrent(t *testing.T) {
 		DisableFollowerJoins: true,
 		NumCores:             1,
 	})
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	challenges := make(chan string, 15)
@@ -303,7 +335,6 @@ func TestRaftChallenge_sameAnswerSameID(t *testing.T) {
 		DisableFollowerJoins: true,
 		NumCores:             1,
 	})
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 	res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 		"server_id": "node1",
@@ -335,7 +366,6 @@ func TestRaftChallenge_evicted(t *testing.T) {
 		DisableFollowerJoins: true,
 		NumCores:             1,
 	})
-	defer cluster.Cleanup()
 	firstResponse := map[string]interface{}{}
 	client := cluster.Cores[0].Client
 	for i := 0; i < vault.RaftInitialChallengeLimit+1; i++ {
@@ -391,7 +421,6 @@ func TestRaft_ChallengeSpam(t *testing.T) {
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	// Execute 2 * MaxInFlightRequests, over a period that should allow some to proceed as the token bucket
 	// refills.
@@ -424,7 +453,6 @@ func TestRaft_Join(t *testing.T) {
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -471,7 +499,6 @@ func TestRaft_Join(t *testing.T) {
 func TestRaft_RemovePeer(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -545,7 +572,6 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			cluster, _ := raftCluster(t, tc.ropts)
-			defer cluster.Cleanup()
 
 			for i, c := range cluster.Cores {
 				if c.Core.Sealed() {
@@ -582,14 +608,12 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 	Raft_Configuration_Test(t, cluster)
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -601,9 +625,12 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 func TestRaft_SnapshotAPI(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
 
 	// Write a few keys
 	for i := 0; i < 10; i++ {
@@ -617,7 +644,7 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 
 	// Take a snapshot
 	buf := new(bytes.Buffer)
-	err := leaderClient.Sys().RaftSnapshot(buf)
+	err = leaderClient.Sys().RaftSnapshot(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -665,9 +692,13 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 		NumCores: 1,
 		Seal:     autoSeal,
 	})
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
+
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
 
 	// Write a bunch of keys; if too few, the detection code in api.RaftSnapshot
 	// will never make it into the tar part, it'll fail merely when trying to
@@ -694,7 +725,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	wrappers[0].SetError(errors.New("seal failure"))
 	// Take a snapshot
-	err := leaderClient.Sys().RaftSnapshot(w)
+	err = leaderClient.Sys().RaftSnapshot(w)
 	w.Close()
 	if err == nil || err != api.ErrIncompleteSnapshot {
 		t.Fatalf("expected err=%v, got: %v", api.ErrIncompleteSnapshot, err)
@@ -770,9 +801,12 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
 			})
-			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
+			err := leaderClient.Sys().Mount("secret", &api.MountInput{
+				Type: "kv",
+			})
+			require.NoError(t, err)
 
 			// Write a few keys
 			for i := 0; i < 10; i++ {
@@ -974,9 +1008,13 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
 			})
-			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
+
+			err := leaderClient.Sys().Mount("secret", &api.MountInput{
+				Type: "kv",
+			})
+			require.NoError(t, err)
 
 			// Write a few keys
 			for i := 0; i < 10; i++ {
@@ -1161,9 +1199,13 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
+
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
 
 	// Write a few keys
 	for i := 0; i < 10; i++ {
@@ -1207,7 +1249,6 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	// Cluster 2
 	{
 		cluster2, _ := raftCluster(t, nil)
-		defer cluster2.Cleanup()
 
 		leaderClient := cluster2.Cores[0].Client
 
@@ -1254,7 +1295,6 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
 	cluster, _ := raftCluster(b, nil)
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
 
@@ -1288,7 +1328,6 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		InmemCluster:         true,
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -1366,17 +1405,125 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 	}
 }
 
+// TestRaft_Join_DoesNotForwardEnvironmentCredentials verifies that an
+// unauthenticated join cannot send process credentials to a caller-selected leader.
+func TestRaft_Join_DoesNotForwardEnvironmentCredentials(t *testing.T) {
+	t.Parallel()
+
+	// Run in a subprocess so the fake credentials don't affect other tests.
+	const subprocessEnv = "VAULT_TEST_RAFT_JOIN_CREDENTIALS"
+	if os.Getenv(subprocessEnv) != "1" {
+		executable, err := os.Executable()
+		require.NoError(t, err)
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, executable,
+			"-test.run=^TestRaft_Join_DoesNotForwardEnvironmentCredentials$", "-test.timeout=90s")
+		for _, entry := range os.Environ() {
+			key, _, _ := strings.Cut(entry, "=")
+			switch key {
+			case api.EnvVaultToken, api.EnvVaultHeaders, api.EnvVaultNamespace, subprocessEnv:
+				continue
+			}
+			cmd.Env = append(cmd.Env, entry)
+		}
+		cmd.Env = append(cmd.Env,
+			subprocessEnv+"=1",
+			api.EnvVaultToken+"=harmless-environment-token",
+			api.EnvVaultHeaders+`={"Authorization":"Bearer harmless-authorization","X-Test-Credential":"harmless-custom-credential"}`,
+			api.EnvVaultNamespace+"=environment-namespace")
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "isolated credential regression failed:\n%s", output)
+		return
+	}
+
+	// Capture the challenge request without completing the join.
+	requests := make(chan *http.Request, 1)
+	leader := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests <- r.Clone(t.Context())
+		http.Error(w, "not a raft leader", http.StatusBadRequest)
+	}))
+	defer leader.Close()
+
+	// Leave a follower sealed and uninitialized so it can accept a join request.
+	conf, opts := raftClusterBuilder(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+		NumCores:             2,
+	})
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	client, err := cluster.Cores[1].Client.Clone()
+	require.NoError(t, err)
+	// The incoming join request must be unauthenticated, regardless of the environment.
+	client.ClearToken()
+	client.SetHeaders(http.Header{api.RequestHeaderName: {"true"}})
+
+	initialized, err := client.Sys().InitStatus()
+	require.NoError(t, err)
+	require.False(t, initialized, "the follower must be eligible for an unauthenticated join")
+	status, err := client.Sys().SealStatus()
+	require.NoError(t, err)
+	require.True(t, status.Sealed, "an integrated-storage follower must be sealed before joining")
+
+	_, err = client.Sys().RaftJoin(&api.RaftJoinRequest{LeaderAPIAddr: leader.URL})
+	require.Error(t, err, "the capture server must not complete a raft join")
+
+	// The outgoing request should keep the required headers, but none of the credentials.
+	select {
+	case request := <-requests:
+		require.Equal(t, http.MethodPut, request.Method)
+		require.Equal(t, "/v1/sys/storage/raft/bootstrap/challenge", request.URL.Path)
+		require.Empty(t, request.Header.Get("X-Vault-Token"), "the environment token must not reach the leader")
+		require.Empty(t, request.Header.Get("Authorization"), "environment authorization must not reach the leader")
+		require.Empty(t, request.Header.Get("X-Test-Credential"), "custom environment headers must not reach the leader")
+		require.Equal(t, "true", request.Header.Get(api.RequestHeaderName))
+		require.Empty(t, request.Header.Get(api.NamespaceHeaderName), "the operator namespace must override the environment")
+	default:
+		require.FailNow(t, "the eligible follower did not request a bootstrap challenge")
+	}
+}
+
+// TestRaft_Join_RejectsAutoJoinMetadata verifies that the unauthenticated join
+// endpoint rejects caller-selected discovery before making an outbound request.
+func TestRaft_Join_RejectsAutoJoinMetadata(t *testing.T) {
+	t.Setenv("PACKET_AUTH_TOKEN", "harmless-test-token")
+	t.Setenv("PACKET_PROJECT", "test-project")
+
+	var requests atomic.Int32
+	discoveryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+	}))
+	defer discoveryServer.Close()
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+	})
+	client, err := cluster.Cores[1].Client.Clone()
+	require.NoError(t, err)
+	client.SetToken("")
+
+	_, err = client.Sys().RaftJoin(&api.RaftJoinRequest{
+		AutoJoin: "provider=packet url=" + discoveryServer.URL,
+	})
+	require.ErrorContains(t, err, "auto-join metadata must be configured using raft.retry_join")
+	require.Zero(t, requests.Load())
+}
+
 // TestRaftCluster_Removed creates a 3 node raft cluster and then removes one of
 // the nodes. The test verifies that a write on the removed node errors, and that
 // the removed node is sealed.
 func TestRaftCluster_Removed(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	follower := cluster.Cores[2]
 	followerClient := follower.Client
-	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+
+	err := followerClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	_, err = followerClient.Logical().Write("secret/foo", map[string]interface{}{
 		"test": "data",
 	})
 	require.NoError(t, err)
@@ -1417,11 +1564,12 @@ func TestRaftCluster_Removed_RaftConfig(t *testing.T) {
 	conf, opts := raftClusterBuilder(t, nil)
 	conf.ClusterHeartbeatInterval = 5 * time.Minute
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 	follower := cluster.Cores[2]
 	followerClient := follower.Client
-	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+	err := followerClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+	_, err = followerClient.Logical().Write("secret/foo", map[string]interface{}{
 		"test": "data",
 	})
 	require.NoError(t, err)
@@ -1458,7 +1606,6 @@ func TestSysHealth_Raft(t *testing.T) {
 		ClusterHeartbeatInterval: heartbeat,
 	}
 	vaultCluster := vault.NewTestCluster(t, conf, opts)
-	defer vaultCluster.Cleanup()
 	testhelpers.WaitForActiveNodeAndStandbys(t, vaultCluster)
 	followerClient := vaultCluster.Cores[1].Client
 
@@ -1565,7 +1712,6 @@ func TestSysHealth_Raft(t *testing.T) {
 func TestRaftCluster_Removed_ReAdd(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	leader := cluster.Cores[0]
 	follower := cluster.Cores[2]
@@ -1576,7 +1722,7 @@ func TestRaftCluster_Removed_ReAdd(t *testing.T) {
 	require.NoError(t, err)
 	require.Eventually(t, follower.Sealed, 10*time.Second, 250*time.Millisecond)
 
-	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.Address.String()}
+	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.APIAddress().String()}
 	_, err = follower.Client.Sys().RaftJoin(joinReq)
 	require.Error(t, err)
 }
@@ -1589,7 +1735,6 @@ func TestCore_RaftDataDirPath(t *testing.T) {
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
 		cluster, _ := raftCluster(t, nil)
-		defer cluster.Cleanup()
 		path, ok := cluster.Cores[0].RaftDataDirPath()
 		require.True(t, ok)
 		require.NotEmpty(t, path)
@@ -1608,7 +1753,6 @@ func TestCore_RaftDataDirPath(t *testing.T) {
 		opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 		teststorage.RaftHASetup(&conf, &opts, teststorage.MakeFileBackend)
 		cluster := vault.NewTestCluster(t, &conf, &opts)
-		defer cluster.Cleanup()
 		path, ok := cluster.Cores[0].RaftDataDirPath()
 		require.False(t, ok)
 		require.Empty(t, path)
@@ -1631,9 +1775,6 @@ func TestRaft_SnapshotLargerMaxRequestSize(t *testing.T) {
 	}
 
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-	defer cluster.Cleanup()
-
 	client := cluster.Cores[0].Client
 	for i := 0; i < 4096; i++ {
 		path, err := uuid.GenerateUUID()
@@ -1658,4 +1799,15 @@ func TestRaft_SnapshotLargerMaxRequestSize(t *testing.T) {
 	err = client.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
 	require.NoError(t, err)
 	testhelpers.WaitForActiveNode(t, cluster)
+}
+
+// TestRaft_BootstrapWhenSealed ensures raft does not attempt to bootstrap when sealed.
+func TestRaft_BootstrapWhenSealed(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	cluster.EnsureCoresSealed(t)
+
+	_, err := client.Logical().Write("sys/storage/raft/bootstrap", nil)
+	require.ErrorContains(t, err, "node must be unsealed to bootstrap")
 }

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+```

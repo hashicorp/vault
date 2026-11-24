@@ -8,6 +8,13 @@ import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'vault/config/environment';
 
+// HDS removed ember-engines as a peer dependency in 6.0.0
+// Adding below snippet to support ember engines
+import LinkToExternal from 'ember-engines/components/link-to-external';
+import { setLinkToExternal } from '@hashicorp/design-system-components/utils/hds-link-to-external';
+
+setLinkToExternal(LinkToExternal);
+
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
   podModulePrefix = config.podModulePrefix;
@@ -24,64 +31,82 @@ export default class App extends Application {
           'custom-messages',
           'api',
           'capabilities',
+          'theme',
+          // services needed for tools sidebar component
+          'permissions',
+          'current-cluster',
+          '-portal',
         ],
+        externalRoutes: {
+          vault: 'vault.cluster',
+          tool: 'vault.cluster.tools.tool',
+          messages: 'vault.cluster.config-ui.messages',
+          openApiExplorer: 'vault.cluster.tools.open-api-explorer',
+          loginSettings: 'vault.cluster.config-ui.login-settings',
+        },
       },
     },
     'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', { 'app-router': 'router' }, 'version'],
+        externalRoutes: { vault: 'vault.cluster' },
       },
     },
     replication: {
       dependencies: {
         services: [
+          'api',
           'auth',
           'capabilities',
           'flash-messages',
           'namespace',
           'replication-mode',
           { 'app-router': 'router' },
-          'store',
           'version',
+          // services needed for tools sidebar component
+          'permissions',
+          'current-cluster',
+          'flags',
           '-portal',
+          'control-group',
         ],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
           vault: 'vault.cluster',
+          recoverySnapshots: 'vault.cluster.recovery.snapshots',
+          settingsSeal: 'vault.cluster.settings.seal',
+          replicationMode: 'vault.cluster.replication.mode',
         },
       },
     },
     kmip: {
       dependencies: {
         services: [
+          'api',
           'auth',
+          'capabilities',
           'download',
           'flash-messages',
           'namespace',
           'path-help',
           { 'app-router': 'router' },
-          'store',
-          'pagination',
           'version',
           'secret-mount-path',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          vault: 'vault.cluster',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
     kubernetes: {
       dependencies: {
-        services: [
-          { 'app-router': 'router' },
-          'store',
-          'secret-mount-path',
-          'flash-messages',
-          'api',
-          'capabilities',
-        ],
+        services: [{ 'app-router': 'router' }, 'secret-mount-path', 'flash-messages', 'api', 'capabilities'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
+          vault: 'vault.cluster',
         },
       },
     },
@@ -94,8 +119,10 @@ export default class App extends Application {
           'auth',
           'api',
           'capabilities',
+          'permissions',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
           secretsPluginSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.plugin-settings',
@@ -110,14 +137,17 @@ export default class App extends Application {
           'control-group',
           'download',
           'flash-messages',
+          'kv-mount-retry',
           'namespace',
           { 'app-router': 'router' },
           'secret-mount-path',
           'version',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
@@ -136,9 +166,11 @@ export default class App extends Application {
           'version',
         ],
         externalRoutes: {
+          vault: 'vault.cluster',
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
+          secretsGeneralSettingsConfiguration: 'vault.cluster.secrets.backend.configuration.general-settings',
         },
       },
     },
@@ -148,14 +180,23 @@ export default class App extends Application {
           'flash-messages',
           'flags',
           { 'app-router': 'router' },
-          'store',
           'api',
           'capabilities',
           'version',
+          // services needed for Secrets sidebar component
+          'current-cluster',
+          'permissions',
+          '-portal',
+          'namespace',
         ],
         externalRoutes: {
           kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
+          databaseStaticRoleOverview: 'vault.cluster.secrets.backend.show',
           clientCountOverview: 'vault.cluster.clients',
+          // routes needed for Secrets sidebar component
+          secrets: 'vault.cluster.secrets',
+          sync: 'vault.cluster.sync',
+          vault: 'vault.cluster',
         },
       },
     },

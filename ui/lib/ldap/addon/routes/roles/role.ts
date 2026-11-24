@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,6 +12,7 @@ import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type { LdapStaticRole, LdapDynamicRole } from 'vault/secrets/ldap';
+import type { LdapApplicationModel } from '../application';
 
 export type LdapRolesRoleRouteModel = ModelFrom<LdapRolesRoleRoute>;
 
@@ -37,13 +38,15 @@ export default class LdapRolesRoleRoute extends Route {
       canDelete: capabilities[paths.role]?.canDelete,
       canEdit: capabilities[paths.role]?.canUpdate,
       canReadCreds: capabilities[paths.creds]?.canRead,
-      canRotateStaticCreds: paths.rotate ? capabilities[paths.rotate]?.canCreate : false,
+      canRotateStaticCreds: paths.rotate ? capabilities[paths.rotate]?.canUpdate : false,
     };
   }
 
   async model(params: { name: string; type: 'static' | 'dynamic' }) {
     const backend = this.secretMountPath.currentPath;
     const { name, type } = params;
+
+    const { config } = this.modelFor('application') as LdapApplicationModel;
 
     const [capabilities] = await fetchRoleCapabilities(this.capabilities, backend, [
       { name, completeRoleName: name, type },
@@ -60,6 +63,6 @@ export default class LdapRolesRoleRoute extends Route {
       ...(data || {}),
     } as LdapStaticRole | LdapDynamicRole;
 
-    return { capabilities, role };
+    return { capabilities, role, config };
   }
 }

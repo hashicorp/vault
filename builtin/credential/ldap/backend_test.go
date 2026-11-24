@@ -16,11 +16,10 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
@@ -331,7 +330,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 	}
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -377,7 +376,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -488,7 +487,7 @@ func factory(t *testing.T) logical.Backend {
 // https://github.com/hashicorp/vault/issues/26183.
 func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	cfg.AnonymousGroupSearch = true
 	defer cleanup()
 
@@ -521,7 +520,7 @@ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 // passwords are disallowed
 func TestBackend_Login_EmptyPasswordDisallowed(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	configReq := &logical.Request{
@@ -572,7 +571,7 @@ func TestBackend_Login_EmptyPasswordDisallowed(t *testing.T) {
 // attributes to entity alias metadata.
 func TestBackend_LoginRegression_UserAttr(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	cfg.UserAttr = "givenName"
 	defer cleanup()
 
@@ -603,7 +602,7 @@ func TestBackend_LoginRegression_UserAttr(t *testing.T) {
 
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -633,7 +632,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -651,7 +650,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -672,7 +671,7 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -689,7 +688,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 
 func TestBackend_basic_authbind_userfilter(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	// userattr not used in the userfilter should result in a warning in the response
@@ -832,7 +831,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	cfg.UserAttr = "cn"
@@ -897,7 +896,7 @@ func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry,
 
 func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -914,7 +913,7 @@ func TestBackend_basic_discover(t *testing.T) {
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1479,7 +1478,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 
 	ctx := context.Background()
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1522,6 +1521,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 		TokenParams: tokenutil.TokenParams{
 			TokenPeriod:         5 * time.Minute,
 			TokenExplicitMaxTTL: 24 * time.Hour,
+			AliasMetadata:       make(map[string]string),
 		},
 		ConfigEntry: &ldaputil.ConfigEntry{
 			Url:                      cfg.Url,
@@ -1543,10 +1543,8 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			UsernameAsAlias:          false,
 			DerefAliases:             "never",
 			MaximumPageSize:          1000,
+			Schema:                   ldaputil.SchemaOpenLDAP, // Default schema when not specified
 		},
-	}
-	if constants.IsEnterprise {
-		exp.TokenParams.AliasMetadata = make(map[string]string)
 	}
 
 	configEntry, err := b.Config(ctx, configReq)

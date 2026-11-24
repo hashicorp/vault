@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_BatchDecryption(t *testing.T) {
@@ -66,9 +68,15 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	expectedResult := "[{\"plaintext\":\"\",\"reference\":\"foo\"},{\"plaintext\":\"Cg==\",\"reference\":\"bar\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\",\"reference\":\"baz\"}]"
 
 	jsonResponse, err := json.Marshal(batchDecryptionResponseItems)
-	if err != nil || err == nil && string(jsonResponse) != expectedResult {
+	if err != nil {
+		t.Fatalf("bad: failed to marshal response items: err=%v json=%s", err, jsonResponse)
+	}
+	if string(jsonResponse) != expectedResult {
 		t.Fatalf("bad: expected json response [%s]", jsonResponse)
 	}
+
+	// We expect 6 successful requests (3 for batch encryption, 3 for batch decryption)
+	require.Equal(t, uint64(6), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
@@ -275,6 +283,107 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 				if !reflect.DeepEqual(tt.want, respItems) {
 					t.Fatalf("response items mismatch, want:%#v, got:%#v", tt.want, respItems)
 				}
+			}
+		})
+	}
+
+	// We expect 7 successful requests (2 for batch encryption + 1 single-item decryption + 2 batch decryption + 2 batch decryption)
+	require.Equal(t, uint64(7), b.secretEngineCounts.Transit.MonthlyCount.Load())
+}
+
+// TestTransit_decodeDecryptBatchRequestItems verifies that decodeBatchRequestItems
+// correctly handles all fields — including the newer padding_scheme and
+// hash_algorithm fields — when called via the decrypt path (requireCiphertext=true).
+func TestTransit_decodeDecryptBatchRequestItems(t *testing.T) {
+	tests := []struct {
+		name            string
+		src             interface{}
+		dest            []BatchRequestItem
+		wantErrContains string
+	}{
+		// Required ciphertext field
+		{
+			name:            "required_ciphertext_missing",
+			src:             []interface{}{map[string]interface{}{}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "missing ciphertext",
+		},
+		{
+			name: "required_ciphertext_present",
+			src:  []interface{}{map[string]interface{}{"ciphertext": "vault:v1:abc"}},
+			dest: []BatchRequestItem{},
+		},
+		// Invalid ciphertext type
+		{
+			name:            "src_ciphertext_invalid_type",
+			src:             []interface{}{map[string]interface{}{"ciphertext": 666}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
+		},
+		// padding_scheme field
+		{
+			name: "src_padding_scheme_valid",
+			src:  []interface{}{map[string]interface{}{"ciphertext": "vault:v1:abc", "padding_scheme": "oaep"}},
+			dest: []BatchRequestItem{},
+		},
+		{
+			name:            "src_padding_scheme_invalid_type",
+			src:             []interface{}{map[string]interface{}{"ciphertext": "vault:v1:abc", "padding_scheme": 666}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
+		},
+		// hash_algorithm field
+		{
+			name: "src_hash_algorithm_valid",
+			src:  []interface{}{map[string]interface{}{"ciphertext": "vault:v1:abc", "hash_algorithm": "sha2-256"}},
+			dest: []BatchRequestItem{},
+		},
+		{
+			name:            "src_hash_algorithm_invalid_type",
+			src:             []interface{}{map[string]interface{}{"ciphertext": "vault:v1:abc", "hash_algorithm": 666}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
+		},
+		// Both fields together
+		{
+			name: "src_padding_scheme_and_hash_algorithm",
+			src:  []interface{}{map[string]interface{}{"ciphertext": "vault:v1:abc", "padding_scheme": "oaep", "hash_algorithm": "sha2-512"}},
+			dest: []BatchRequestItem{},
+		},
+		// Multiple items — error on one item does not hide the other
+		{
+			name: "multi_item_second_invalid",
+			src: []interface{}{
+				map[string]interface{}{"ciphertext": "vault:v1:abc", "padding_scheme": "oaep"},
+				map[string]interface{}{"ciphertext": "vault:v1:abc", "padding_scheme": 666},
+			},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expectedDest := append(tt.dest[:0:0], tt.dest...)
+			expectedErr := mapstructure.Decode(tt.src, &expectedDest) != nil || tt.wantErrContains != ""
+
+			gotErr := decodeDecryptBatchRequestItems(tt.src, &tt.dest)
+
+			if expectedErr {
+				if gotErr == nil {
+					t.Fatal("decodeDecryptBatchRequestItems: expected error but got none")
+				}
+				if tt.wantErrContains == "" {
+					t.Fatal("missing wantErrContains for error case")
+				}
+				if !strings.Contains(gotErr.Error(), tt.wantErrContains) {
+					t.Errorf("decodeDecryptBatchRequestItems: want error containing %q, got %q", tt.wantErrContains, gotErr.Error())
+				}
+			} else if gotErr != nil {
+				t.Errorf("decodeDecryptBatchRequestItems: unexpected error: %v", gotErr)
+			}
+
+			if !reflect.DeepEqual(expectedDest, tt.dest) {
+				t.Errorf("decodeDecryptBatchRequestItems: dest mismatch, want: %v, got: %v", expectedDest, tt.dest)
 			}
 		})
 	}

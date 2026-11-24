@@ -1,0 +1,70 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppSideNav::Portal
+  @ariaLabel="Resilience and recovery Navigation Links"
+  data-test-sidebar-nav-panel="Resilience and recovery"
+  as |Nav|
+>
+  <Nav.BackLink
+    @route={{if @isEngine "vault" "vault.cluster"}}
+    @isRouteExternal={{@isEngine}}
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+  {{#if (or (display-nav-item this.routeName.secretsRecovery) (display-nav-item this.routeName.seal))}}
+    <Nav.Title data-test-sidebar-nav-heading="Resilience and recovery">Resilience and recovery</Nav.Title>
+  {{/if}}
+  {{#if (display-nav-item this.routeName.secretsRecovery)}}
+    <Nav.Link
+      @route={{if @isEngine "recoverySnapshots" "vault.cluster.recovery.snapshots"}}
+      @isRouteExternal={{@isEngine}}
+      @text="Secrets recovery"
+      @badge={{if this.version.isCommunity "Enterprise" ""}}
+      data-test-sidebar-nav-link="Secrets recovery"
+    />
+  {{/if}}
+  {{#if (display-nav-item this.routeName.seal)}}
+    <Nav.Link
+      @route={{if @isEngine "settingsSeal" "vault.cluster.settings.seal"}}
+      @isRouteExternal={{@isEngine}}
+      @model={{this.cluster.name}}
+      @text="Seal Vault"
+      data-test-sidebar-nav-link="Seal Vault"
+    />
+  {{/if}}
+
+  {{#if (display-nav-item this.routeName.replication)}}
+    <Nav.Title data-test-sidebar-nav-heading="Replication">Replication</Nav.Title>
+    <Nav.Link
+      @route={{if @isEngine "replication" "vault.cluster.replication.index"}}
+      @isRouteExternal={{@isEngine}}
+      @text="Overview"
+      data-test-sidebar-nav-link="Overview"
+    />
+    {{#if (not-eq this.cluster.mode "unsupported")}}
+      {{#if (has-feature "DR Replication")}}
+        <Nav.Link
+          @route={{if @isEngine "replicationMode" "vault.cluster.replication.mode"}}
+          @isRouteExternal={{@isEngine}}
+          @model="dr"
+          @text="Disaster recovery"
+          data-test-sidebar-nav-link="Disaster recovery"
+        />
+      {{/if}}
+      {{#if (has-feature "Performance Replication")}}
+        <Nav.Link
+          @route={{if @isEngine "replicationMode" "vault.cluster.replication.mode"}}
+          @isRouteExternal={{@isEngine}}
+          @model="performance"
+          @text="Performance replication"
+          data-test-sidebar-nav-link="Performance replication"
+        />
+      {{/if}}
+    {{/if}}
+  {{/if}}
+</Hds::AppSideNav::Portal>

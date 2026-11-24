@@ -33,7 +33,7 @@ export async function addSecondary(secondaryName, mountFilterMode = null) {
   await fillIn('[data-test-input="Secondary ID"]', secondaryName);
 
   if (mountFilterMode) {
-    await click(`#${mountFilterMode}`);
+    await click(`[data-test-filter-mode="${mountFilterMode}"]`);
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
   }
@@ -50,7 +50,7 @@ export const disableReplication = async (type, assert) => {
 
     await click('[data-test-disable-replication] button');
 
-    const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
+    const typeDisplay = type === 'dr' ? 'Disaster recovery' : 'Performance';
     await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', typeDisplay);
     await click(GENERAL.confirmButton);
     await settled(); // eslint-disable-line

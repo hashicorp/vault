@@ -8,15 +8,16 @@ import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type Controller from '@ember/controller';
-import type LdapRoleModel from 'vault/models/ldap/role';
+import type { LdapRole } from 'vault/secrets/ldap';
 import type Transition from '@ember/routing/transition';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { LdapApplicationModel } from '../application';
 
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
+  isSelfManaged: boolean;
   roleAncestry: { path_to_role: string; type: string };
-  roles: Array<LdapRoleModel>;
+  roles: Array<LdapRole>;
 }
 
 interface RouteController extends Controller {
@@ -43,7 +44,7 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
 
   async model(params: RouteParams) {
     const { page, pageFilter: filter } = params;
-    const { secretsEngine } = this.modelFor('application') as LdapApplicationModel;
+    const { secretsEngine, isSelfManaged } = this.modelFor('application') as LdapApplicationModel;
     const { path_to_role, type } = params as { path_to_role: string; type: string };
     const roleAncestry = { path_to_role, type };
     const { roles, capabilities } = await this.fetchRolesAndCapabilities(
@@ -52,6 +53,7 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
     );
     return {
       secretsEngine,
+      isSelfManaged,
       roleAncestry,
       roles,
       capabilities,
@@ -67,7 +69,8 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
     };
 
     const crumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: secretsEngine.id, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       ...ldapBreadcrumbs(roleAncestry.path_to_role, routeParams, roleRoutes, true),

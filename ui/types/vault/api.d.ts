@@ -24,6 +24,33 @@ export interface ApiResponse {
   wrap_info: WrapInfo | null;
 }
 
+export interface ApiBaseErrorResponse {
+  data?: {
+    error?: string;
+  };
+  error?: string;
+  errors?: string[];
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface ControlGroupErrorResponse extends ApiBaseErrorResponse, WrapInfo {
+  isControlGroupError: true;
+}
+
+export interface ApiStandardErrorResponse extends ApiBaseErrorResponse {
+  isControlGroupError?: false;
+}
+
+export type ApiErrorResponse = ControlGroupErrorResponse | ApiStandardErrorResponse;
+
+export interface ApiParsedError {
+  message: string;
+  path?: string;
+  response?: ApiErrorResponse;
+  status?: number;
+}
+
 export type HeaderMap =
   | {
       namespace: string;

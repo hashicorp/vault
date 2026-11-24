@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
-import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/owner';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
@@ -28,9 +28,11 @@ export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service('app-router') router;
   @service api;
+  @service version;
 
   @tracked secretPath;
   @tracked metadataToDelete = null; // set to the metadata intended to delete
+  @tracked showPolicyFlyout = false;
 
   // used for KV list and list-directory view
   // ex: beep/

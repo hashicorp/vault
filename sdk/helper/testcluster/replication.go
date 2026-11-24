@@ -463,10 +463,10 @@ func WaitForDRSecondary(ctx context.Context, pri, sec VaultCluster, skipPoisonPi
 	return nil
 }
 
-func EnableDRSecondaryNoWait(ctx context.Context, sec VaultCluster, drToken string) error {
+func EnableDRSecondaryNoWait(ctx context.Context, pri, sec VaultCluster, drToken string) error {
 	postData := map[string]interface{}{
 		"token":   drToken,
-		"ca_file": sec.GetCACertPEMFile(),
+		"ca_file": pri.GetCACertPEMFile(),
 	}
 
 	_, err := sec.Nodes()[0].APIClient().Logical().Write("sys/replication/dr/secondary/enable", postData)
@@ -553,7 +553,7 @@ func WaitForDRReplicationWorking(ctx context.Context, pri, sec VaultCluster) err
 }
 
 func EnableDrSecondary(ctx context.Context, pri, sec VaultCluster, drToken string) error {
-	err := EnableDRSecondaryNoWait(ctx, sec, drToken)
+	err := EnableDRSecondaryNoWait(ctx, pri, sec, drToken)
 	if err != nil {
 		return err
 	}

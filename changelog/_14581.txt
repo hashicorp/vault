@@ -1,0 +1,3 @@
+```release-note:security
+core: Update github.com/apache/thrift to fix security vulnerability GHSA-wf45-q9ch-q8gh
+```

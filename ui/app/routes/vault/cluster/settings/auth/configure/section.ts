@@ -9,15 +9,29 @@ import AuthMethodForm from 'vault/forms/auth/method';
 import OpenApiForm from 'vault/forms/open-api';
 
 import type ApiService from 'vault/services/api';
-import type PathHelpService from 'vault/services/path-help';
-import type Store from '@ember-data/store';
 import type { ClusterSettingsAuthConfigureRouteModel } from '../configure';
 import type { MountConfig } from 'vault/mount';
+import type { UserLockoutConfig, UserLockoutConfigResponse } from 'vault/auth/methods';
+
+// Vault reports lockout settings that were never set as 0. Those are left empty so that only
+// configured values are shown, and only those are sent back when the form is saved.
+const lockoutConfigForForm = (saved: UserLockoutConfigResponse = {}): UserLockoutConfig => {
+  const lockout: UserLockoutConfig = {};
+  // A threshold beyond the safe integer range was rounded when the response was parsed, so sending it
+  // back would change it or be rejected. It is left out and stays as saved unless the user sets one.
+  if (saved.user_lockout_threshold && Number.isSafeInteger(saved.user_lockout_threshold)) {
+    lockout.lockout_threshold = String(saved.user_lockout_threshold);
+  }
+  if (saved.user_lockout_duration) lockout.lockout_duration = `${saved.user_lockout_duration}s`;
+  if (saved.user_lockout_counter_reset_duration) {
+    lockout.lockout_counter_reset_duration = `${saved.user_lockout_counter_reset_duration}s`;
+  }
+  if (saved.user_lockout_disable !== undefined) lockout.lockout_disable = saved.user_lockout_disable;
+  return lockout;
+};
 
 export default class ClusterSettingsAuthConfigureRoute extends Route {
   @service declare readonly api: ApiService;
-  @service declare readonly pathHelp: PathHelpService;
-  @service declare readonly store: Store;
 
   get configRouteModel() {
     return this.modelFor('vault.cluster.settings.auth.configure') as ClusterSettingsAuthConfigureRouteModel;
@@ -25,14 +39,17 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
 
   modelForOptions() {
     const { methodOptions, method } = this.configRouteModel;
-    const config = methodOptions.config as MountConfig;
+    // the saved lockout settings are read here and sent back under the keys Vault accepts, not as part of config
+    const { user_lockout_config: savedLockoutConfig, ...config } = methodOptions.config as MountConfig & {
+      user_lockout_config?: UserLockoutConfigResponse;
+    };
     const listing_visibility = config.listing_visibility === 'unauth' ? true : false;
 
     const form = new AuthMethodForm({
       ...methodOptions,
       path: method.id,
       config: { ...config, listing_visibility },
-      user_lockout_config: {},
+      user_lockout_config: lockoutConfigForForm(savedLockoutConfig),
     });
     // `type` is a tracked property on the form class and not a field param
     // so we need to set it here even though it is spread in methodOptions above.
@@ -54,21 +71,25 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
     }[method.methodType];
   }
 
-  fetchConfig(type: string, section: string, path: string) {
+  fetchConfig(type: string, section: string, path: string): Promise<{ data: unknown }> {
+    // there is a mix of VoidResponse and specific response schemas
+    // normalize the responses to always return a data object
+    const normalize = (data: unknown) => ({ data });
+
     switch (type) {
       case 'aws': {
         switch (section) {
           case 'client':
-            return this.api.auth.awsReadClientConfiguration(path);
+            return this.api.auth.awsReadClientConfiguration(path).then(normalize);
           case 'identity-accesslist':
-            return this.api.auth.awsReadIdentityAccessListTidySettings(path);
+            return this.api.auth.awsReadIdentityAccessListTidySettings(path).then(normalize);
           case 'roletag-denylist':
-            return this.api.auth.awsReadRoleTagDenyListTidySettings(path);
+            return this.api.auth.awsReadRoleTagDenyListTidySettings(path).then(normalize);
         }
         break;
       }
       case 'azure':
-        return this.api.auth.azureReadAuthConfiguration(path);
+        return this.api.auth.azureReadAuthConfiguration(path).then((data) => ({ data }));
       case 'github':
         return this.api.auth.githubReadConfiguration(path);
       case 'gcp':
@@ -81,7 +102,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
       case 'ldap':
         return this.api.auth.ldapReadAuthConfiguration(path);
       case 'okta':
-        return this.api.auth.oktaReadConfiguration(path);
+        return this.api.auth.oktaReadConfiguration(path).then(normalize);
       case 'radius':
         return this.api.auth.radiusReadConfiguration(path);
     }
@@ -106,7 +127,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
         gcp: 'GoogleCloudConfigureAuthRequest',
         jwt: 'JwtConfigureRequest',
         oidc: 'JwtConfigureRequest',
-        kubernetes: 'KubernetesConfigureRequest',
+        kubernetes: 'KubernetesConfigureAuthRequest',
         ldap: 'LdapConfigureAuthRequest',
         okta: 'OktaConfigureRequest',
         radius: 'RadiusConfigureRequest',
@@ -132,10 +153,17 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
       }
     }
     const form = new OpenApiForm(this.schemaForType(methodType, section), formData, formOptions);
+    const defaultGroup = form.formFieldGroups[0]?.['default'] || [];
+    // to improve UX, set kubernetes_ca_cert editType to file
+    if (methodType === 'kubernetes') {
+      const kubernetesCaCertField = defaultGroup.find((field) => field.name === 'kubernetes_ca_cert');
+      if (kubernetesCaCertField) {
+        kubernetesCaCertField.options.editType = 'file';
+      }
+    }
     // for jwt and oidc types, the jwks_pairs field is not deprecated but we do not render it in the UI
     // remove the field from the group before rendering the form
     if (['jwt', 'oidc'].includes(methodType)) {
-      const defaultGroup = form.formFieldGroups[0]?.['default'] || [];
       const index = defaultGroup.findIndex((field) => field.name === 'jwks_pairs');
       if (index !== undefined && index >= 0) {
         defaultGroup.splice(index, 1);

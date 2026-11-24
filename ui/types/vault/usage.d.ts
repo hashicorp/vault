@@ -4,10 +4,7 @@
  */
 
 import type { GenerateUtilizationReportResponse } from '@hashicorp/vault-client-typescript';
-import type {
-  REPLICATION_ENABLED_STATE,
-  REPLICATION_DISABLED_STATE,
-} from '@hashicorp-internal/vault-reporting/types/index';
+import type { REPLICATION_ENABLED_STATE, REPLICATION_DISABLED_STATE } from 'vault/types/usage-reporting';
 
 export type GlobalLeaseCountQuota = {
   capacity: number;

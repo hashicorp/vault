@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
@@ -20,12 +20,13 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 const (
@@ -138,12 +139,14 @@ func Backend(conf *logical.BackendConfig) *backend {
 			Root: []string{
 				"root",
 				"root/sign-self-issued",
+				"keys/+/export",
 			},
 
 			SealWrapStorage: []string{
 				legacyCertBundlePath,
 				legacyCertBundleBackupPath,
 				keyPrefix,
+				exportKeyPrefix,
 			},
 
 			WriteForwardedStorage: []string{
@@ -216,6 +219,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathGenerateKey(&b),
 			pathImportKey(&b),
 			pathConfigKeys(&b),
+			pathSecureExportCAKey(&b),
 
 			// Fetch APIs have been lowered to favor the newer issuer API endpoints
 			pathFetchCA(&b),
@@ -312,7 +316,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.acmeState = NewACMEState()
 	b.certificateCounter = NewCertificateCounter(b.backendUUID)
 
-	b.pkiCertificateCounter = logical.NewNullPkiCertificateCounter()
+	if pkiCertCounterSysView, ok := conf.System.(logical.CertificateCountSystemView); ok {
+		b.pkiCertificateCounter = pkiCertCounterSysView.GetCertificateCounter()
+	} else {
+		b.pkiCertificateCounter = logical.NewNullCertificateCounter()
+	}
 
 	b.pkiObserver = observe.NewPkiCeObserver(b.Logger(), b)
 
@@ -350,7 +358,7 @@ type backend struct {
 
 	// pkiCertificateCounter keeps track of issued and stored certificate counts
 	// for the purposes of PKI-only billing.
-	pkiCertificateCounter logical.PkiCertificateCounter
+	pkiCertificateCounter logical.CertificateCounter
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *CrlBuilder
@@ -890,13 +898,13 @@ type revoker struct {
 func (r *revoker) RevokeCert(cert *x509.Certificate) (revocation.RevokeCertInfo, error) {
 	r.backend.GetRevokeStorageLock().Lock()
 	defer r.backend.GetRevokeStorageLock().Unlock()
-	resp, err := revokeCert(r.storageContext, r.crlConfig, cert)
+	resp, err := revokeCert(r.storageContext, r.crlConfig, cert, ocsp.Unspecified)
 	return parseRevokeCertOutput(resp, err)
 }
 
 func (r *revoker) RevokeCertBySerial(serial string) (revocation.RevokeCertInfo, error) {
 	// NOTE: tryRevokeCertBySerial grabs the revoke storage lock for us
-	resp, err := tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial)
+	resp, err := tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial, ocsp.Unspecified)
 	return parseRevokeCertOutput(resp, err)
 }
 

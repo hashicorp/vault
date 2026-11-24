@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -15,6 +15,7 @@
  * @isWriteWithoutRead={{isWriteWithoutRead}}
  * @secretDataIsAdvanced={{secretDataIsAdvanced}}
  * @showAdvancedMode={{showAdvancedMode}}
+ * @editorFormat={{editorFormat}}
  * @modelForData={{this.modelForData}}
  * @canUpdateSecret={{canUpdateSecret}}
  * @editActions={{hash
@@ -29,6 +30,7 @@
  * @param {boolean} isWriteWithoutRead - boolean describing permissions
  * @param {boolean} secretDataIsAdvanced - used to determine if show JSON toggle
  * @param {boolean} showAdvancedMode - used for JSON toggle
+ * @param {string} editorFormat - determines editor format as JSON or YAML
  * @param {object} modelForData - a modified version of the model with secret data
  * @param {boolean} canUpdateSecret - permissions to hide/show edit secret button.
  * @param {object} editActions - actions passed from parent to child
@@ -42,7 +44,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
 export default class SecretEditToolbar extends Component {
-  @service store;
+  @service api;
   @service router;
   @service flashMessages;
 
@@ -54,10 +56,14 @@ export default class SecretEditToolbar extends Component {
   }
 
   @action
-  handleDelete() {
-    this.args.model.destroyRecord().then(() => {
+  async handleDelete() {
+    try {
+      await this.api.secrets.kvV1Delete(this.args.model.id, this.args.model.backend);
       this.router.transitionTo('vault.cluster.secrets.backend.list-root');
-    });
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(message);
+    }
   }
 
   @task
@@ -65,11 +71,15 @@ export default class SecretEditToolbar extends Component {
   *wrapSecret() {
     const { id } = this.args.modelForData;
     const { backend } = this.args.model;
-    const wrapTTL = { wrapTTL: 1800 };
 
     try {
-      const resp = yield this.store.adapterFor('secret').queryRecord(null, null, { backend, id, ...wrapTTL });
-      this.wrappedData = resp.wrap_info.token;
+      const { wrap_info } = yield this.api.secrets.kvV1Read(
+        id,
+        backend,
+        undefined,
+        this.api.buildHeaders({ wrap: '1800' })
+      );
+      this.wrappedData = wrap_info.token;
       this.flashMessages.success('Secret successfully wrapped!');
     } catch (e) {
       this.flashMessages.danger('Could not wrap secret.');

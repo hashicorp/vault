@@ -168,6 +168,219 @@ func TestBackend_Config(t *testing.T) {
 	})
 }
 
+// TestBackend_Config_CaseInsensitiveWarnings verifies mixed-case and case-collision warnings are returned when enabling case-insensitive names.
+func TestBackend_Config_CaseInsensitiveWarnings(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	baseConfig := map[string]interface{}{
+		"host":                   "test.radius.hostname.com",
+		"secret":                 "test-secret",
+		"case_insensitive_names": false,
+	}
+
+	enableCaseInsensitive := map[string]interface{}{
+		"case_insensitive_names": true,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, baseConfig, false),
+			testStepUpdateUser(t, "Admin", "admin"),
+			testStepUpdateUser(t, "admin", "attacker"),
+			testConfigWriteWithCheck(t, enableCaseInsensitive, false, func(resp *logical.Response) error {
+				if resp == nil {
+					return fmt.Errorf("expected warning response, got nil")
+				}
+
+				if len(resp.Warnings) != 2 {
+					return fmt.Errorf("expected 2 warnings, got: %v", resp.Warnings)
+				}
+
+				all := strings.Join(resp.Warnings, " ")
+				if !strings.Contains(all, "uppercase characters") {
+					return fmt.Errorf("warning did not mention mixed-case usernames: %v", resp.Warnings)
+				}
+
+				if !strings.Contains(all, "differ only by case") || !strings.Contains(all, "ExampleUser") || !strings.Contains(all, "exampleuser") {
+					return fmt.Errorf("warning did not include expected collision guidance: %v", resp.Warnings)
+				}
+
+				return nil
+			}),
+		},
+	})
+}
+
+// TestBackend_Config_CaseInsensitiveMixedCaseWarnings verifies a mixed-case-only dataset returns only the mixed-case warning.
+func TestBackend_Config_CaseInsensitiveMixedCaseWarnings(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	baseConfig := map[string]interface{}{
+		"host":                   "test.radius.hostname.com",
+		"secret":                 "test-secret",
+		"case_insensitive_names": false,
+	}
+
+	enableCaseInsensitive := map[string]interface{}{
+		"case_insensitive_names": true,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, baseConfig, false),
+			testStepUpdateUser(t, "Admin", "admin"),
+			testConfigWriteWithCheck(t, enableCaseInsensitive, false, func(resp *logical.Response) error {
+				if resp == nil {
+					return fmt.Errorf("expected warning response, got nil")
+				}
+
+				if len(resp.Warnings) != 1 {
+					return fmt.Errorf("expected 1 warning, got: %v", resp.Warnings)
+				}
+
+				all := strings.Join(resp.Warnings, " ")
+				if !strings.Contains(all, "uppercase characters") {
+					return fmt.Errorf("warning did not mention mixed-case usernames: %v", resp.Warnings)
+				}
+
+				if strings.Contains(all, "differ only by case") {
+					return fmt.Errorf("did not expect collision warning for a single mixed-case username: %v", resp.Warnings)
+				}
+
+				return nil
+			}),
+		},
+	})
+}
+
+// TestBackend_Config_CaseInsensitiveNoWarnings verifies no warnings are returned when existing usernames are already lowercase.
+func TestBackend_Config_CaseInsensitiveNoWarnings(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	baseConfig := map[string]interface{}{
+		"host":                   "test.radius.hostname.com",
+		"secret":                 "test-secret",
+		"case_insensitive_names": false,
+	}
+
+	enableCaseInsensitive := map[string]interface{}{
+		"case_insensitive_names": true,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, baseConfig, false),
+			testStepUpdateUser(t, "admin", "attacker"),
+			testConfigWriteWithCheck(t, enableCaseInsensitive, false, func(resp *logical.Response) error {
+				if resp == nil {
+					return nil
+				}
+
+				if len(resp.Warnings) != 0 {
+					return fmt.Errorf("expected no warnings, got: %v", resp.Warnings)
+				}
+
+				return nil
+			}),
+		},
+	})
+}
+
+func testConfigWriteWithCheck(t *testing.T, d map[string]interface{}, expectError bool, check func(*logical.Response) error) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data:      d,
+		ErrorOk:   expectError,
+		Check:     check,
+	}
+}
+
+func testAccUserLoginPolicyAndMetaUsername(
+	t *testing.T,
+	user string,
+	data map[string]interface{},
+	policies []string,
+	expectError bool,
+	expectedUsername string,
+) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.UpdateOperation,
+		Path:            "login/" + user,
+		Data:            data,
+		ErrorOk:         expectError,
+		Unauthenticated: true,
+		Check: func(resp *logical.Response) error {
+			res := logicaltest.TestCheckAuth(policies)(resp)
+			if res != nil {
+				if expectError {
+					return nil
+				}
+
+				return res
+			}
+
+			if resp == nil || resp.Auth == nil || resp.Auth.Metadata == nil {
+				return fmt.Errorf("expected auth metadata, got none")
+			}
+
+			got := resp.Auth.Metadata["username"]
+			if got != expectedUsername {
+				return fmt.Errorf("expected metadata username %q, got %q", expectedUsername, got)
+			}
+
+			return nil
+		},
+	}
+}
+
+func policiesFromData(v interface{}) []string {
+	switch policies := v.(type) {
+	case []string:
+		return policies
+	case []interface{}:
+		out := make([]string, 0, len(policies))
+		for _, p := range policies {
+			if s, ok := p.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
 func TestBackend_users(t *testing.T) {
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
@@ -364,4 +577,234 @@ func testAccUserLoginPolicy(t *testing.T, user string, data map[string]interface
 			return res
 		},
 	}
+}
+
+// TestBackend_Users_CaseInsensitiveCollisionBlocked verifies case-variant writes are rejected when case-insensitive names are enabled.
+func TestBackend_Users_CaseInsensitiveCollisionBlocked(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	configTrue := map[string]interface{}{
+		"host":                   "test.radius.hostname.com",
+		"secret":                 "test-secret",
+		"case_insensitive_names": true,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, configTrue, false),
+			testStepUpdateUser(t, "admin", "attacker"),
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "users/Admin",
+				Data: map[string]interface{}{
+					"policies": "admin",
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp == nil || !resp.IsError() {
+						return fmt.Errorf("expected error response, got: %#v", resp)
+					}
+
+					msg, _ := resp.Data["error"].(string)
+					if !strings.Contains(msg, "collides with existing username") {
+						return fmt.Errorf("unexpected error message: %q", msg)
+					}
+
+					return nil
+				},
+			},
+		},
+	})
+}
+
+// TestBackend_Users_CaseInsensitiveCollisionBlockedLegacyMixedCase verifies a legacy mixed-case key cannot be rewritten through the normalized CRUD path.
+func TestBackend_Users_CaseInsensitiveCollisionBlockedLegacyMixedCase(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	baseConfig := map[string]interface{}{
+		"host":                   "test.radius.hostname.com",
+		"secret":                 "test-secret",
+		"case_insensitive_names": false,
+	}
+
+	enableCaseInsensitive := map[string]interface{}{
+		"case_insensitive_names": true,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, baseConfig, false),
+			testStepUpdateUser(t, "Admin", "attacker"),
+			testConfigWriteWithCheck(t, enableCaseInsensitive, false, func(resp *logical.Response) error {
+				if resp == nil {
+					return fmt.Errorf("expected warning response, got nil")
+				}
+
+				if len(resp.Warnings) == 0 {
+					return fmt.Errorf("expected warnings when enabling case_insensitive_names with legacy mixed-case usernames")
+				}
+
+				return nil
+			}),
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "users/Admin",
+				Data: map[string]interface{}{
+					"policies": "admin",
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp == nil || !resp.IsError() {
+						return fmt.Errorf("expected error response, got: %#v", resp)
+					}
+
+					msg, _ := resp.Data["error"].(string)
+					if !strings.Contains(msg, "collides with existing username") {
+						return fmt.Errorf("unexpected error message: %q", msg)
+					}
+
+					return nil
+				},
+			},
+		},
+	})
+}
+
+// TestBackend_Users_CaseInsensitiveReadDeleteNormalized verifies read and delete normalize mixed-case usernames to the canonical lowercase key.
+func TestBackend_Users_CaseInsensitiveReadDeleteNormalized(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	configTrue := map[string]interface{}{
+		"host":                   "test.radius.hostname.com",
+		"secret":                 "test-secret",
+		"case_insensitive_names": true,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, configTrue, false),
+			testStepUpdateUser(t, "admin", "attacker"),
+			{
+				Operation: logical.ReadOperation,
+				Path:      "users/AdMiN",
+				Check: func(resp *logical.Response) error {
+					if resp == nil || resp.IsError() {
+						return fmt.Errorf("expected successful response, got: %#v", resp)
+					}
+
+					got := policiesFromData(resp.Data["policies"])
+					if !reflect.DeepEqual(got, []string{"attacker"}) {
+						return fmt.Errorf("expected policies [attacker], got: %#v", got)
+					}
+
+					return nil
+				},
+			},
+			{
+				Operation: logical.DeleteOperation,
+				Path:      "users/AdMiN",
+			},
+			{
+				Operation: logical.ReadOperation,
+				Path:      "users/admin",
+				Check: func(resp *logical.Response) error {
+					if resp != nil {
+						return fmt.Errorf("expected canonical user to be deleted, got %#v", resp.Data)
+					}
+
+					return nil
+				},
+			},
+		},
+	})
+}
+
+// TestBackend_Acceptance_CaseInsensitiveLoginNormalization verifies login metadata uses the normalized lowercase username when enabled.
+func TestBackend_Acceptance_CaseInsensitiveLoginNormalization(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	cleanup, host, port := prepareRadiusTestContainer(t)
+	defer cleanup()
+
+	username := os.Getenv(envRadiusUsername)
+	if username == "" {
+		username = "test"
+	}
+
+	password := os.Getenv(envRadiusUserPass)
+	if password == "" {
+		password = "test"
+	}
+
+	secret := os.Getenv(envRadiusSecret)
+	if secret == "" {
+		secret = "testing123"
+	}
+
+	cfg := map[string]interface{}{
+		"host":                   host,
+		"port":                   strconv.Itoa(port),
+		"secret":                 secret,
+		"case_insensitive_names": true,
+	}
+
+	if cfg["port"] == "" {
+		cfg["port"] = "1812"
+	}
+
+	lower := strings.ToLower(username)
+	upper := strings.ToUpper(username)
+
+	loginData := map[string]interface{}{
+		"password": password,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		PreCheck:          testAccPreCheck(t, host, port),
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, cfg, false),
+			testStepUpdateUser(t, lower, "foopolicy"),
+			testAccUserLoginPolicyAndMetaUsername(t, upper, loginData, []string{"default", "foopolicy"}, false, lower),
+		},
+	})
 }

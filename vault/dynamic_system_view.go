@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/random"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -179,6 +179,11 @@ func (d dynamicSystemView) ListVersionedPlugins(ctx context.Context, pluginType 
 // MlockEnabled returns the configuration setting for enabling mlock on plugins.
 func (d dynamicSystemView) MlockEnabled() bool {
 	return d.core.enableMlock
+}
+
+// DenySlashInTemplatedPaths returns the configuration setting for denying slashes in templated policy paths.
+func (d dynamicSystemView) DenySlashInTemplatedPaths() bool {
+	return d.core.denySlashInTemplatedPolicyPaths
 }
 
 func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) {
@@ -371,25 +376,36 @@ func (d dynamicSystemView) GetRotationInformation(ctx context.Context, req *rota
 	return d.core.GetRotationInformation(nsCtx, mountEntry.APIPath(), req)
 }
 
-func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (string, error) {
+func (d dynamicSystemView) RegisterRotationJobWithResponse(ctx context.Context, req *rotation.RotationJobConfigureRequest) (*rotation.RotationInfo, error) {
 	mountEntry := d.mountEntry
 	if mountEntry == nil {
-		return "", fmt.Errorf("no mount entry")
+		return nil, fmt.Errorf("no mount entry")
 	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
 
 	job, err := rotation.ConfigureRotationJob(req)
 	if err != nil {
-		return "", fmt.Errorf("error configuring rotation job: %s", err)
+		return nil, fmt.Errorf("error configuring rotation job: %s", err)
 	}
 
-	id, err := d.core.RegisterRotationJob(nsCtx, job)
+	// Set the MountPoint here from the mountEntry so plugins cannot force-set a mount point other than its own.
+	job.MountPoint = mountEntry.APIPath()
+
+	resp, err := d.core.RegisterRotationJob(nsCtx, job)
 	if err != nil {
-		return "", fmt.Errorf("error registering rotation job: %s", err)
+		return nil, fmt.Errorf("error registering rotation job: %s", err)
 	}
 
-	job.RotationID = id
-	return id, nil
+	return resp, nil
+}
+
+func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (string, error) {
+	info, err := d.RegisterRotationJobWithResponse(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	return info.RotationID, nil
 }
 
 func (d dynamicSystemView) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) (err error) {
@@ -400,4 +416,8 @@ func (d dynamicSystemView) DeregisterRotationJob(ctx context.Context, req *rotat
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
 
 	return d.core.DeregisterRotationJob(nsCtx, req)
+}
+
+func (d dynamicSystemView) GetConsumptionBillingManager() logical.ConsumptionBillingManager {
+	return d.core.GetConsumptionBillingManager()
 }

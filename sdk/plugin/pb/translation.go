@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 const (
@@ -211,6 +212,30 @@ func LogicalSecretToProtoSecret(s *logical.Secret) (*Secret, error) {
 	}, err
 }
 
+func RotationInfoToProto(i *rotation.RotationInfo) *RotationInfo {
+	if i == nil {
+		return nil
+	}
+
+	return &RotationInfo{
+		RotationID:        i.RotationID,
+		NextVaultRotation: i.NextVaultRotation.Unix(),
+		LastVaultRotation: i.LastVaultRotation.Unix(),
+	}
+}
+
+func RotationInfoToLogical(i *RotationInfo) *rotation.RotationInfo {
+	if i == nil {
+		return nil
+	}
+
+	return &rotation.RotationInfo{
+		RotationID:        i.RotationID,
+		NextVaultRotation: time.Unix(i.NextVaultRotation, 0).UTC(),
+		LastVaultRotation: time.Unix(i.LastVaultRotation, 0).UTC(),
+	}
+}
+
 func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 	if r == nil {
 		return nil, nil
@@ -259,6 +284,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		Unauthenticated:          r.Unauthenticated,
 		RequiresSnapshotID:       r.RequiresSnapshotID,
 		RecoverSourcePath:        r.RecoverSourcePath,
+		RotationInfo:             RotationInfoToProto(r.RotationInfo),
 	}, nil
 }
 
@@ -319,6 +345,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		Unauthenticated:          r.Unauthenticated,
 		RequiresSnapshotID:       r.RequiresSnapshotID,
 		RecoverSourcePath:        r.RecoverSourcePath,
+		RotationInfo:             RotationInfoToLogical(r.RotationInfo),
 	}, nil
 }
 

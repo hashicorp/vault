@@ -1,0 +1,3 @@
+```release-note:change
+core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+```

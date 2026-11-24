@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-pgmultiauth"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-uuid"
@@ -232,7 +232,7 @@ func getAuthConfig(ctx context.Context, url string, conf map[string]string, log 
 
 		authOptions.AuthMethod = pgmultiauth.AWSAuth
 		authOptions.AWSDBRegion = conf["aws_db_region"]
-	case "azure_msi":
+	case "azure_msi", "azure":
 		authOptions.AuthMethod = pgmultiauth.AzureAuth
 		authOptions.AzureClientID = conf["azure_client_id"]
 	case "gcp_iam":

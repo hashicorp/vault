@@ -5,6 +5,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"net/rpc"
 	"sync"
 
@@ -14,6 +15,14 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin"
 	bplugin "github.com/hashicorp/vault/sdk/plugin"
 )
+
+const pluginReloadInProgressErr = "plugin reload in progress"
+
+func (b *backend) pluginReloadInProgressError() error {
+	pluginName := b.config.Config["plugin_name"]
+	pluginVersion := b.config.Config["plugin_version"]
+	return logical.CodedError(503, fmt.Sprintf("%s: %s (version=%s)", pluginReloadInProgressErr, pluginName, pluginVersion))
+}
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
@@ -49,7 +58,8 @@ type backend struct {
 	canary string
 }
 
-func (b *backend) reloadBackend(ctx context.Context, storage logical.Storage) error {
+func (b *backend) reloadBackend(ctx context.Context, req *logical.Request) error {
+	storage := req.Storage
 	pluginName := b.config.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
 	if err != nil {
@@ -75,11 +85,18 @@ func (b *backend) reloadBackend(ctx context.Context, storage logical.Storage) er
 	}
 	b.Backend = nb
 
-	// Re-initialize the backend in case plugin was reloaded
-	// after it crashed
-	err = b.Backend.Initialize(ctx, &logical.InitializationRequest{
-		Storage: storage,
-	})
+	// Re-initialize the backend after crash-recovery. Mount metadata is read
+	// directly from the triggering request — it is always present on any real
+	// Vault request — and BackendUUID comes from the stable BackendConfig.
+	initReq := &logical.InitializationRequest{
+		Storage:             storage,
+		MountPoint:          req.MountPoint,
+		MountType:           req.MountType,
+		MountAccessor:       req.MountAccessor,
+		BackendUUID:         b.config.BackendUUID,
+		MountRunningVersion: req.MountRunningVersion(),
+	}
+	err = b.Backend.Initialize(ctx, initReq)
 	if err != nil {
 		return err
 	}
@@ -97,10 +114,14 @@ func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	// and is returned as plugin.BasicError type.
 	if err != nil &&
 		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
+		if reloadingBackend, ok := b.Backend.(interface{ IsReloading() bool }); ok && reloadingBackend.IsReloading() {
+			return nil, b.pluginReloadInProgressError()
+		}
+
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx, req.Storage)
+			err := b.reloadBackend(ctx, req)
 			if err != nil {
 				b.mu.Unlock()
 				return nil, err
@@ -129,10 +150,14 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 	b.mu.RUnlock()
 	if err != nil &&
 		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
+		if reloadingBackend, ok := b.Backend.(interface{ IsReloading() bool }); ok && reloadingBackend.IsReloading() {
+			return false, false, b.pluginReloadInProgressError()
+		}
+
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx, req.Storage)
+			err := b.reloadBackend(ctx, req)
 			if err != nil {
 				b.mu.Unlock()
 				return false, false, err

@@ -20,7 +20,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -31,8 +33,10 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/billing"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
@@ -52,6 +56,11 @@ func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	err := b.Backend.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
+	}
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 	return b, config.StorageView
 }
@@ -74,6 +83,11 @@ func createBackendWithSysView(t testing.TB) (*backend, logical.Storage) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
+	}
 
 	return b, storage
 }
@@ -94,6 +108,11 @@ func createBackendWithSysViewWithStorage(t testing.TB, s logical.Storage) *backe
 	err := b.Backend.Setup(context.Background(), conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 
 	return b
@@ -117,8 +136,34 @@ func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical
 	if err != nil {
 		t.Fatal(err)
 	}
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
+	}
 
 	return b
+}
+
+func createBackendWithObservationRecorder(t testing.TB) (*backend, logical.Storage, *observations.TestObservationRecorder) {
+	config := logical.TestBackendConfig()
+	obsRecorder := observations.NewTestObservationRecorder()
+	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = obsRecorder
+
+	b, _ := Backend(context.Background(), config)
+	require.NotNil(t, b)
+	err := b.Backend.Setup(context.Background(), config)
+	require.NoError(t, err)
+	return b, config.StorageView, obsRecorder
+}
+
+func factoryWithObservationRecorder(t testing.TB) (logical.Factory, *observations.TestObservationRecorder) {
+	obsRecorder := observations.NewTestObservationRecorder()
+	return func(ctx context.Context, bc *logical.BackendConfig) (logical.Backend, error) {
+		bc.ObservationRecorder = obsRecorder
+		return Factory(ctx, bc)
+	}, obsRecorder
 }
 
 func TestTransit_RSA(t *testing.T) {
@@ -346,57 +391,325 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 }
 
+// TestTransit_RSA_HashAlgorithm verifies that hash_algorithm is accepted and
+// enforced correctly for native RSA encrypt/decrypt operations.
+func TestTransit_RSA_HashAlgorithm(t *testing.T) {
+	for _, keyType := range []string{"rsa-2048", "rsa-3072", "rsa-4096"} {
+		t.Run(keyType, func(t *testing.T) {
+			testTransit_RSA_HashAlgorithm(t, keyType)
+		})
+	}
+}
+
+func testTransit_RSA_HashAlgorithm(t *testing.T, keyType string) {
+	t.Helper()
+	b, storage := createBackendWithStorage(t)
+
+	// Create the RSA key under test.
+	keyReq := &logical.Request{
+		Path:      "keys/rsa-ha",
+		Operation: logical.UpdateOperation,
+		Data:      map[string]interface{}{"type": keyType},
+		Storage:   storage,
+	}
+	resp, err := b.HandleRequest(context.Background(), keyReq)
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "key creation error: %v", resp)
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
+
+	// Round-trip each valid hash algorithm with oaep padding.
+	for _, hashAlg := range []string{"sha1", "sha2-256", "sha2-384", "sha2-512"} {
+		t.Run("oaep/"+hashAlg, func(t *testing.T) {
+			encResp, encErr := b.HandleRequest(context.Background(), &logical.Request{
+				Path:      "encrypt/rsa-ha",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"plaintext":      plaintext,
+					"padding_scheme": "oaep",
+					"hash_algorithm": hashAlg,
+				},
+			})
+			require.NoError(t, encErr)
+			require.False(t, encResp != nil && encResp.IsError(), "encrypt error for hash %s: %v", hashAlg, encResp)
+
+			ciphertext := encResp.Data["ciphertext"].(string)
+
+			decResp, decErr := b.HandleRequest(context.Background(), &logical.Request{
+				Path:      "decrypt/rsa-ha",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"ciphertext":     ciphertext,
+					"padding_scheme": "oaep",
+					"hash_algorithm": hashAlg,
+				},
+			})
+			require.NoError(t, decErr)
+			require.False(t, decResp != nil && decResp.IsError(), "decrypt error for hash %s: %v", hashAlg, decResp)
+			require.Equal(t, plaintext, decResp.Data["plaintext"].(string), "round-trip failed for hash %s", hashAlg)
+		})
+	}
+
+	// An unknown hash_algorithm string must be rejected.
+	t.Run("unknown hash_algorithm rejected", func(t *testing.T) {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-ha",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"plaintext":      plaintext,
+				"padding_scheme": "oaep",
+				"hash_algorithm": "md5",
+			},
+		})
+		require.True(t, err != nil || (resp != nil && resp.IsError()), "expected error for unknown hash_algorithm")
+	})
+}
+
+// TestTransit_HashAlgorithm_NonRSA verifies that hash_algorithm is rejected
+// for non-RSA key types (e.g. aes256-gcm96).
+func TestTransit_HashAlgorithm_NonRSA(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+
+	// Create an AES key via the upsert path.
+	_, createErr := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "encrypt/aes-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+		},
+	})
+	require.NoError(t, createErr)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "encrypt/aes-key",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext":      "dGhlIHF1aWNrIGJyb3duIGZveA==",
+			"hash_algorithm": "sha2-256",
+		},
+	})
+	require.True(t, err != nil || (resp != nil && resp.IsError()), "expected error when hash_algorithm is supplied for a non-RSA key")
+}
+
+// TestTransit_RSA_BatchPaddingAndHash verifies that padding_scheme and
+// hash_algorithm are processed correctly on a per-item basis in batch
+// encrypt/decrypt requests.
+func TestTransit_RSA_BatchPaddingAndHash(t *testing.T) {
+	for _, keyType := range []string{"rsa-2048", "rsa-3072", "rsa-4096"} {
+		t.Run(keyType, func(t *testing.T) {
+			testTransit_RSA_BatchPaddingAndHash(t, keyType)
+		})
+	}
+}
+
+func testTransit_RSA_BatchPaddingAndHash(t *testing.T, keyType string) {
+	t.Helper()
+	b, storage := createBackendWithStorage(t)
+
+	// Create the RSA key under test.
+	_, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "keys/rsa-batch",
+		Operation: logical.UpdateOperation,
+		Data:      map[string]interface{}{"type": keyType},
+		Storage:   storage,
+	})
+	require.NoError(t, err)
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
+
+	// --- Encrypt batch: per-item invalid padding_scheme errors ---
+	t.Run("encrypt batch invalid padding_scheme per item", func(t *testing.T) {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"batch_input": []interface{}{
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "bad-scheme"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		results := resp.Data["batch_results"].([]EncryptBatchResponseItem)
+		require.Len(t, results, 3)
+		require.Empty(t, results[0].Error, "item 0 should succeed")
+		require.NotEmpty(t, results[1].Error, "item 1 should fail with invalid padding_scheme")
+		require.Contains(t, results[1].Error, "[1].padding_scheme")
+		require.Empty(t, results[2].Error, "item 2 should succeed")
+	})
+
+	// --- Encrypt batch: per-item invalid hash_algorithm errors ---
+	t.Run("encrypt batch invalid hash_algorithm per item", func(t *testing.T) {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"batch_input": []interface{}{
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep", "hash_algorithm": "sha2-256"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep", "hash_algorithm": "md5"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep", "hash_algorithm": "sha2-512"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		results := resp.Data["batch_results"].([]EncryptBatchResponseItem)
+		require.Len(t, results, 3)
+		require.Empty(t, results[0].Error, "item 0 should succeed")
+		require.NotEmpty(t, results[1].Error, "item 1 should fail with invalid hash_algorithm")
+		require.Contains(t, results[1].Error, "[1].hash_algorithm")
+		require.Empty(t, results[2].Error, "item 2 should succeed")
+	})
+
+	// --- Full round-trip: batch encrypt then batch decrypt with matching per-item params ---
+	t.Run("batch round-trip oaep with varied hash algorithms", func(t *testing.T) {
+		hashAlgs := []string{"sha1", "sha2-256", "sha2-384", "sha2-512"}
+		encBatch := make([]interface{}, len(hashAlgs))
+		for i, ha := range hashAlgs {
+			encBatch[i] = map[string]interface{}{
+				"plaintext":      plaintext,
+				"padding_scheme": "oaep",
+				"hash_algorithm": ha,
+			}
+		}
+
+		encResp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data:      map[string]interface{}{"batch_input": encBatch},
+		})
+		require.NoError(t, err)
+		require.False(t, encResp != nil && encResp.IsError())
+		encResults := encResp.Data["batch_results"].([]EncryptBatchResponseItem)
+		require.Len(t, encResults, len(hashAlgs))
+		for i, res := range encResults {
+			require.Emptyf(t, res.Error, "encrypt item %d (%s) should succeed", i, hashAlgs[i])
+		}
+
+		decBatch := make([]interface{}, len(hashAlgs))
+		for i, ha := range hashAlgs {
+			decBatch[i] = map[string]interface{}{
+				"ciphertext":     encResults[i].Ciphertext,
+				"padding_scheme": "oaep",
+				"hash_algorithm": ha,
+			}
+		}
+
+		decResp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "decrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data:      map[string]interface{}{"batch_input": decBatch},
+		})
+		require.NoError(t, err)
+		require.False(t, decResp != nil && decResp.IsError())
+		decResults := decResp.Data["batch_results"].([]DecryptBatchResponseItem)
+		require.Len(t, decResults, len(hashAlgs))
+		for i, res := range decResults {
+			require.Emptyf(t, res.Error, "decrypt item %d (%s) should succeed", i, hashAlgs[i])
+			require.Equalf(t, plaintext, res.Plaintext, "round-trip failed for item %d (%s)", i, hashAlgs[i])
+		}
+	})
+
+	// --- Decrypt batch: per-item invalid padding_scheme errors ---
+	t.Run("decrypt batch invalid padding_scheme per item", func(t *testing.T) {
+		// First encrypt a ciphertext to use.
+		encResp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"plaintext":      plaintext,
+				"padding_scheme": "oaep",
+			},
+		})
+		require.NoError(t, err)
+		ciphertext := encResp.Data["ciphertext"].(string)
+
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "decrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"batch_input": []interface{}{
+					map[string]interface{}{"ciphertext": ciphertext, "padding_scheme": "oaep"},
+					map[string]interface{}{"ciphertext": ciphertext, "padding_scheme": "bad-scheme"},
+					map[string]interface{}{"ciphertext": ciphertext, "padding_scheme": "oaep"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		results := resp.Data["batch_results"].([]DecryptBatchResponseItem)
+		require.Len(t, results, 3)
+		require.Empty(t, results[0].Error, "item 0 should succeed")
+		require.NotEmpty(t, results[1].Error, "item 1 should fail with invalid padding_scheme")
+		require.Contains(t, results[1].Error, "[1].padding_scheme")
+		require.Empty(t, results[2].Error, "item 2 should succeed")
+	})
+}
+
 func TestBackend_basic(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, obsRecorder),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEncrypt(t, "test", "", decryptData),
 			testAccStepDecrypt(t, "test", "", decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepEnableDeletion(t, "test"),
 			testAccStepDisableDeletion(t, "test"),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 		},
 	})
 }
 
 func TestBackend_upsert(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 			testAccStepListPolicy(t, "test", true),
 			testAccStepEncryptUpsert(t, "test", testPlaintext, decryptData),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, obsRecorder),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 		},
 	})
 }
 
 func TestBackend_datakey(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	dataKeyInfo := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, nil),
 			testAccStepWriteDatakey(t, "test", false, 256, dataKeyInfo),
 			testAccStepDecryptDatakey(t, "test", dataKeyInfo),
 			testAccStepWriteDatakey(t, "test", true, 128, dataKeyInfo),
@@ -405,20 +718,20 @@ func TestBackend_datakey(t *testing.T) {
 }
 
 func TestBackend_rotation(t *testing.T) {
-	defer os.Setenv("TRANSIT_ACC_KEY_TYPE", "")
 	testBackendRotation(t)
-	os.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
+	t.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
 	testBackendRotation(t)
 }
 
 func testBackendRotation(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	encryptHistory := make(map[int]map[string]interface{})
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 0, encryptHistory),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 1, encryptHistory),
@@ -446,7 +759,7 @@ func testBackendRotation(t *testing.T) {
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepAdjustPolicyMinDecryption(t, "test", 3),
 			testAccStepAdjustPolicyMinEncryption(t, "test", 4),
-			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4, obsRecorder),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecryptExpectFailure(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -458,7 +771,7 @@ func testBackendRotation(t *testing.T) {
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepAdjustPolicyMinDecryption(t, "test", 1),
-			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4, obsRecorder),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -468,8 +781,8 @@ func testBackendRotation(t *testing.T) {
 			testAccStepRewrap(t, "test", decryptData, 4),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 			testAccStepListPolicy(t, "test", true),
 		},
 	})
@@ -477,28 +790,42 @@ func testBackendRotation(t *testing.T) {
 
 func TestBackend_basic_derived(t *testing.T) {
 	decryptData := make(map[string]interface{})
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", true),
+			testAccStepWritePolicy(t, "test", true, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, true),
+			testAccStepReadPolicy(t, "test", false, true, obsRecorder),
 			testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, true),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, true, obsRecorder),
 		},
 	})
 }
 
-func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest.TestStep {
+func testAccStepWritePolicy(t *testing.T, name string, derived bool, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	ts := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name,
 		Data: map[string]interface{}{
 			"derived": derived,
+		},
+		Check: func(resp *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyWrite)
+			if obs == nil {
+				return fmt.Errorf("no observation")
+			}
+			if name != obs.Data["key_name"] {
+				return fmt.Errorf("expected name %s, got %s", name, obs.Data["key_name"])
+			}
+			return nil
 		},
 	}
 	if os.Getenv("TRANSIT_ACC_KEY_TYPE") == "CHACHA" {
@@ -583,10 +910,24 @@ func testAccStepEnableDeletion(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepDeletePolicy(t *testing.T, name string, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
 		Path:      "keys/" + name,
+		Check: func(_ *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyDelete)
+			if obs == nil {
+				return fmt.Errorf("expected observation of type %s but got none", ObservationTypeTransitKeyDelete)
+			}
+			if obs.Data["key_name"] != name {
+				return fmt.Errorf("expected name %s, got %s", name, obs.Data["key_name"])
+			}
+			return nil
+		},
 	}
 }
 
@@ -607,11 +948,11 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 	}
 }
 
-func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
-	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
+func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
+	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0, obsRecorder)
 }
 
-func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) logicaltest.TestStep {
+func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -672,6 +1013,25 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if derived && d.KDF != "hkdf_sha256" {
 				return fmt.Errorf("bad: %#v", d)
 			}
+
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyRead)
+			if obs == nil {
+				return fmt.Errorf("expected key read observation but found none")
+			}
+			if obs.Data == nil {
+				return fmt.Errorf("observation data should not be nil")
+			}
+			keyName, ok := obs.Data["key_name"]
+			if !ok {
+				return fmt.Errorf("observation data missing key_name field")
+			}
+			if keyName != name {
+				return fmt.Errorf("observation key_name mismatch: expected %s, got %v", name, keyName)
+			}
+
 			return nil
 		},
 	}
@@ -1654,6 +2014,10 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				err = b.Initialize(context.Background(), &logical.InitializationRequest{Storage: storage})
+				if err != nil {
+					t.Fatal(err)
+				}
 
 				// Write a key with the default auto rotate value (0/disabled)
 				req := &logical.Request{
@@ -1731,6 +2095,7 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				p.Unlock()
 
 				// Run the rotation check and validate the state of key rotations
 				b.checkAutoRotateAfter = time.Now()
@@ -1770,6 +2135,184 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 			},
 		)
 	}
+}
+
+// TestTransit_AutoRotateKeysNotAffectedByManualRotation sets up a backend, then tests: that a (1h auto-rotate) key
+// which was manually rotated is not auto-rotated 1hour after initial creation, rather 1hour after it's manual rotation.
+// Because auto-rotation sets up a priority queue to do this, the ordering of that queue needs to be tested: this tests
+// that by setting up two auto-rotating keys.
+func TestTransit_AutoRotateKeysNotAffectedByManualRotation(t *testing.T) {
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	conf := &logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	}
+
+	synctest.Test(t, func(t *testing.T) {
+		b, _ := Backend(context.Background(), conf)
+		if b == nil {
+			t.Fatal("failed to create backend")
+		}
+
+		err := b.Backend.Setup(context.Background(), conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = b.Backend.Initialize(context.Background(), &logical.InitializationRequest{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Write a key with 1h rotate value
+		req := &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test1",
+			Data: map[string]interface{}{
+				"auto_rotate_period": 1 * time.Hour,
+			},
+		}
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		// Write a second key with an auto rotate value
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test2",
+			Data: map[string]interface{}{
+				"auto_rotate_period": 1 * time.Hour,
+			},
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 10)
+
+		// Manually Rotate the First Key
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test1/rotate",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 10)
+
+		// Manually Rotate the Second Key
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test2/rotate",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 41)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that no auto-rotation happened when keys were only 50, 40 minutes old
+		// If this is the case version should be "2" - the keys were rotated once manually
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      "keys/test1",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+
+		// This is when the auto-rotation of key test1 should happen
+		time.Sleep(time.Minute * 11)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that the first key auto-rotated when it reached an hour old (but the second didn't at 50 minutes)
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      "keys/test1",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 3 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 3)
+		}
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+
+		time.Sleep(time.Minute * 10)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that the second key auto-rotated when it reached an hour old
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 3 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 3)
+		}
+	})
 }
 
 func TestTransit_AEAD(t *testing.T) {
@@ -1937,8 +2480,6 @@ func TestTransitPKICSR(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	cores := cluster.Cores
 
@@ -2152,12 +2693,11 @@ func TestTransit_VerifyWithImportedPublicKey(t *testing.T) {
 	}
 
 	// Retrieve public wrapping key
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
 
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	// generate ciphertext

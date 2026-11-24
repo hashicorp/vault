@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/scim (enterprise): Add support for `attributes` and `excludedAttributes` query parameters on SCIM User and Group endpoints, allowing callers to request a subset or exclusion of attributes in responses per RFC 7644.
+```

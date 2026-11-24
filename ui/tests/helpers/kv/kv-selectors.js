@@ -5,7 +5,7 @@
 
 export const PAGE = {
   // General selectors that are common between pages
-  title: '[data-test-header-title]',
+  title: '.hds-page-header__title',
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
@@ -19,12 +19,10 @@ export const PAGE = {
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   popup: '[data-test-popup-menu-trigger]',
-  error: {
-    title: '[data-test-page-error] h1',
-    message: '[data-test-page-error] p',
-  },
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
+  // Hds::Dropdown toggles are toolbar actions too, but carry HDS's own class
+  toolbarDropdown: 'nav.toolbar-actions .hds-dropdown-toggle-button',
   secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
   metadata: {
@@ -56,7 +54,7 @@ export const PAGE = {
     toggleDiffDescription: '[data-test-diff-description]',
   },
   list: {
-    createSecret: '[data-test-toolbar-create-secret]',
+    createSecret: '[data-test-button="create secret"]',
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     menuItem: (label) => `[data-test-list-menu-item="${label}"]`,
     filter: `[data-test-kv-list-filter]`,
@@ -77,6 +75,9 @@ export const PAGE = {
   },
   create: {
     metadataSection: '[data-test-metadata-section]',
+  },
+  configuration: {
+    editBtn: '[data-test-secret-backend-configure]',
   },
   paths: {
     codeSnippet: (section) => `[data-test-code-block="${section}"] code`,

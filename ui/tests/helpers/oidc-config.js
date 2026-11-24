@@ -8,10 +8,8 @@ import { debug } from '@ember/debug';
 export const OIDC_BASE_URL = `/vault/access/oidc`;
 
 export const SELECTORS = {
-  oidcHeader: '[data-test-oidc-header]',
   oidcClientCreateButton: '[data-test-oidc-configure]',
   oidcRouteTabs: '[data-test-oidc-tabs]',
-  oidcLandingImg: '[data-test-oidc-img]',
   inlineAlert: '[data-test-inline-alert]',
   // client route
   clientSaveButton: '[data-test-oidc-client-save]',

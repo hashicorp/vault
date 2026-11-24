@@ -63,9 +63,11 @@
         {{#let (this.label field) as |label|}}
           {{#if (eq field "issuer_ref")}}
             <InfoTableRow @label={{label}} @value={{val}} @alwaysRender={{true}}>
-              <LinkTo @route="issuers.issuer.details" @models={{array this.secretMountPath.currentPath val}}>
-                {{val}}
-              </LinkTo>
+              {{#if val}}
+                <LinkTo @route="issuers.issuer.details" @models={{array this.secretMountPath.currentPath val}}>
+                  {{val}}
+                </LinkTo>
+              {{/if}}
             </InfoTableRow>
           {{else if (this.isArrayField field)}}
             <InfoTableRow @label={{label}} @value={{val}} @alwaysRender={{true}} />

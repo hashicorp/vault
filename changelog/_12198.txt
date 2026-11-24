@@ -1,0 +1,6 @@
+```release-note:bug
+secrets/pki (enterprise): Modify the SCEP GetCACaps endpoint to dynamically reflect the configured encryption and digest algorithms.
+```
+```release-note:improvement
+secrets/pki (enterprise): Return the POSTPKIOperation capability within SCEP GetCACaps endpoint for better legacy client support.
+```

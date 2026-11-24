@@ -4,9 +4,14 @@
 }}
 
 <div class="has-top-margin-m">
-  <Toggle @onChange={{fn (mut this.showSubkeys)}} @checked={{this.showSubkeys}} @name="Reveal subkeys">
-    <Hds::Text::Body @tag="p" @weight="semibold">Reveal subkeys in JSON</Hds::Text::Body>
-  </Toggle>
+  <Hds::Form::Toggle::Field
+    checked={{this.showSubkeys}}
+    {{on "change" (fn (mut this.showSubkeys) (not this.showSubkeys))}}
+    data-test-toggle-input="Reveal subkeys"
+    as |F|
+  >
+    <F.Label data-test-toggle-label="Reveal subkeys">Reveal subkeys in JSON</F.Label>
+  </Hds::Form::Toggle::Field>
   {{#if this.showSubkeys}}
     <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} data-test-code-block="subkeys" />
   {{/if}}

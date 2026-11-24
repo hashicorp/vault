@@ -20,7 +20,7 @@ scenario "dev_single_cluster" {
     arch     = ["amd64", "arm64"]
     artifact = ["local", "deb", "rpm", "zip"]
     backend  = ["consul", "raft"]
-    distro   = ["amzn", "leap", "rhel", "sles", "ubuntu"]
+    distro   = ["amzn", "rhel", "sles", "ubuntu"]
     edition  = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     seal     = ["awskms", "pkcs11", "shamir"]
 
@@ -41,7 +41,7 @@ scenario "dev_single_cluster" {
 
     exclude {
       artifact = ["deb", "rpm"]
-      distro   = ["sles", "leap"]
+      distro   = ["sles"]
     }
 
     exclude {
@@ -72,7 +72,6 @@ scenario "dev_single_cluster" {
     // specified in enos-providers.hcl), and we need to be able to access both of those here.
     enos_provider = {
       amzn   = provider.enos.ec2_user
-      leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu

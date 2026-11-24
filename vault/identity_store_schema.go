@@ -10,11 +10,15 @@ import (
 )
 
 const (
-	entitiesTable      = "entities"
-	entityAliasesTable = "entity_aliases"
-	groupsTable        = "groups"
-	groupAliasesTable  = "group_aliases"
-	oidcClientsTable   = "oidc_clients"
+	entitiesTable              = "entities"
+	entityAliasesTable         = "entity_aliases"
+	groupsTable                = "groups"
+	groupAliasesTable          = "group_aliases"
+	oidcClientsTable           = "oidc_clients"
+	scimClientsTable           = "scim_clients"
+	tpmsTable                  = "tpms"
+	factorsIndex               = "factors"
+	issuerAndExternalIdFactors = "issuer_externalid_factors"
 )
 
 func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
@@ -28,7 +32,9 @@ func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
 		groupsTableSchema,
 		groupAliasesTableSchema,
 		oidcClientsTableSchema,
-		scimConfigSchema,
+		scimClientSchema,
+		tpmsTableSchema,
+		tpmgroupsTableSchema,
 	}
 
 	for _, schemaFunc := range schemas {
@@ -53,8 +59,8 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "ID",
 				},
 			},
-			"factors": {
-				Name:   "factors",
+			factorsIndex: {
+				Name:   factorsIndex,
 				Unique: true,
 				Indexer: &memdb.CompoundIndex{
 					Indexes: []memdb.Indexer{
@@ -68,6 +74,23 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					},
 				},
 			},
+			issuerAndExternalIdFactors: {
+				Name: issuerAndExternalIdFactors,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "Issuer",
+						},
+						&memdb.StringFieldIndex{
+							Field: "ExternalID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+					},
+				},
+				AllowMissing: true,
+			},
 			"namespace_id": {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
@@ -79,6 +102,16 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				AllowMissing: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "LocalBucketKey",
+				},
+			},
+			"scim_client_id": {
+				Name:         "scim_client_id",
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{Field: "NamespaceID"},
+						&memdb.StringFieldIndex{Field: "ScimClientID"},
+					},
 				},
 			},
 		},
@@ -155,6 +188,7 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Indexes: []memdb.Indexer{
 						&memdb.StringFieldIndex{Field: "NamespaceID"},
 						&memdb.StringFieldIndex{Field: "ScimClientID"},
+						&memdb.StringFieldIndex{Field: "Name"},
 					},
 				},
 			},
@@ -215,11 +249,20 @@ func groupsTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				},
 			},
 			"scim_client_id": {
+				// AllowMissing is intentionally absent. scimClientIDIndexer always
+				// returns (true, ...) — even for ScimClientID == "" — so CompoundIndex
+				// never sees a missing sub-index and never truncates the key. Unmanaged
+				// groups are stored under (nsID, scimClientIDSentinel, name) and are
+				// reachable via a prefix scan on (nsID, ""), which PrefixFromArgs maps
+				// to the sentinel. See the scimClientIDIndexer doc for the full story.
 				Name: "scim_client_id",
-				Indexer: &memdb.StringFieldIndex{
-					Field: "ScimClientID",
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{Field: "NamespaceID"},
+						scimClientIDIndexer{},
+						&memdb.StringFieldIndex{Field: "Name", Lowercase: lowerCaseName},
+					},
 				},
-				AllowMissing: true,
 			},
 		},
 	}

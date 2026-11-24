@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package mysql
@@ -21,9 +21,9 @@ import (
 	"time"
 	"unicode"
 
-	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -80,7 +80,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		return nil, err
 	}
 
-	dbTable := fmt.Sprintf("`%s`.`%s`", database, table)
+	dbTable := quoteIdentifier(database) + "." + quoteIdentifier(table)
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -116,7 +116,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	// Create the required database if it doesn't exists.
 	if !schemaExist {
-		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS `" + database + "`"); err != nil {
+		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + quoteIdentifier(database)); err != nil {
 			return nil, fmt.Errorf("failed to create mysql database: %w", err)
 		}
 	}
@@ -145,7 +145,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		locktable = table + "_lock"
 	}
 
-	dbLockTable := "`" + database + "`.`" + locktable + "`"
+	dbLockTable := quoteIdentifier(database) + "." + quoteIdentifier(locktable)
 
 	// Only create lock table if ha_enabled is true
 	if haEnabled {
@@ -256,6 +256,12 @@ func validate(name string) (err error) {
 		}
 	}
 	return nil
+}
+
+// Quote identifiers independently of validation, including custom lock tables
+// whose names are not restricted by validateDBTable.
+func quoteIdentifier(name string) string {
+	return "`" + strings.ReplaceAll(name, "`", "``") + "`"
 }
 
 func wrapErr(message string, err error) error {

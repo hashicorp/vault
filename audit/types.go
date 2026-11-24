@@ -44,6 +44,9 @@ type request struct {
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	RequestURI                    string                 `json:"request_uri,omitempty"`
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
+	// SupplementalAuditData A plugin can influence the request logged within an audit entry of type response, to
+	// provide additional details on the parsed request. Useful for binary protocols.
+	SupplementalAuditData map[string]any `json:"supplemental_audit_data,omitempty"`
 }
 
 type response struct {
@@ -61,17 +64,22 @@ type response struct {
 	Secret                *secret                `json:"secret,omitempty"`
 	WrapInfo              *responseWrapInfo      `json:"wrap_info,omitempty"`
 	Warnings              []string               `json:"warnings,omitempty"`
+	// SupplementalAuditData A plugin can influence the response logged within an audit entry of type response, to
+	// provide additional details on the response outside what was returned within the Data map.
+	// Useful for binary protocols.
+	SupplementalAuditData map[string]any `json:"supplemental_audit_data,omitempty"`
 }
 
 type auth struct {
 	Accessor                  string              `json:"accessor,omitempty"`
+	AuthorizationDetails      []any               `json:"authorization_details,omitempty"`
 	ClientToken               string              `json:"client_token,omitempty"`
 	DisplayName               string              `json:"display_name,omitempty"`
 	EntityCreated             bool                `json:"entity_created,omitempty"`
 	EntityID                  string              `json:"entity_id,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
-	Metadata                  map[string]string   `json:"metadata,omitempty"`
+	Metadata                  map[string]any      `json:"metadata,omitempty"`
 	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	Policies                  []string            `json:"policies,omitempty"`

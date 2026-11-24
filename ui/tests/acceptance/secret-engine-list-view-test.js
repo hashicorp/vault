@@ -10,18 +10,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import {
-  createTokenCmd,
-  deleteEngineCmd,
-  mountEngineCmd,
-  runCmd,
-  tokenWithPolicyCmd,
-} from 'vault/tests/helpers/commands';
+import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   const createSecret = async (path, key, value, enginePath) => {
     await click(SES.createSecretLink);
@@ -32,128 +29,69 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(SES.crumb(enginePath));
   };
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return login();
+    await login();
+    // dismiss wizard
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
   });
 
   // the new API service camelizes response keys, so this tests is to assert that does NOT happen when we re-implement it
   test('it does not camelize the secret mount path', async function (assert) {
+    const path = `aws_${this.uid}`;
     await visit('/vault/secrets-engines');
     await page.enableEngine();
     await click(GENERAL.cardContainer('aws'));
-    await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
+    await click(GENERAL.button('next'));
+    await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.submitButton);
-    await click(GENERAL.breadcrumbLink('Secrets'));
+    await click(GENERAL.breadcrumbLink('Secrets engines'));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',
       'breadcrumb navigates to the list page'
     );
-    assert.dom(GENERAL.tableData('aws_engine/', 'path')).hasTextContaining('aws_engine/');
-    // cleanup
-    await runCmd(deleteEngineCmd('aws_engine'));
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), path);
+    assert.dom(GENERAL.tableData(0, 'path')).hasText(`${path}/`);
+    await runCmd(deleteEngineCmd(path));
   });
 
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
     await visit('/vault/secrets-engines');
     await page.enableEngine();
     await click(GENERAL.cardContainer('nomad'));
+    await click(GENERAL.button('next'));
     await click(GENERAL.submitButton);
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.configuration.general-settings',
+      'navigates to the configuration page'
+    );
     // cleanup
     await runCmd(deleteEngineCmd('nomad'));
   });
 
   test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
+    const path = `aws-${this.uid}`;
     await visit('/vault/secrets-engines');
     await page.enableEngine();
     await click(GENERAL.cardContainer('aws'));
+    await click(GENERAL.button('next'));
+    await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.submitButton);
 
     await click(GENERAL.dropdownToggle('Manage'));
     assert.dom(GENERAL.menuItem('Configure')).exists();
 
-    await click(GENERAL.breadcrumbLink('Secrets'));
+    await click(GENERAL.breadcrumbLink('Secrets engines'));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',
       'breadcrumb navigates to the list page'
     );
     // cleanup
-    await runCmd(deleteEngineCmd('aws'));
-  });
-
-  test('enterprise: cannot view list without permissions inside a namespace', async function (assert) {
-    this.namespace = `ns-${this.uid}`;
-    const enginePath1 = `kv-t1-${this.uid}`;
-    const userDefault = await runCmd(createTokenCmd()); // creates a default user token
-
-    await runCmd([`write sys/namespaces/${this.namespace} -force`]); // creates a namespace
-    await loginNs(this.namespace); //logs into namespace with root token
-    await runCmd(mountEngineCmd('kv', enginePath1)); // mounts a kv engine in namespace
-
-    await loginNs(this.namespace, userDefault); // logs into that same namespace with a default user token
-
-    await visit(`/vault/secrets-engines?namespace=${this.namespace}`); // nav to specified namespace list
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets-engines?namespace=${this.namespace}`,
-      'Should be on main secret engines list page within namespace.'
-    );
-    assert.dom(GENERAL.tableData(`${enginePath1}/`, 'path')).doesNotExist(); // without permissions, engine should not show for this user
-
-    // cleanup namespace
-    await login();
-    await runCmd(`delete sys/namespaces/${this.namespace}`);
-  });
-
-  test('enterprise: can view list with permissions inside a namespace', async function (assert) {
-    this.namespace = `ns-${this.uid}`;
-    const enginePath1 = `kv-t2-${this.uid}`;
-    const userToken = await runCmd(
-      tokenWithPolicyCmd(
-        'policy',
-        `path "${this.namespace}/sys/*" {
-          capabilities = ["create", "read", "update", "delete", "list"]
-        }`
-      )
-    );
-
-    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace, userToken); // logs into namespace with user token
-    await runCmd(mountEngineCmd('kv', enginePath1)); // mount kv engine as user
-
-    await loginNs(this.namespace); // logs into namespace with root token
-
-    await visit(`/vault/secrets-engines?namespace=${this.namespace}`); // nav to specified namespace list
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets-engines?namespace=${this.namespace}`,
-      'Should be on main secret engines list page within namespace.'
-    );
-
-    assert.dom(GENERAL.tableData(`${enginePath1}/`, 'path')).exists(); // with permissions, able to see the engine in list
-
-    // cleanup namespace
-    await login();
-    await runCmd(`delete sys/namespaces/${this.namespace}`);
-  });
-
-  test('enterprise: it should navigate to cubbyhole list view in child namespace', async function (assert) {
-    this.namespace = `ns-${this.uid}`;
-
-    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace);
-    await visit(`/vault/secrets-engines?namespace=${this.namespace}`);
-    await click(`${GENERAL.tableData('cubbyhole/', 'path')} a`);
-
-    assert.dom(GENERAL.emptyStateTitle).hasText('No secrets in this backend');
-
-    // cleanup namespace
-    await login();
-    await runCmd(`delete sys/namespaces/${this.namespace}`);
+    await runCmd(deleteEngineCmd(path));
   });
 
   test('after disabling it stays on the list view', async function (assert) {
@@ -163,16 +101,36 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets-engines');
     // to reduce flakiness, searching by engine name first in case there are pagination issues
     await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
-    assert.dom(GENERAL.tableData(`${enginePath}/`, 'path')).exists('the alicloud engine is mounted');
+    assert
+      .dom(GENERAL.tableData(0, 'path'))
+      .hasTextContaining(`${enginePath}/`, 'the alicloud engine is mounted');
 
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('Delete'));
+    await click(GENERAL.menuItem('delete-engine-path'));
+    await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',
       'redirects to the backends list page'
     );
+  });
+
+  // The cubbyhole/ engine is a built-in per-token mount that Vault refuses to disable.
+  test('it never offers delete for cubbyhole but does for other engines', async function (assert) {
+    const enginePath = `kv-delete-${this.uid}`;
+    await runCmd(mountEngineCmd('kv-v2', enginePath));
+    await visit('/vault/secrets-engines');
+
+    await click('[data-test-popup-menu-trigger="cubbyhole"]');
+    assert.dom(GENERAL.menuItem('view-configuration')).exists('cubbyhole offers view configuration');
+    assert.dom(GENERAL.menuItem('delete-engine-path')).doesNotExist('cubbyhole does not offer delete');
+
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
+    await click(`[data-test-popup-menu-trigger="${enginePath}"]`);
+    assert.dom(GENERAL.menuItem('delete-engine-path')).exists('a user-mounted engine offers delete');
+
+    await runCmd(deleteEngineCmd(enginePath));
   });
 
   test('it allows navigation to a non-nested secret with pagination', async function (assert) {
@@ -184,7 +142,8 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     // check kv1
     await visit('/vault/secrets-engines');
-    await click(`${GENERAL.tableData(`${enginePath1}/`, 'path')} a`);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath1);
+    await click(GENERAL.linkTo(`${enginePath1}/`));
     for (let i = 0; i <= 15; i++) {
       await createSecret(`secret-${i}`, 'foo', 'bar', enginePath1);
     }
@@ -217,7 +176,8 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     // check kv1
     await visit('/vault/secrets-engines');
-    await click(`${GENERAL.tableData(`${enginePath1}/`, 'path')} a`);
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath1);
+    await click(GENERAL.linkTo(`${enginePath1}/`));
     for (let i = 0; i <= 15; i++) {
       await createSecret(`${parentPath}/secret-${i}`, 'foo', 'bar', enginePath1);
     }
@@ -240,5 +200,137 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     // cleanup
     await runCmd(deleteEngineCmd(enginePath1));
+  });
+
+  test('it can navigate to the enablement page from the intro', async function (assert) {
+    // stub the mount response to meet the empty state criteria for showing the intro page
+    this.server.get('/sys/internal/ui/mounts', () => ({
+      data: {
+        secret: {
+          'cubbyhole/': {
+            type: 'cubbyhole',
+            local: true,
+            path: 'cubbyhole/',
+          },
+        },
+      },
+    }));
+    await visit(`/vault/secrets-engines`);
+    await click(GENERAL.button('intro'));
+    await click(GENERAL.button('enable'));
+
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/enable`, 'It navigates to the enablement page');
+    assert.dom('[data-test-guided-setup]').doesNotExist('The guided setup is not shown');
+    assert.dom('[data-test-intro]').doesNotExist('The intro is not shown');
+  });
+
+  module('enterprise | namespaces', function (hooks) {
+    hooks.beforeEach(async function () {
+      await login();
+      this.namespace = `ns-${this.uid}`;
+      await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+      await loginNs(this.namespace); // log into namespace with root token
+      // dismiss wizard
+      this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
+    });
+
+    // Ember route models won't refresh within a namespace when this.router.transitionTo() is called
+    // because ?namespace is a query param that remains the same so the app doesn't detect any changes
+    // and therefore does not refire the model hook.
+    // this.router.refresh() must be called to refire model hooks and request fresh data.
+    test('list refreshes after deleting an engine in a namespace', async function (assert) {
+      const enginePath1 = `kv-t2-${this.uid}`;
+      await runCmd(mountEngineCmd('kv', enginePath1)); // mount kv engine in the namespace
+      await visit(`/vault/secrets-engines?namespace=${this.namespace}`); // nav to specified namespace list
+
+      assert.dom(GENERAL.linkTo(`${enginePath1}/`)).exists();
+      assert.dom(GENERAL.tableRow()).exists({ count: 2 }, 'only 2 secret engines are listed');
+      // Delete the engine — target the specific row to avoid clicking cubbyhole/'s trigger
+      await click(`[data-test-popup-menu-trigger="${enginePath1}"]`);
+      await click(GENERAL.menuItem('delete-engine-path'));
+      await fillIn(GENERAL.confirmTextInput, 'delete-engine');
+      await click(GENERAL.confirmButton);
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backends',
+        'redirects to the backends list page'
+      );
+      assert.dom(GENERAL.linkTo(enginePath1)).doesNotExist('deleted engine is no longer in list');
+      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only 1 secret engine is listed');
+      // cleanup namespace
+      await login();
+      await runCmd(`delete sys/namespaces/${this.namespace}`);
+    });
+
+    test('it should navigate to cubbyhole list view in child namespace', async function (assert) {
+      await visit(`/vault/secrets-engines?namespace=${this.namespace}`);
+      await click(GENERAL.linkTo('cubbyhole/'));
+      assert.dom(GENERAL.emptyStateTitle).hasText('No secrets in this backend');
+
+      // cleanup namespace
+      await login();
+      await runCmd(`delete sys/namespaces/${this.namespace}`);
+    });
+  });
+});
+
+// Read-only tokens must not be offered enable or delete actions.
+module('Acceptance | secret-engine list view | read-only token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    this.enginePath = `kv-read-only-${uuidv4()}`;
+    // The engine path grant is needed because the list only shows mounts the token can reach.
+    const readOnlyPolicy = `
+      path "sys/mounts" { capabilities = ["read", "list"] }
+      path "sys/mounts/*" { capabilities = ["read", "list"] }
+      path "sys/internal/ui/mounts/*" { capabilities = ["read"] }
+      path "${this.enginePath}/*" { capabilities = ["read", "list"] }
+    `;
+    await login();
+    await runCmd(mountEngineCmd('kv-v2', this.enginePath));
+    const token = await runCmd(tokenWithPolicyCmd('secrets-engines-read-only', readOnlyPolicy));
+    await login(token);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
+  });
+
+  hooks.afterEach(async function () {
+    await login();
+    await runCmd(deleteEngineCmd(this.enginePath));
+  });
+
+  test('it hides the enable and delete actions', async function (assert) {
+    await visit('/vault/secrets-engines');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets engines', 'list view renders');
+    assert.dom(GENERAL.button('Enable new engine')).doesNotExist('enable action is hidden');
+
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), this.enginePath);
+    await click(`[data-test-popup-menu-trigger="${this.enginePath}"]`);
+    assert.dom(GENERAL.menuItem('view-configuration')).exists('view configuration is offered');
+    assert.dom(GENERAL.menuItem('delete-engine-path')).doesNotExist('delete action is hidden');
+  });
+});
+
+// Enable permission is often scoped to a mount prefix, which capabilities-self cannot evaluate for an
+// unnamed mount, so the header action must still show for these tokens.
+module('Acceptance | secret-engine list view | path-scoped token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    const scopedPolicy = `
+      path "sys/mounts" { capabilities = ["read"] }
+      path "sys/mounts/team-*" { capabilities = ["update"] }
+      path "sys/internal/ui/mounts/*" { capabilities = ["read"] }
+    `;
+    await login();
+    const token = await runCmd(tokenWithPolicyCmd('secrets-engines-team-scoped', scopedPolicy));
+    await login(token);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
+  });
+
+  test('it shows the enable action when update is scoped to a mount prefix', async function (assert) {
+    await visit('/vault/secrets-engines');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets engines', 'list view renders');
+    assert.dom(GENERAL.button('Enable new engine')).exists('enable action is offered');
   });
 });

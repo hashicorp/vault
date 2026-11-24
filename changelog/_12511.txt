@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix stale secrets engine list after deleting an engine within a namespace.
+``

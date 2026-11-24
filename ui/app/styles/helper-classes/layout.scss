@@ -154,3 +154,16 @@
 .has-margin-top-auto {
   margin-top: auto;
 }
+
+.sticky-footer {
+  background-color: var(--token-color-foreground-high-contrast);
+  bottom: 0;
+  position: fixed;
+  right: 0;
+  z-index: 6;
+  width: 100%;
+
+  box-shadow:
+    0 2px 3px 0 rgba(59, 61, 69, 0.25),
+    0 12px 24px 0 rgba(59, 61, 69, 0.35);
+}

@@ -1,18 +1,18 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { toLabel } from 'core/helpers/to-label';
-import { tracked } from '@glimmer/tracking';
 
 import type { LdapRolesRoleRouteModel } from 'ldap/routes/roles/role';
-import { Breadcrumb } from 'vault/vault/app-types';
+import type { Breadcrumb } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
@@ -31,6 +31,10 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
 
   @tracked showConfirmDeleteModal = false;
   @tracked showConfirmRotateModal = false;
+  @tracked cachedPassword: string | null = null;
+  @tracked passwordError = '';
+  // Set on the first reveal, even if that request is still pending or failed.
+  passwordRequested = false;
 
   isTtl = (field: string) => ['default_ttl', 'max_ttl', 'rotation_period'].includes(field);
   label = (field: string) => {
@@ -44,15 +48,25 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
         creation_ldif: 'Creation LDIF',
         deletion_ldif: 'Deletion LDIF',
         rollback_ldif: 'Rollback LDIF',
+        password: 'Password',
       }[field] || toLabel([field])
     );
   };
 
+  get hasManageActions() {
+    const { capabilities } = this.args.model;
+    return !!(capabilities?.canEdit || capabilities?.canDelete || capabilities?.canRotateStaticCreds);
+  }
+
   get displayFields() {
-    const { role } = this.args.model;
+    const { role, capabilities } = this.args.model;
     const fields = ['name', 'type'];
     if (role.type === 'static') {
-      fields.push('dn', 'username', 'rotation_period');
+      fields.push('dn', 'username');
+      if (capabilities?.canReadCreds) {
+        fields.push('password');
+      }
+      fields.push('rotation_period');
     } else {
       fields.push(
         'default_ttl',
@@ -65,6 +79,35 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
     }
     return fields;
   }
+
+  onPasswordToggle = task(
+    waitFor(async () => {
+      // Already fetched; MaskedInput owns its own show/hide state from here.
+      if (this.cachedPassword !== null) {
+        return;
+      }
+      this.passwordRequested = true;
+      await this.fetchPassword.perform();
+    })
+  );
+
+  fetchPassword = task(
+    waitFor(async () => {
+      this.passwordError = '';
+      try {
+        const { role } = this.args.model;
+        const { currentPath } = this.secretMountPath;
+        const response = await this.api.secrets.ldapRequestStaticRoleCredentials(role.name, currentPath);
+        this.cachedPassword = (response.data as { password?: string }).password ?? '';
+      } catch (error) {
+        const { message } = await this.api.parseError(
+          error,
+          'Unable to retrieve password. Please try again or contact support.'
+        );
+        this.passwordError = message;
+      }
+    })
+  );
 
   @action
   async delete() {
@@ -95,6 +138,11 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
         const { role } = this.args.model;
         await this.api.secrets.ldapRotateStaticRole(role.completeRoleName, currentPath, {});
         this.flashMessages.success('Credentials successfully rotated.');
+        // The previous password is no longer valid. Refresh it only if the user asked to see it.
+        this.cachedPassword = null;
+        if (this.passwordRequested) {
+          await this.fetchPassword.perform();
+        }
       } catch (error) {
         const { message } = await this.api.parseError(error);
         this.flashMessages.danger(`Error rotating credentials \n ${message}`);

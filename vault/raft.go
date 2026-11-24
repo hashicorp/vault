@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -39,6 +39,10 @@ import (
 const (
 	RaftInitialChallengeLimit = 20 // allow an initial burst to 20
 	RaftChallengesPerSecond   = 5  // equating to an average 200ms min time
+	// Keep retry-join workers to a fixed bound so unauthenticated retry joins
+	// cannot grow goroutines without limit. 20 allows bounded parallel progress
+	// while capping memory/CPU impact from repeated requests.
+	raftMaxConcurrentRetryJoins = 20
 
 	// undoLogMonitorInterval is how often the leader checks to see
 	// if all the cluster members it knows about are new enough to support
@@ -1002,8 +1006,10 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 	if err != nil {
 		return nil, fmt.Errorf("failed to create api client: %w", err)
 	}
-	// Clearing namespace, as this client should only ever be using the root namespace
-	apiClient.ClearNamespace()
+	// The caller-selected leader must not receive credentials inherited from the environment.
+	apiClient.ClearToken()
+	apiClient.SetHeaders(http.Header{api.RequestHeaderName: {"true"}})
+	apiClient.SetNamespace(c.OperatorNamespacePath())
 
 	// Attempt to join the leader by requesting for the bootstrap challenge
 	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
@@ -1022,6 +1028,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
+	// We compare here the local seal configuration to that of the leader we are trying to join,
+	// thus there is no need to call ValidateSealGenerationInfo.
 	if !CompatibleSealTypes(sealConfig.Type, c.seal.BarrierSealConfigType().String()) {
 		return nil, fmt.Errorf("incompatible seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
 	}
@@ -1245,7 +1253,15 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 	switch retryFailures {
 	case true:
+		select {
+		case c.raftJoinRetryLimiter <- struct{}{}:
+		default:
+			return false, errors.New("too many concurrent raft retry joins in progress")
+		}
 		go func() {
+			defer func() {
+				<-c.raftJoinRetryLimiter
+			}()
 			for {
 				select {
 				case <-ctx.Done():

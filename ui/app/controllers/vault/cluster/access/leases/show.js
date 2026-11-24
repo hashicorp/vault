@@ -7,34 +7,59 @@ import { next } from '@ember/runloop';
 import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 export default Controller.extend({
   clusterController: controller('vault.cluster'),
-
-  backendCrumb: computed('clusterController.model.name', function () {
-    return {
-      label: 'Leases',
-      text: 'Leases',
-      path: 'vault.cluster.access.leases.list-root',
-      model: this.clusterController.model.name,
-    };
-  }),
-
+  api: service(),
   flashMessages: service(),
   router: service(),
 
+  backendCrumb: computed('clusterController.model.name', function () {
+    return [
+      {
+        label: 'Vault',
+        text: 'Vault',
+        path: 'vault.cluster.dashboard',
+        icon: 'vault',
+      },
+      {
+        label: 'Leases',
+        text: 'Leases',
+        path: 'vault.cluster.access.leases.list-root',
+        model: this.clusterController.model.name,
+      },
+    ];
+  }),
+
   actions: {
     revokeLease(model) {
-      return model.destroyRecord().then(() => {
-        return this.router.transitionTo('vault.cluster.access.leases.list-root');
-      });
+      return this.api.sys.leasesRevokeLease({ lease_id: model.id }).then(
+        () => {
+          this.flashMessages.success(`The lease ${model.id} was successfully revoked.`);
+          return this.router.transitionTo('vault.cluster.access.leases.list-root').catch((error) => {
+            if (error?.name === 'TransitionAborted') return;
+            throw error;
+          });
+        },
+        (error) =>
+          this.api.parseError(error).then(({ message }) => {
+            this.flashMessages.danger(`There was an error revoking the lease: ${message}`);
+          })
+      );
     },
 
     renewLease(model, increment) {
-      const adapter = model.store.adapterFor('lease');
+      // the picker explains an over-limit increment, so it only needs to stop the request
+      if (increment?.isValid === false) return;
       const flash = this.flashMessages;
-      adapter
-        .renew(model.id, increment?.seconds)
+      // An increment that was turned off keeps being sent as before, unless Vault would reject it.
+      const isHiddenOverMax = increment && !increment.enabled && isDurationOverMax(increment.seconds);
+      this.api.sys
+        .leasesRenewLease({
+          lease_id: model.id,
+          increment: isHiddenOverMax ? '' : String(increment?.seconds ?? ''),
+        })
         .then(() => {
           this.send('refreshModel');
           // lol this is terrible, but there's no way to get the promise from the route refresh
@@ -43,8 +68,9 @@ export default Controller.extend({
           });
         })
         .catch((e) => {
-          const errString = e.errors.join('.');
-          flash.danger(`There was an error renewing the lease: ${errString}`);
+          this.api.parseError(e).then(({ message }) => {
+            flash.danger(`There was an error renewing the lease: ${message}`);
+          });
         });
     },
   },

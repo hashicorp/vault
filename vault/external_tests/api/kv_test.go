@@ -24,8 +24,10 @@ func TestKVV1Get(t *testing.T) {
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
-	// (the test cluster has already mounted the KVv1 backend at "secret")
-	err := client.KVv1(v1MountPath).Put(context.Background(), secretPath, secretData)
+	err := client.Sys().Mount(v1MountPath, &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	err = client.KVv1(v1MountPath).Put(context.Background(), secretPath, secretData)
 	if err != nil {
 		t.Fatal(err)
 	}

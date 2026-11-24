@@ -1,0 +1,4 @@
+```release-note:bug
+plugins/database/hana: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL identifiers before ALTER USER and DROP USER statements.
+plugins/database/redshift: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL string literals when invoking terminateloop(...), preventing statement-structure manipulation.
+```

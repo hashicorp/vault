@@ -20,12 +20,15 @@ import { runCmd, createNSFromPaths, deleteNSFromPaths } from 'vault/tests/helper
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async () => {
+  hooks.beforeEach(async function () {
     await login();
+    // dismiss wizard
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.namespace);
   });
 
   test('it focuses the search input field when user toggles namespace picker', async function (assert) {
@@ -82,7 +85,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await click(GENERAL.button('namespace-picker'));
 
     // Verify that the root namespace is selected by default
-    assert.dom(GENERAL.button('root')).hasAttribute('aria-selected', 'true', 'root is selected by default');
+    assert.dom(GENERAL.button('root')).hasAttribute('aria-current', 'true', 'root is selected by default');
     assert
       .dom(`${GENERAL.button('root')} svg${GENERAL.icon('check')}`)
       .exists('The root namespace has a check icon indicating it is selected');
@@ -166,17 +169,19 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await click(GENERAL.button('namespace-picker'));
 
     // Verify that the namespace exists in the manage namespaces page
-    await fillIn(GENERAL.filterInputExplicit, namespace);
-    await click(GENERAL.button('Search'));
+    await fillIn(GENERAL.filterInput, namespace);
 
     // Delete the namespace
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('delete'));
     await click(GENERAL.confirmButton);
 
+    // Clear search filter
+    await fillIn(GENERAL.filterInput, '');
+
     assert.strictEqual(
       currentURL(),
-      `/vault/access/namespaces?page=1&pageFilter=${namespace}`,
+      `/vault/access/namespaces`,
       'Should remain on the manage namespaces page after deletion'
     );
     // Verify that the namespace no longer exists on the namespace page

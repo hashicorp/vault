@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add "Configuration path" and "Configuration metadata path" fields to KV v2 secret paths page showing paths without /v1/ prefix for use in policies, Vault Agent configurations, and other tools that reference the logical path.
+```

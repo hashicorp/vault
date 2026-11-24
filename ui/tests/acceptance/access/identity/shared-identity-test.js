@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -13,10 +13,12 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { runCmd, mountAuthCmd } from 'vault/tests/helpers/commands';
 
 // Helper to create an entity or group
 async function createEntityOrGroup(itemType, name) {
   await visit(`/vault/access/identity/${itemType}/create`);
+
   if (itemType === 'groups') {
     await fillIn(GENERAL.inputByAttr('type'), 'external');
   }
@@ -29,7 +31,9 @@ async function createEntityOrGroup(itemType, name) {
 async function createAlias(itemType, itemGeneratedId, name) {
   await visit(`/vault/access/identity/${itemType}/aliases/add/${itemGeneratedId}`);
   await fillIn(GENERAL.inputByAttr('name'), name);
+
   await click(GENERAL.submitButton);
+
   return document.querySelector(GENERAL.infoRowValue('ID')).innerText;
 }
 
@@ -40,6 +44,13 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // HDS table/dropdown observers can emit a benign "ResizeObserver loop" error that QUnit fails on.
+    this._originalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
@@ -47,6 +58,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
   });
 
   hooks.afterEach(function () {
+    window.ResizeObserver = this._originalResizeObserver;
     this.flashSuccessSpy.restore();
   });
 
@@ -56,14 +68,14 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       const itemGeneratedId = await createEntityOrGroup(itemType, name);
 
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${singularize(capitalize(itemType))}.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved ${singularize(capitalize(itemType))}: ${name}.`),
         `${itemType}: shows a flash message on create`
       );
 
       const aliasGeneratedId = await createAlias(itemType, itemGeneratedId, name);
 
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${singularize(capitalize(itemType))} alias.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved Alias: ${name}.`),
         `${itemType}: shows a flash message when creating an alias.`
       );
 
@@ -77,6 +89,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
         .hasText(name, `${itemType}: renders the alias name on the alias show page`);
 
       await visit(`/vault/access/identity/${itemType}/aliases`);
+
       assert
         .dom(`[data-test-identity-link="${aliasGeneratedId}"]`)
         .exists(`${itemType}: lists the entity alias`);
@@ -84,7 +97,139 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       await click(GENERAL.menuItem(name));
       await click('[data-test-popup-menu="delete"]');
       await click(GENERAL.confirmButton);
-      assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
+
+      assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted alias: ${name}`);
+    });
+
+    test(`${itemType}: cancel on the create alias page navigates to the entities/groups list, not the legacy aliases list`, async function (assert) {
+      const name = `${itemType}-${uuidv4()}`;
+      const itemGeneratedId = await createEntityOrGroup(itemType, name);
+
+      await visit(`/vault/access/identity/${itemType}/aliases/add/${itemGeneratedId}`);
+      await click('[data-test-cancel-link]');
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access/identity/${itemType}`,
+        `${itemType}: cancel navigates to the entities/groups list`
+      );
+    });
+
+    test(`${itemType}: it blocks creating an alias with a name already used on the same mount instead of silently reassigning it`, async function (assert) {
+      const name1 = `${itemType}-${uuidv4()}`;
+      const name2 = `${itemType}-${uuidv4()}`;
+      const itemId1 = await createEntityOrGroup(itemType, name1);
+      const itemId2 = await createEntityOrGroup(itemType, name2);
+
+      const aliasName = `alias-${uuidv4()}`;
+      const aliasId = await createAlias(itemType, itemId1, aliasName);
+      this.flashSuccessSpy.resetHistory();
+
+      // Vault's alias create endpoint treats (name, mount_accessor) as a unique key and silently
+      // reassigns an existing alias to a different entity/group instead of erroring.
+      await visit(`/vault/access/identity/${itemType}/aliases/add/${itemId2}`);
+      await fillIn(GENERAL.inputByAttr('name'), aliasName);
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access/identity/${itemType}/aliases/add/${itemId2}`,
+        `${itemType}: stays on the add alias page instead of navigating`
+      );
+      assert
+        .dom(GENERAL.messageError)
+        .exists(`${itemType}: shows an error banner instead of a raw router error`);
+      assert
+        .dom(GENERAL.messageError)
+        .includesText(aliasName, `${itemType}: error message references the duplicate alias name`);
+      assert.true(
+        this.flashSuccessSpy.notCalled,
+        `${itemType}: no success flash is shown when the create is blocked`
+      );
+
+      // confirm the original alias still belongs to the first entity/group, unaffected
+      await visit(`/vault/access/identity/${itemType}/aliases/${aliasId}/details`);
+      assert
+        .dom(GENERAL.infoRowValue(itemType === 'groups' ? 'Group ID' : 'Entity ID'))
+        .hasText(itemId1, `${itemType}: alias still belongs to the original ${singularize(itemType)}`);
+    });
+
+    test(`${itemType}: it blocks create with a name that already exists instead of silently updating it`, async function (assert) {
+      const name = `${itemType}-${uuidv4()}`;
+      await createEntityOrGroup(itemType, name);
+      this.flashSuccessSpy.resetHistory();
+
+      // Vault's create-by-name endpoints silently update an existing item of the same name rather
+      // than erroring, so the UI must catch this case before submitting.
+      await visit(`/vault/access/identity/${itemType}/create`);
+      if (itemType === 'groups') {
+        await fillIn(GENERAL.inputByAttr('type'), 'external');
+      }
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access/identity/${itemType}/create`,
+        `${itemType}: stays on the create page instead of navigating with a missing id`
+      );
+      assert
+        .dom(GENERAL.messageError)
+        .exists(`${itemType}: shows an error banner instead of a raw router error`);
+      assert
+        .dom(GENERAL.messageError)
+        .includesText(name, `${itemType}: error message references the duplicate name`);
+      assert.true(
+        this.flashSuccessSpy.notCalled,
+        `${itemType}: no success flash is shown when the create is blocked`
+      );
+    });
+
+    test(`${itemType}: it shows alias management options on the aliases tab of the item details page`, async function (assert) {
+      const name = `${itemType}-${uuidv4()}`;
+      const itemGeneratedId = await createEntityOrGroup(itemType, name);
+      const aliasName = `alias-${uuidv4()}`;
+      const aliasGeneratedId = await createAlias(itemType, itemGeneratedId, aliasName);
+
+      await visit(`/vault/access/identity/${itemType}/${itemGeneratedId}/aliases`);
+      await click(`[data-test-popup-menu="${aliasName}"]`);
+
+      assert
+        .dom('[data-test-alias-actions-menu]')
+        .hasText('Details Edit Remove', `${itemType}: alias actions menu shows all options`);
+
+      await click(`a[href*="/aliases/edit/"]`);
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access/identity/${itemType}/aliases/edit/${aliasGeneratedId}`,
+        `${itemType}: navigates to the alias edit page`
+      );
+    });
+
+    test(`${itemType}: it allows editing an alias's auth backend`, async function (assert) {
+      const name = `${itemType}-${uuidv4()}`;
+      const itemGeneratedId = await createEntityOrGroup(itemType, name);
+      const aliasName = `alias-${uuidv4()}`;
+      const aliasGeneratedId = await createAlias(itemType, itemGeneratedId, aliasName);
+
+      const authPath = `userpass-${uuidv4().slice(0, 8)}`;
+      await runCmd(mountAuthCmd('userpass', authPath));
+
+      await visit(`/vault/access/identity/${itemType}/aliases/edit/${aliasGeneratedId}`);
+
+      const select = document.querySelector('[data-test-mount-accessor-select]');
+      const option = [...select.options].find((opt) => opt.text.includes(authPath));
+      await fillIn('[data-test-mount-accessor-select]', option.value);
+      await click(GENERAL.submitButton);
+
+      assert.dom(GENERAL.messageError).doesNotExist(`${itemType}: no raw API error is shown`);
+      assert
+        .dom(GENERAL.latestFlashContent)
+        .includesText('Successfully saved', `${itemType}: shows a flash message on save`);
+      assert
+        .dom(GENERAL.infoRowValue('Mount'))
+        .includesText(authPath, `${itemType}: alias is saved with the newly selected auth backend`);
     });
 
     test(`${itemType}: it allows delete from the edit form`, async function (assert) {
@@ -132,13 +277,19 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
 
       await visit(`/vault/access/identity/${itemType}`);
 
-      const rowSelector = `[data-test-identity-row="${name}"]`;
-      const menuTriggerSelector = `${rowSelector} ${GENERAL.menuTrigger}`;
+      const rowSelector =
+        itemType === 'groups' ? `[data-test-identity-link="${name}"]` : GENERAL.listItem(name);
+      const menuTriggerSelector =
+        itemType === 'groups'
+          ? `[data-test-popup-menu-trigger="${name}"]`
+          : `${rowSelector} ${GENERAL.menuTrigger}`;
+      const deleteItemSelector =
+        itemType === 'groups' ? GENERAL.menuItem('delete-group') : GENERAL.menuItem('delete');
 
       assert.dom(rowSelector).exists(`${itemType}: is in the list view`);
 
       await click(menuTriggerSelector);
-      await click(GENERAL.menuItem('delete'));
+      await click(deleteItemSelector);
       await click(GENERAL.confirmButton);
       assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
     });

@@ -1,0 +1,3 @@
+```release-note:bug
+audit: make file and socket audit sink serialization context-aware so canceled or expired requests stop waiting behind blocked audit writes, reducing buildup of goroutines, memory, connections, and file descriptors during audit sink contention
+```

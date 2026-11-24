@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -23,6 +22,7 @@ func handleSysRaftBootstrap(core *vault.Core) http.Handler {
 		case "POST", "PUT":
 			if core.Sealed() {
 				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"))
+				return
 			}
 
 			if err := core.RaftBootstrap(context.Background(), false); err != nil {
@@ -55,6 +55,11 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	if req.AutoJoin != "" {
+		respondError(w, http.StatusBadRequest, errors.New("auto-join metadata must be configured using raft.retry_join"))
+		return
+	}
+
 	if req.NonVoter && !nonVotersAllowed {
 		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"))
 		return
@@ -71,23 +76,17 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		tlsConfig.ServerName = req.LeaderTLSServerName
 	}
 
-	if req.AutoJoinScheme != "" && (req.AutoJoinScheme != "http" && req.AutoJoinScheme != "https") {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme %q; must either be http or https", req.AutoJoinScheme))
-		return
-	}
-
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
-			AutoJoin:       req.AutoJoin,
-			AutoJoinScheme: req.AutoJoinScheme,
-			AutoJoinPort:   req.AutoJoinPort,
-			LeaderAPIAddr:  configutil.NormalizeAddr(req.LeaderAPIAddr),
-			TLSConfig:      tlsConfig,
-			Retry:          req.Retry,
+			LeaderAPIAddr: configutil.NormalizeAddr(req.LeaderAPIAddr),
+			TLSConfig:     tlsConfig,
+			Retry:         req.Retry,
 		},
 	}
 
-	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
+	ctx, cancel := core.GetContext()
+	defer cancel()
+	joined, err := core.JoinRaftCluster(ctx, leaderInfos, req.NonVoter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return

@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 func addEntPathIssuerFields(fields map[string]*framework.FieldSchema)         {}
 func addEntPathIssuerResponseFields(fields map[string]*framework.FieldSchema) {}
 func setEntIssuerData(data map[string]any, issuer *issuing.IssuerEntry)       {}

@@ -4,22 +4,15 @@
  */
 
 import Route from '@ember/routing/route';
-import ClusterRoute from 'vault/mixins/cluster-route';
 import { service } from '@ember/service';
 
-export default Route.extend(ClusterRoute, {
-  store: service(),
+export default class StorageRoute extends Route {
+  @service api;
 
-  model() {
-    // findAll method will return all records in store as well as response from server
-    // when removing a peer via the cli, stale records would continue to appear until refresh
-    // query method will only return records from response
-    return this.store.query('server', {});
-  },
-
-  actions: {
-    doRefresh() {
-      this.refresh();
-    },
-  },
-});
+  // raft/configuration isn't in the OpenAPI spec/generated client, so use the raw request interface
+  async model() {
+    const response = await this.api.request.get('/sys/storage/raft/configuration');
+    const { data } = await response.json();
+    return data?.config?.servers ?? [];
+  }
+}

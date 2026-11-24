@@ -1,0 +1,3 @@
+```release-note:change
+mfa/duo: Upgrade duo_api_golang client to 0.2.0 to include the new Duo certificate authorities
+```

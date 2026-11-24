@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
-import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { filterEnginesByMountCategory } from 'core/utils/all-engines-metadata';
 import keys from 'core/utils/keys';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import {
-  enhanceEnginesWithCatalogData,
   categorizeEnginesByStatus,
+  enhanceEnginesWithCatalogData,
   MOUNT_CATEGORIES,
-  PLUGIN_TYPES,
   PLUGIN_CATEGORIES,
+  PLUGIN_TYPES,
 } from 'vault/utils/plugin-catalog-helpers';
 
 /**
@@ -48,6 +48,8 @@ export default class MountBackendTypeForm extends Component {
       isEnterprise: !!this.version?.isEnterprise,
     });
 
+    let engines = staticEngines;
+
     // If we have plugin catalog data, merge it with static engines to add catalog info
     if (this.args.pluginCatalogData) {
       const secretEnginesDetailed =
@@ -56,10 +58,10 @@ export default class MountBackendTypeForm extends Component {
         this.args.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === PLUGIN_TYPES.DATABASE) ||
         [];
 
-      return enhanceEnginesWithCatalogData(staticEngines, secretEnginesDetailed, databasePluginsDetailed);
+      engines = enhanceEnginesWithCatalogData(staticEngines, secretEnginesDetailed, databasePluginsDetailed);
     }
 
-    return staticEngines;
+    return engines;
   }
 
   get authMethods() {

@@ -17,14 +17,14 @@ import fm from 'vault/tests/pages/components/flash-message';
 import {
   OIDC_BASE_URL, // -> '/vault/access/oidc'
   SELECTORS,
-  clearRecord,
   CLIENT_LIST_RESPONSE,
   CLIENT_DATA_RESPONSE,
   ASSIGNMENT_LIST_RESPONSE,
   ASSIGNMENT_DATA_RESPONSE,
 } from 'vault/tests/helpers/oidc-config';
-import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { allowAllCapabilitiesStub, capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const searchSelect = create(ss);
 const flashMessage = create(fm);
@@ -38,7 +38,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
   hooks.beforeEach(function () {
     oidcConfigHandlers(this.server);
-    this.store = this.owner.lookup('service:store');
+    this.api = this.owner.lookup('service:api');
     return login();
   });
 
@@ -47,9 +47,11 @@ module('Acceptance | oidc-config clients', function (hooks) {
       assert.expect(21);
 
       //* start with clean test state
-      await clearRecord(this.store, 'oidc/client', 'client-with-test-key');
-      await clearRecord(this.store, 'oidc/client', 'client-with-default-key');
-      await clearRecord(this.store, 'oidc/key', 'test-key');
+      await Promise.allSettled([
+        this.api.identity.oidcDeleteClient('client-with-test-key'),
+        this.api.identity.oidcDeleteClient('client-with-default-key'),
+        this.api.identity.oidcDeleteKey('test-key'),
+      ]);
 
       // create client with default key
       await visit(OIDC_BASE_URL + '/clients/create');
@@ -100,7 +102,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
 
       // create a new key
-      await click('[data-test-breadcrumb-link="oidc-keys"] a');
+      await click(GENERAL.breadcrumbLink('OIDC provider: Keys'));
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.access.oidc.keys.index',
@@ -126,8 +128,8 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await fillIn('[data-test-input="name"]', 'client-with-test-key');
       await click(GENERAL.button('More options'));
       await click('[data-test-component="search-select"] [data-test-icon="trash"]');
-      await clickTrigger('#key');
-      await selectChoose('[data-test-component="search-select"]#key', 'test-key');
+      await clickTrigger('#oidc-client-form-key-select');
+      await selectChoose('[data-test-component="search-select"]#oidc-client-form-key-select', 'test-key');
       await click(SELECTORS.clientSaveButton);
 
       // edit key and limit applications
@@ -180,13 +182,15 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
 
       //* clean up test state
-      await clearRecord(this.store, 'oidc/client', 'client-with-test-key');
-      await clearRecord(this.store, 'oidc/client', 'client-with-default-key');
-      await clearRecord(this.store, 'oidc/key', 'test-key');
+      await Promise.allSettled([
+        this.api.identity.oidcDeleteClient('client-with-test-key'),
+        this.api.identity.oidcDeleteClient('client-with-default-key'),
+        this.api.identity.oidcDeleteKey('test-key'),
+      ]);
     });
 
     test('it creates, rotates and deletes a key', async function (assert) {
-      assert.expect(10);
+      assert.expect(9);
       // mock client list so OIDC url does not redirect to landing page
       this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
       this.server.post('/identity/oidc/key/test-key/rotate', (schema, req) => {
@@ -199,20 +203,17 @@ module('Acceptance | oidc-config clients', function (hooks) {
       });
 
       //* clear out test state
-      await clearRecord(this.store, 'oidc/key', 'test-key');
+      await Promise.allSettled([this.api.identity.oidcDeleteKey('test-key')]);
 
       // create a new key
       await visit(OIDC_BASE_URL + '/keys/create');
       await fillIn('[data-test-input="name"]', 'test-key');
       // toggle ttls to false, testing it sets correct default duration
-      await click('[data-test-input="rotationPeriod"]');
-      await click('[data-test-input="verificationTtl"]');
-      assert
-        .dom('[data-test-oidc-radio="limited"] input')
-        .isDisabled('limiting access radio button is disabled on create');
+      await click('[data-test-input="rotation_period"]');
+      await click('[data-test-input="verification_ttl"]');
       assert
         .dom('[data-test-oidc-radio="limited"]')
-        .hasClass('is-disabled', 'limited radio button label has disabled class');
+        .isDisabled('limiting access radio button is disabled on create');
       await click(SELECTORS.keySaveButton);
       assert.strictEqual(
         flashMessage.latestMessage,
@@ -253,6 +254,52 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
     });
 
+    test('it shows an error when key rotation is denied', async function (assert) {
+      this.server.get('/identity/oidc/key', () => overrideResponse(null, { data: { keys: ['test-key'] } }));
+      this.server.get('/identity/oidc/key/test-key', () =>
+        overrideResponse(null, {
+          data: { algorithm: 'RS256', rotation_period: 86400, verification_ttl: 86400 },
+        })
+      );
+      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'update', 'delete']));
+      this.server.post('/identity/oidc/key/test-key/rotate', () => overrideResponse(403));
+
+      await visit(OIDC_BASE_URL + '/keys');
+      await click('[data-test-oidc-key-linked-block="test-key"]');
+      await click(SELECTORS.keyRotateButton);
+      await click(GENERAL.confirmButton);
+
+      assert.strictEqual(flashMessage.latestMessage, 'permission denied', 'shows the rotation error');
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.access.oidc.keys.key.details',
+        'keeps the user on the key details after a failed rotation'
+      );
+    });
+
+    test('it shows an error when key deletion is denied', async function (assert) {
+      this.server.get('/identity/oidc/key', () => overrideResponse(null, { data: { keys: ['test-key'] } }));
+      this.server.get('/identity/oidc/key/test-key', () =>
+        overrideResponse(null, {
+          data: { algorithm: 'RS256', rotation_period: 86400, verification_ttl: 86400 },
+        })
+      );
+      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'delete']));
+      this.server.delete('/identity/oidc/key/test-key', () => overrideResponse(403));
+
+      await visit(OIDC_BASE_URL + '/keys');
+      await click('[data-test-oidc-key-linked-block="test-key"]');
+      await click(SELECTORS.keyDeleteButton);
+      await click(GENERAL.confirmButton);
+
+      assert.strictEqual(flashMessage.latestMessage, 'permission denied', 'shows the delete error');
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.access.oidc.keys.key.details',
+        'keeps the user on the key details after a failed delete'
+      );
+    });
+
     test('it renders client details and providers', async function (assert) {
       assert.expect(8);
       this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
@@ -261,7 +308,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
       await visit(OIDC_BASE_URL);
       await click('[data-test-oidc-client-linked-block]');
-      assert.dom('[data-test-oidc-client-header]').hasText('test-app', 'renders application name as title');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('test-app', 'renders application name as title');
       assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
       assert.dom(SELECTORS.clientDeleteButton).exists('toolbar renders delete option');
       assert.dom(SELECTORS.clientEditButton).exists('toolbar renders edit button');
@@ -287,13 +334,13 @@ module('Acceptance | oidc-config clients', function (hooks) {
       this.server.get('/identity/oidc/client/test-app', () =>
         overrideResponse(null, { data: CLIENT_DATA_RESPONSE })
       );
-      this.server.post('/sys/capabilities-self', () =>
-        capabilitiesStub(OIDC_BASE_URL + '/client/test-app', ['read'])
-      );
+      this.server.post('/sys/capabilities-self', () => {
+        return capabilitiesStub('identity/oidc/client/test-app', ['read']);
+      });
 
       await visit(OIDC_BASE_URL);
       await click('[data-test-oidc-client-linked-block]');
-      assert.dom('[data-test-oidc-client-header]').hasText('test-app', 'renders application name as title');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('test-app', 'renders application name as title');
       assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
       assert.dom(SELECTORS.clientDeleteButton).doesNotExist('delete option is hidden');
       assert.dom(SELECTORS.clientEditButton).doesNotExist('edit button is hidden');
@@ -306,7 +353,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
     test('it hides delete and edit key when no permission', async function (assert) {
       assert.expect(4);
-      this.server.get('/identity/oidc/keys', () => overrideResponse(null, { data: { keys: ['test-key'] } }));
+      this.server.get('/identity/oidc/key', () => overrideResponse(null, { data: { keys: ['test-key'] } }));
       this.server.get('/identity/oidc/key/test-key', () =>
         overrideResponse(null, {
           data: {
@@ -318,7 +365,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         })
       );
       this.server.post('/sys/capabilities-self', () =>
-        capabilitiesStub(OIDC_BASE_URL + '/key/test-key', ['read'])
+        capabilitiesStub('identity/oidc/key/test-key', ['read'])
       );
 
       await visit(OIDC_BASE_URL + '/keys');
@@ -339,7 +386,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       assert.expect(3);
 
       //* clear out test state
-      await clearRecord(this.store, 'oidc/assignment', 'test-assignment');
+      await Promise.allSettled([this.api.identity.oidcDeleteAssignment('test-assignment')]);
 
       await visit(OIDC_BASE_URL + '/assignments');
       assert.strictEqual(currentURL(), '/vault/access/oidc/assignments');
@@ -350,30 +397,26 @@ module('Acceptance | oidc-config clients', function (hooks) {
     });
 
     test('it renders empty state when no clients are configured', async function (assert) {
-      assert.expect(5);
+      assert.expect(3);
+      this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.oidcProvider);
       this.server.get('/identity/oidc/client', () => overrideResponse(404));
 
       await visit(OIDC_BASE_URL);
+
       assert.strictEqual(currentURL(), '/vault/access/oidc');
-      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('OIDC Provider');
-      assert.dom(SELECTORS.oidcHeader).hasText(
-        `Configure Vault to act as an OIDC identity provider, and offer Vault’s various authentication
-      methods and source of identity to any client applications. Learn more Create your first app`,
-        'renders call to action header when no clients are configured'
-      );
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('OIDC provider');
       assert.dom('[data-test-oidc-landing]').exists('landing page renders when no clients are configured');
-      assert
-        .dom(SELECTORS.oidcLandingImg)
-        .hasAttribute('src', '/ui/images/oidc-landing.png', 'image renders image when no clients configured');
     });
 
     test('it creates an assignment inline, creates a client, updates client to limit access, deletes client', async function (assert) {
       assert.expect(21);
 
       //* clear out test state
-      await clearRecord(this.store, 'oidc/client', 'test-app');
-      await clearRecord(this.store, 'oidc/client', 'my-webapp'); // created by oidc-provider-test
-      await clearRecord(this.store, 'oidc/assignment', 'assignment-inline');
+      await Promise.allSettled([
+        this.api.identity.oidcDeleteClient('test-app'),
+        this.api.identity.oidcDeleteClient('my-webapp'),
+        this.api.identity.oidcDeleteAssignment('assignment-inline'),
+      ]);
 
       // create a client with allow all access
       await visit(OIDC_BASE_URL + '/clients/create');
@@ -385,8 +428,8 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await fillIn('[data-test-input="name"]', 'test-app');
       await click(GENERAL.button('More options'));
       // toggle ttls to false, testing it sets correct default duration
-      await click('[data-test-input="idTokenTtl"]');
-      await click('[data-test-input="accessTokenTtl"]');
+      await click('[data-test-input="id_token_ttl"]');
+      await click('[data-test-input="access_token_ttl"]');
       await click(SELECTORS.clientSaveButton);
       assert.strictEqual(
         flashMessage.latestMessage,
@@ -425,7 +468,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'vault.cluster.access.oidc.clients.client.edit',
         'navigates to edit page from details'
       );
-      await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
+      await fillIn('[data-test-input="redirect_uris"] [data-test-string-list-input="0"]', 'some-url.com');
 
       // limit access & create new assignment inline
       await click('[data-test-oidc-radio="limited"]');
@@ -501,7 +544,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       //);
 
       //* clean up test state
-      await clearRecord(this.store, 'oidc/assignment', 'assignment-inline');
+      await Promise.allSettled([this.api.identity.oidcDeleteAssignment('assignment-inline')]);
     });
 
     test('it creates, updates, and deletes an assignment', async function (assert) {
@@ -509,7 +552,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await visit(OIDC_BASE_URL + '/assignments');
 
       //* ensure clean test state
-      await clearRecord(this.store, 'oidc/assignment', 'test-assignment');
+      await Promise.allSettled([this.api.identity.oidcDeleteAssignment('test-assignment')]);
 
       // create a new assignment
       await click(SELECTORS.assignmentCreateButton);
@@ -518,7 +561,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'vault.cluster.access.oidc.assignments.create',
         'navigates to create form'
       );
-      assert.dom('[data-test-oidc-assignment-title]').hasText('Create Assignment', 'Form title renders');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Assignment', 'Form title renders');
       await fillIn('[data-test-input="name"]', 'test-assignment');
       await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
       await click('.ember-power-select-option');
@@ -545,7 +588,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'vault.cluster.access.oidc.assignments.assignment.edit',
         'navigates to the assignment edit page from details'
       );
-      assert.dom('[data-test-oidc-assignment-title]').hasText('Edit Assignment', 'Form title renders');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Assignment', 'Form title renders');
       await click('[data-test-component="search-select"]#groups .ember-basic-dropdown-trigger');
       await click('.ember-power-select-option');
       assert.dom('[data-test-oidc-assignment-save]').hasText('Update');
@@ -571,6 +614,31 @@ module('Acceptance | oidc-config clients', function (hooks) {
         currentRouteName(),
         'vault.cluster.access.oidc.assignments.index',
         'navigates back to assignment list view after delete'
+      );
+    });
+
+    test('it shows an error when assignment deletion is denied', async function (assert) {
+      this.server.get('/identity/oidc/assignment', () =>
+        overrideResponse(null, { data: ASSIGNMENT_LIST_RESPONSE })
+      );
+      this.server.get('/identity/oidc/assignment/test-assignment', () =>
+        overrideResponse(null, { data: ASSIGNMENT_DATA_RESPONSE })
+      );
+      this.server.post('/sys/capabilities-self', () =>
+        capabilitiesStub('identity/oidc/assignment/test-assignment', ['read', 'delete'])
+      );
+      this.server.delete('/identity/oidc/assignment/test-assignment', () => overrideResponse(403));
+
+      await visit(OIDC_BASE_URL + '/assignments');
+      await click('[data-test-oidc-assignment-linked-block="test-assignment"]');
+      await click(SELECTORS.assignmentDeleteButton);
+      await click(GENERAL.confirmButton);
+
+      assert.strictEqual(flashMessage.latestMessage, 'permission denied', 'shows the delete error');
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.access.oidc.assignments.assignment.details',
+        'keeps the user on assignment details after a failed delete'
       );
     });
 
@@ -633,14 +701,12 @@ module('Acceptance | oidc-config clients', function (hooks) {
         overrideResponse(null, { data: ASSIGNMENT_DATA_RESPONSE })
       );
       this.server.post('/sys/capabilities-self', () =>
-        capabilitiesStub(OIDC_BASE_URL + '/assignment/test-assignment', ['read'])
+        capabilitiesStub('identity/oidc/assignment/test-assignment', ['read'])
       );
 
       await visit(OIDC_BASE_URL + '/assignments');
       await click('[data-test-oidc-assignment-linked-block="test-assignment"]');
-      assert
-        .dom('[data-test-oidc-assignment-title]')
-        .hasText('test-assignment', 'renders assignment name as title');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('test-assignment', 'renders assignment name as title');
       assert.dom(SELECTORS.assignmentDetailsTab).hasClass('active', 'details tab is active');
       assert.dom(SELECTORS.assignmentDeleteButton).doesNotExist('delete option is hidden');
       assert.dom(SELECTORS.assignmentEditButton).doesNotExist('edit button is hidden');

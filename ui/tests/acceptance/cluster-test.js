@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { login, loginMethod, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { mountEngineCmd, runCmd, deleteEngineCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const tokenWithPolicy = async function (name, policy) {
@@ -38,7 +38,9 @@ module('Acceptance | cluster', function (hooks) {
     await login(userToken);
     await visit('/vault/access');
 
-    assert.dom('[data-test-sidebar-nav-link="Policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="ACL policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Role governing policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Endpoint governing policies"]').doesNotExist();
   });
 
   test('it hides mfa setup if user does not have entityId (ex: is a root user)', async function (assert) {
@@ -72,7 +74,9 @@ module('Acceptance | cluster', function (hooks) {
     await login(userToken);
     await visit('/vault/access');
 
-    assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
+    assert.dom('[data-test-sidebar-nav-link="ACL policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Role governing policies"]').exists();
+    assert.dom('[data-test-sidebar-nav-link="Endpoint governing policies"]').doesNotExist();
   });
 
   test('shows error banner if resultant-acl check fails', async function (assert) {
@@ -115,5 +119,16 @@ module('Acceptance | cluster', function (hooks) {
       '/vault/secrets-engines',
       'Navigating to /secrets redirects to /secrets-engines'
     );
+  });
+
+  test('redirects to /secrets-engines/kv/kv/list from legacy /secrets/kv/kv/list path', async function (assert) {
+    await runCmd(mountEngineCmd('kv', this.backend), false);
+    await visit('/vault/secrets/kv/kv/list');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/secrets-engines/kv/kv/list',
+      'Navigating to /secrets redirects to /secrets-engines'
+    );
+    await runCmd(deleteEngineCmd('kv'));
   });
 });

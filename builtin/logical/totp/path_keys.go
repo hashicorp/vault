@@ -166,16 +166,22 @@ func (b *backend) Key(ctx context.Context, s logical.Storage, n string) (*keyEnt
 }
 
 func (b *backend) pathKeyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "key/"+data.Get("name").(string))
+	name := data.Get("name").(string)
+	err := req.Storage.Delete(ctx, "key/"+name)
 	if err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTOTPKeyDelete, map[string]interface{}{
+		"key_name": name,
+	})
 
 	return nil, nil
 }
 
 func (b *backend) pathKeyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	key, err := b.Key(ctx, req.Storage, data.Get("name").(string))
+	name := data.Get("name").(string)
+	key, err := b.Key(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +191,14 @@ func (b *backend) pathKeyRead(ctx context.Context, req *logical.Request, data *f
 
 	// Translate algorithm back to string
 	algorithm := key.Algorithm.String()
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTOTPKeyRead, map[string]interface{}{
+		"key_name":  name,
+		"period":    key.Period,
+		"algorithm": algorithm,
+		"digits":    key.Digits,
+		"skew":      key.Skew,
+	})
 
 	// Return values of key
 	return &logical.Response{
@@ -431,6 +445,17 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTOTPKeyCreate, map[string]interface{}{
+		"key_name":  name,
+		"period":    period,
+		"algorithm": algorithm,
+		"digits":    digits,
+		"skew":      skew,
+		"generate":  generate,
+		"exported":  exported,
+		"key_size":  keySize,
+	})
 
 	return response, nil
 }

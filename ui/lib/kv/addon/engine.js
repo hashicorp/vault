@@ -22,12 +22,13 @@ export default class KvEngine extends Engine {
       'control-group',
       'download',
       'flash-messages',
+      'kv-mount-retry',
       'namespace',
       'app-router',
       'secret-mount-path',
       'version',
     ],
-    externalRoutes: ['secrets', 'syncDestination'],
+    externalRoutes: ['vault', 'secrets', 'syncDestination', 'secretsGeneralSettingsConfiguration'],
   };
 }
 

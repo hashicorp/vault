@@ -5,8 +5,6 @@
 
 package vault
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 import (
 	"context"
 
@@ -28,8 +26,8 @@ func (c *Core) GetRotationInformation(_ context.Context, _ string, _ *rotation.R
 	return nil, automatedrotationutil.ErrRotationManagerUnsupported
 }
 
-func (c *Core) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (string, error) {
-	return "", automatedrotationutil.ErrRotationManagerUnsupported
+func (c *Core) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (*rotation.RotationInfo, error) {
+	return nil, automatedrotationutil.ErrRotationManagerUnsupported
 }
 
 // The DeregisterRotationJob stub returns nil instead of an error because it is intended to be valid to send a deregister

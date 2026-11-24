@@ -16,11 +16,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -439,6 +439,13 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Info("entering standby mode")
+	if cancelIface := c.activeContextCancelFunc.Load(); cancelIface != nil {
+		cancel, ok := cancelIface.(context.CancelFunc)
+		if ok && cancel != nil {
+			cancel()
+		}
+		c.activeContextCancelFunc.Store(context.CancelFunc(nil))
+	}
 
 	var g run.Group
 	newLeaderCh := addEnterpriseHaActors(c, &g)
@@ -555,6 +562,13 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			continue
 		}
 
+		if c.auditConfigFailed.Load() {
+			c.logger.Warn("audit device configuration failed, skipping HA lock acquisition to prevent leadership flapping")
+			c.heldHALock = nil
+			lock.Unlock()
+			continue
+		}
+
 		// If the backend is a FencingHABackend, register the lock with it so it can
 		// correctly fence all writes from now on  (i.e. assert that we still hold
 		// the lock atomically with each write).
@@ -600,7 +614,12 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		c.heldHALock = lock
 
 		// Create the active context
-		activeCtx, activeCtxCancel := context.WithCancel(namespace.RootContext(nil))
+		activeCtx, baseCancel := context.WithCancel(namespace.RootContext(nil))
+		c.logger.Trace("created active context", "ctx", fmt.Sprintf("%p", activeCtx))
+		activeCtxCancel := context.CancelFunc(func() {
+			c.logger.Trace("cancelling active context", "ctx", fmt.Sprintf("%p", activeCtx))
+			baseCancel()
+		})
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
 
@@ -698,7 +717,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		}
 
 		// Attempt the post-unseal process
-		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
+		err = c.postUnseal(activeCtx, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
 			c.activeTime = time.Now()

@@ -1,0 +1,42 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<section data-test-persona-section class="has-bottom-margin-l">
+  <Hds::Text::Display @tag="h2" @size="300" class="has-bottom-margin-s">Your role</Hds::Text::Display>
+
+  <Hds::Text::Body @tag="p" class="has-bottom-margin-s">
+    Help us tailor your Vault experience by letting us know your role.
+  </Hds::Text::Body>
+
+  <Hds::Form::Select::Field
+    class={{if this.isOther "has-bottom-margin-m"}}
+    {{on "change" this.updatePersona}}
+    data-test-persona-select
+    as |F|
+  >
+    <F.Label>Select your role</F.Label>
+    <F.Options>
+      <option value="" disabled selected={{eq this.selectedValue ""}}>Select a role</option>
+      {{#each this.personas as |p|}}
+        <option value={{p.value}} selected={{eq this.selectedValue p.value}}>{{p.label}}</option>
+      {{/each}}
+    </F.Options>
+  </Hds::Form::Select::Field>
+
+  {{#if this.isOther}}
+    <Hds::Form::TextInput::Field
+      @value={{this.otherRawText}}
+      @isInvalid={{if this.otherInputError true false}}
+      placeholder="Designer"
+      {{on "input" this.updateOtherText}}
+      data-test-persona-other-input
+      as |F|
+    >
+      <F.Label>Describe your role</F.Label>
+      {{#if this.otherInputError}}
+        <F.Error data-test-persona-other-input-error>{{this.otherInputError}}</F.Error>
+      {{/if}}
+    </Hds::Form::TextInput::Field>
+  {{/if}}
+</section>

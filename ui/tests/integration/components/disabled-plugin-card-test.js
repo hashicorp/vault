@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, triggerKeyEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -25,8 +25,8 @@ module('Integration | Component | disabled-plugin-card', function (hooks) {
 
   test('it renders disabled plugin card', async function (assert) {
     await render(hbs`
-      <DisabledPluginCard 
-        @type={{this.type}} 
+      <DisabledPluginCard
+        @type={{this.type}}
         @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
         @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
       />
@@ -44,8 +44,8 @@ module('Integration | Component | disabled-plugin-card', function (hooks) {
 
   test('it handles click events', async function (assert) {
     await render(hbs`
-      <DisabledPluginCard 
-        @type={{this.type}} 
+      <DisabledPluginCard
+        @type={{this.type}}
         @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
         @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
       />
@@ -59,8 +59,8 @@ module('Integration | Component | disabled-plugin-card', function (hooks) {
 
   test('it handles keyboard events', async function (assert) {
     await render(hbs`
-      <DisabledPluginCard 
-        @type={{this.type}} 
+      <DisabledPluginCard
+        @type={{this.type}}
         @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
         @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
       />
@@ -79,8 +79,8 @@ module('Integration | Component | disabled-plugin-card', function (hooks) {
     };
 
     await render(hbs`
-      <DisabledPluginCard 
-        @type={{this.type}} 
+      <DisabledPluginCard
+        @type={{this.type}}
         @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
         @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
       />
@@ -94,8 +94,8 @@ module('Integration | Component | disabled-plugin-card', function (hooks) {
 
   test('it renders and displays plugin information correctly', async function (assert) {
     await render(hbs`
-      <DisabledPluginCard 
-        @type={{this.type}} 
+      <DisabledPluginCard
+        @type={{this.type}}
         @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
         @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
       />

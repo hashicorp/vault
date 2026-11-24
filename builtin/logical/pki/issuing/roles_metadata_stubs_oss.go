@@ -5,8 +5,6 @@
 
 package issuing
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 import "github.com/hashicorp/vault/sdk/framework"
 
 func AddNoStoreMetadata(roleData map[string]interface{}, r *RoleEntry) {

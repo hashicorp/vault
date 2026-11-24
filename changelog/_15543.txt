@@ -1,0 +1,3 @@
+```release-note:feature
+**Agent Registry UI (Enterprise)**: Adds a new Agentic Security section to the primary navigation with an Agent Registry page where operators can view, search, and manage registered AI agents, their associated Vault entities and aliases, assigned policies, and operational status.
+```

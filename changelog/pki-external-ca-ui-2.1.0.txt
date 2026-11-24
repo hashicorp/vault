@@ -1,0 +1,3 @@
+```release-note:feature
+**UI: PKI External CA**: Adds views to inspect ACME orders (active orders by role, lookup by order ID or certificate), ACME account, DNS provider, and role configurations, and retrieve cached certificates.
+```

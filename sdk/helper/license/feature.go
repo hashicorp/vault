@@ -4,7 +4,7 @@
 package license
 
 // Features is a bitmask of feature flags
-type Features uint
+type Features uint64
 
 const FeatureNone Features = 0
 

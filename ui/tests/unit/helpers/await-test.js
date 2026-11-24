@@ -6,7 +6,7 @@
 import AwaitHelper from 'vault/helpers/await';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { waitUntil } from '@ember/test-helpers';
+import { waitUntil, settled } from '@ember/test-helpers';
 import { Promise } from 'rsvp';
 import { later } from '@ember/runloop';
 import sinon from 'sinon';
@@ -67,12 +67,12 @@ module('Unit | Helpers | await', function (hooks) {
   });
 
   test('it always returns value from latest promise', async function (assert) {
-    const promise1 = new Promise((resolve) => later(() => resolve('foo'), 500));
+    const promise1 = new Promise((resolve) => later(() => resolve('foo'), 200));
     const promise2 = new Promise((resolve) => resolve('bar'));
     this.helper.compute([promise1]);
     this.helper.compute([promise2]);
     // allow first promise time to resolve
-    await waitUntil(() => later(() => true, 500));
+    await settled();
     assert.strictEqual(this.spy.returnValues[2], 'bar', 'Latest promise value is returned');
   });
 });

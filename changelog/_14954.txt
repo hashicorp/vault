@@ -1,0 +1,3 @@
+```release-note:change
+core/raft: Limited concurrent retry-join workers to 20. Any further retry-join attempts while 20 are in progress will result in an error (`too many concurrent raft retry joins in progress`).
+```

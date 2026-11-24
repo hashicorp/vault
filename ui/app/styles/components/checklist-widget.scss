@@ -1,0 +1,37 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// position: relative makes .dashboard-checklist a positioned element so that
+// z-index takes effect, placing the checklist above the ::before gradient blob
+// on the Page::Header behind it.
+.dashboard-checklist {
+  position: relative;
+  z-index: 1;
+}
+
+.checklist-step-marker {
+  display: inline-flex;
+}
+
+.checklist-step-marker-number-wrapper {
+  display: inline-flex;
+  position: relative;
+}
+
+.checklist-step-marker-number {
+  align-items: center;
+  color: var(--token-color-foreground-primary);
+  display: inline-flex;
+  font-size: 0.625rem; // 10px — sized to fit inside the 16px hexagon icon
+  font-weight: var(--token-typography-font-weight-semibold);
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+}
+
+.checklist-step-marker-number--focused {
+  color: var(--token-color-palette-neutral-0);
+}

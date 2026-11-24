@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,6 +10,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
 
@@ -19,13 +20,13 @@ module('Acceptance | totp key backend', function (hooks) {
   const createVaultKey = async (keyName, issuer, accountName, exported = true, qrSize = 200) => {
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
-    await fillIn(GENERAL.inputByAttr('accountName'), accountName);
+    await fillIn(GENERAL.inputByAttr('account_name'), accountName);
     if (!exported) {
       await click(GENERAL.toggleInput('toggle-exported'));
     }
     if (qrSize !== 200) {
       await click(GENERAL.button('Provider Options'));
-      await fillIn(GENERAL.inputByAttr('qrSize'), qrSize);
+      await fillIn(GENERAL.inputByAttr('qr_size'), qrSize);
     }
     await click(GENERAL.submitButton);
   };
@@ -34,7 +35,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(GENERAL.radioByAttr('Other service'));
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
-    await fillIn(GENERAL.inputByAttr('accountName'), accountName);
+    await fillIn(GENERAL.inputByAttr('account_name'), accountName);
     if (url) await fillIn(GENERAL.inputByAttr('url'), url);
     if (key) await fillIn(GENERAL.inputByAttr('key'), key);
     await click(GENERAL.submitButton);
@@ -57,7 +58,41 @@ module('Acceptance | totp key backend', function (hooks) {
     await login();
     // Setup TOTP engine
     await visit('/vault/secrets-engines/enable');
-    await mountBackend('totp', this.mountPath);
+    await mountBackend('totp', this.mountPath, true);
+  });
+
+  test('it filters TOTP keys by name', async function (assert) {
+    const filterInput = '[data-test-component="navigate-input"]';
+
+    try {
+      await visit('/vault/dashboard');
+      for (const name of ['test-key', 'other-key']) {
+        await runCmd(
+          `write ${this.path}/keys/${name} generate=true issuer=${this.issuer} account_name=${this.accountName} exported=false`
+        );
+      }
+      await visit(`/vault/secrets-engines/${this.path}/list`);
+      assert.dom(SES.secretLink('test-key')).exists('The matching key appears before filtering');
+      assert.dom(SES.secretLink('other-key')).exists('The other key appears before filtering');
+
+      await fillIn(filterInput, 'test-key');
+      assert.dom(SES.secretLink('test-key')).exists('An exact name match remains visible');
+      assert.dom(SES.secretLink('other-key')).doesNotExist('Nonmatching keys are hidden');
+
+      await fillIn(filterInput, 'OTHER');
+      assert.dom(SES.secretLink('other-key')).exists('Partial matching is case-insensitive');
+      assert.dom(SES.secretLink('test-key')).doesNotExist('The previous match is no longer visible');
+
+      await fillIn(filterInput, 'missing-key');
+      assert.dom(SES.secretLink()).doesNotExist('No keys appear for an unmatched filter');
+      assert.dom(GENERAL.emptyStateTitle).includesText('There are no keys matching "missing-key".');
+
+      await fillIn(filterInput, '');
+      assert.dom(SES.secretLink('test-key')).exists('Clearing the filter restores the matching key');
+      assert.dom(SES.secretLink('other-key')).exists('Clearing the filter restores the other key');
+    } finally {
+      await runCmd(`delete sys/mounts/${this.path}`);
+    }
   });
 
   test('it views a key via menu option', async function (assert) {
@@ -74,7 +109,8 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(GENERAL.menuTrigger);
     await click(`${GENERAL.menuItem('details')}`);
 
-    assert.dom('.title').hasText(`TOTP key ${this.keyName}`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('TOTP key');
+    assert.dom(GENERAL.hdsPageHeaderSubtitle).hasText(this.keyName);
     assert.dom('[data-test-totp-key-details]').exists();
 
     assert.strictEqual(
@@ -101,7 +137,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
   test('it creates a key with Vault as the provider', async function (assert) {
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'It renders the create key page');
 
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     assert.dom('[data-test-qrcode]').exists('QR code exists');
@@ -121,7 +157,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
   test('it creates a key with another service as the provider with URL', async function (assert) {
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, this.url);
     await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
@@ -136,7 +172,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
   test('it creates a key with another service as the provider with key', async function (assert) {
     await click(SES.createSecretLink);
-    assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, undefined, this.key);
     await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${this.keyName}`);
     assert.strictEqual(

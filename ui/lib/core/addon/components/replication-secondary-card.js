@@ -20,7 +20,7 @@ import { clusterStates } from 'core/helpers/cluster-states';
     />
  * ```
  * @param {String} [title=null] - The title to be displayed on the top left corner of the card.
- * @param {Object} replicationDetails=null - An Ember data object pulled from the Ember Model. It contains details specific to the mode's replication.
+ * @param {Object} replicationDetails=null - An object pulled from the cluster. It contains details specific to the mode's replication.
  */
 
 export default Component.extend({

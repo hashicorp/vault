@@ -17,7 +17,6 @@
         class="has-bottom-margin-s hds-foreground-strong"
       >Security</Hds::Text::Display>
     </G.Legend>
-    {{! TODO: Confirm with design to see if we want these two fields to be disabled }}
     <G.ToggleField name="local" checked={{@model.secretsEngine.local}} disabled data-test-input="local" as |F|>
       <F.Label data-test-form-field-label="local">Local</F.Label>
       <F.HelperText data-test-help-text="local">Secrets stay in one cluster and are not replicated.</F.HelperText>

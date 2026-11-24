@@ -5,11 +5,23 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import OidcKeyResource from 'vault/resources/oidc/key';
 
 export default class OidcKeyRoute extends Route {
-  @service store;
+  @service api;
+  @service capabilities;
 
-  model({ name }) {
-    return this.store.findRecord('oidc/key', name);
+  async model({ name }) {
+    const { data } = await this.api.identity.oidcReadKey(name);
+    const { pathFor } = this.capabilities;
+    const paths = {
+      key: pathFor('oidcKey', { name }),
+      rotate: pathFor('oidcKeyRotate', { name }),
+    };
+    const capabilities = await this.capabilities.fetch(Object.values(paths));
+    return {
+      key: new OidcKeyResource({ ...data, name }),
+      capabilities: { ...capabilities[paths.key], canRotate: capabilities[paths.rotate].canUpdate },
+    };
   }
 }

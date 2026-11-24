@@ -3,13 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { ALL_ENGINES } from 'core/utils/all-engines-metadata';
 import MountForm from 'vault/forms/mount';
+import { isKnownExternalPlugin } from 'vault/utils/external-plugin-helpers';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import type { EngineVersionInfo } from 'vault/utils/plugin-catalog-helpers';
+import { isValidVersion } from 'vault/utils/version-utils';
 
-import type { SecretsEngineFormData } from 'vault/secrets/engine';
 import type Form from 'vault/forms/form';
+import type { SecretsEngineFormData } from 'vault/secrets/engine';
 
 export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> {
   constructor(...args: ConstructorParameters<typeof Form>) {
@@ -17,9 +20,66 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
     // path validation is already defined on the MountForm class
     // add validation for kv max versions
     this.validations['kv_config.max_versions'] = [
-      { type: 'number', message: 'Maximum versions must be a number.' },
+      { type: 'number', options: { min: 0 }, message: 'Maximum versions must be a non-negative number.' },
       { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
+      {
+        validator: (data: SecretsEngineFormData) => !data?.kv_config?.max_versions?.toString().includes('.'),
+        message: 'Maximum versions must be a whole number.',
+      },
     ];
+    // add validation for plugin_version when mounting external plugins
+    this.validations['config.plugin_version'] = [
+      {
+        validator: this.validatePluginVersionForExternalPlugins,
+        message: 'Plugin version is required when mounting external plugins.',
+      },
+    ];
+  }
+
+  // Custom validator for plugin version when mounting external plugins
+  validatePluginVersionForExternalPlugins = (data: any) => {
+    const pluginVersion = data?.config?.plugin_version;
+    const pluginType = this.type;
+
+    // Check if this is a known external plugin using the proper mapping
+    const isExternalPluginType = pluginType && isKnownExternalPlugin(pluginType);
+
+    if (isExternalPluginType) {
+      // For external plugins, plugin_version is required UNLESS it's omitted due to pinned version
+      // When using pinned version, the frontend omits plugin_version entirely (it gets deleted)
+      // So we allow external plugin types to not have plugin_version (pinned version scenario)
+      // But if plugin_version IS provided, it must be valid
+      if (pluginVersion !== undefined && pluginVersion !== null) {
+        return isValidVersion(pluginVersion);
+      }
+      // Allow external plugin types without plugin_version (pinned version case)
+      return true;
+    }
+
+    // For non-external plugin types, if a version is specified, validate it
+    if (pluginVersion && pluginVersion.trim() && pluginVersion !== 'null') {
+      return isValidVersion(pluginVersion);
+    }
+
+    // For all other cases (builtin plugins without version), allow
+    return true;
+  };
+
+  // Method to handle plugin version changes and update the type accordingly
+  handlePluginVersionChange(availableVersions: EngineVersionInfo[]) {
+    const config = this.data.config as { plugin_version?: string };
+    const pluginVersion = config?.plugin_version;
+
+    if (pluginVersion && availableVersions) {
+      // Find the matching version info
+      const versionInfo = availableVersions.find((v) => v.version === pluginVersion && !v.isBuiltin);
+
+      if (versionInfo) {
+        // Use the external plugin name format
+        const externalPluginName = versionInfo.pluginName;
+        this.type = externalPluginName;
+      }
+    }
   }
 
   // Method to apply type-specific side effects - called when type changes
@@ -116,7 +176,7 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
         new FormField('options.version', 'number', {
           label: 'Version',
           helpText:
-            'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
+            'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine that allows for the storage of static key/value pairs. Version 2 added more features, including data versioning, TTLs, and check-and-set.',
           possibleValues: [2, 1],
         })
       );
@@ -128,7 +188,7 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
   get formFieldGroups() {
     return [
       new FormFieldGroup('default', this.defaultFields),
-      new FormFieldGroup('Method Options', this.optionFields),
+      new FormFieldGroup('View additional settings', this.optionFields),
     ];
   }
 }

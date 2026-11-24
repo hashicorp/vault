@@ -117,14 +117,11 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	params.factories = make([]any, 0)
 	if ps, ok := d.GetOk("padding_scheme"); ok {
-		paddingScheme, err := parsePaddingSchemeArg(p.Type, ps)
+		paddingScheme, err := parsePaddingSchemeArg(p.KeyVersionType(params.keyVersion), ps)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("padding_scheme argument invalid: %s", err.Error())), logical.ErrInvalidRequest
 		}
@@ -143,11 +140,11 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		},
 	}
 
-	if len(params.nonce) > 0 && !nonceAllowed(p) {
+	if len(params.nonce) > 0 && !nonceAllowed(p, keyVersion) {
 		return nil, ErrNonceNotAllowed
 	}
 
-	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, params.nonce) {
+	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, params.nonce, keyVersion) {
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
@@ -169,24 +166,25 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		resp.Data["plaintext"] = plaintext
 	}
 
+	// Increment the counter for successful operations
+	// Since there are not batched operations, we can add one successful
+	// request to the transit request counter.
+	if err = b.incrementBillingCounts(ctx, req, 1); err != nil {
+		b.Logger().Error("failed to track transit data key request count", "error", err.Error())
+	}
+
 	return resp, nil
 }
 
 func (b *backend) generateDataKey(ctx context.Context, p *keysutil.Policy, params *DataKeyParams) (string, string, error) {
 	factories := params.factories
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-		if !ok {
-			return "", "", errors.New("unsupported system view")
+	if p.KeyVersionType(params.keyVersion) == keysutil.KeyType_MANAGED_KEY {
+		factory, err := b.GetManagedKeyFactory(ctx)
+		if err != nil {
+			return "", "", err
 		}
 
-		factories = append(params.factories, ManagedKeyFactory{
-			managedKeyParams: keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeySystemView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
-			},
-		})
+		factories = append(params.factories, factory)
 	}
 
 	newKey := make([]byte, params.bits/8)

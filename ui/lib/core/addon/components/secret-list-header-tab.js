@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -26,7 +26,8 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 
 export default class SecretListHeaderTab extends Component {
-  @service store;
+  @service capabilities;
+
   @tracked dontShowTab;
 
   constructor() {
@@ -41,45 +42,15 @@ export default class SecretListHeaderTab extends Component {
   }
 
   async fetchCapabilities() {
-    const capabilitiesArray = ['canList', 'canCreate', 'canUpdate'];
-    const checkCapabilities = function (object) {
-      const array = [];
-      // we only want to look at the canList, canCreate and canUpdate on the capabilities record
-      capabilitiesArray.forEach((item) => {
-        // object is sometimes null
-        if (object) {
-          array.push(object[item]);
-        }
-      });
-      return array;
-    };
-    const checker = (arr) => arr.every((item) => !item); // same things as listing every item as !item && !item, etc.
     // For now only check capabilities for the Database Secrets Engine
     if (this.args.displayName === 'Database') {
-      const peekRecordRoles = this.store.peekRecord('capabilities', 'database/roles/');
-      const peekRecordStaticRoles = this.store.peekRecord('capabilities', 'database/static-roles/');
-      const peekRecordConnections = this.store.peekRecord('capabilities', 'database/config/');
-      // peekRecord if the capabilities store data is there for the connections (config) and roles model
-      if (
-        (peekRecordRoles && this.args.path === 'roles') ||
-        (peekRecordStaticRoles && this.args.path === 'roles')
-      ) {
-        const roles = checker(checkCapabilities(peekRecordRoles));
-        const staticRoles = checker(checkCapabilities(peekRecordStaticRoles));
-
-        this.dontShowTab = roles && staticRoles;
-        return;
-      }
-      if (peekRecordConnections && this.args.path === 'config') {
-        this.dontShowTab = checker(checkCapabilities(peekRecordConnections));
-        return;
-      }
-      // otherwise queryRecord and create an instance on the capabilities.
-      const response = await this.store.queryRecord(
-        'capabilities',
-        this.pathQuery(this.args.id, this.args.path)
+      const { path, id: backend } = this.args;
+      const pathKeys = path === 'config' ? ['databaseConfig'] : ['databaseRoles', 'databaseStaticRoles'];
+      const paths = this.capabilities.pathsForList(pathKeys, { backend });
+      const capabilities = await this.capabilities.fetch(paths);
+      this.dontShowTab = !Object.values(capabilities).some(
+        ({ canList, canCreate, canUpdate }) => canList || canCreate || canUpdate
       );
-      this.dontShowTab = checker(checkCapabilities(response));
     }
   }
 }

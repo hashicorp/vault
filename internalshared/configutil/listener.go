@@ -19,13 +19,30 @@ import (
 	"github.com/hashicorp/go-sockaddr/template"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/hcl/hcl/token"
+	"github.com/hashicorp/vault/internalshared/namespace"
 )
 
 const (
 	TCP  ListenerType = "tcp"
 	Unix ListenerType = "unix"
 )
+
+// minTLSReloadInterval is the smallest permitted value for tls_reload_interval.
+// Polling more frequently than this provides no practical benefit and only adds
+// filesystem load, since certificate rotation happens on the order of days.
+const minTLSReloadInterval = 1 * time.Second
+
+// maxTLSReloadInterval is the largest permitted value for tls_reload_interval.
+//
+// The interval is the worst-case delay between a rotated certificate appearing
+// on disk and Vault serving it, so an interval longer than the window between
+// rotation and expiry defeats the purpose of automatic reloading: the listener
+// would keep serving a certificate that has already expired and reject new
+// connections until the next poll. A day is far longer than any practical
+// rotation overlap while still catching obvious misconfiguration, such as a
+// unit mix-up that yields an interval of months.
+const maxTLSReloadInterval = 24 * time.Hour
 
 // ListenerType represents the supported types of listener.
 type ListenerType string
@@ -81,6 +98,12 @@ type Listener struct {
 	TLSDisableClientCerts            bool        `hcl:"-"`
 	TLSDisableClientCertsRaw         interface{} `hcl:"tls_disable_client_certs"`
 
+	// TLSReloadInterval controls how often the listener re-reads tls_cert_file
+	// and tls_key_file from disk. A zero value disables automatic reloading, in
+	// which case certificates are only reloaded on SIGHUP.
+	TLSReloadInterval    time.Duration `hcl:"-"`
+	TLSReloadIntervalRaw interface{}   `hcl:"tls_reload_interval"`
+
 	HTTPReadTimeout          time.Duration `hcl:"-"`
 	HTTPReadTimeoutRaw       interface{}   `hcl:"http_read_timeout"`
 	HTTPReadHeaderTimeout    time.Duration `hcl:"-"`
@@ -134,6 +157,9 @@ type Listener struct {
 	ChrootNamespaceRaw interface{} `hcl:"chroot_namespace"`
 	ChrootNamespace    string      `hcl:"-"`
 
+	OperatorNamespacePathRaw interface{} `hcl:"operator_namespace_path"`
+	OperatorNamespacePath    string      `hcl:"-"`
+
 	// Per-listener redaction configuration
 	RedactAddressesRaw   any  `hcl:"redact_addresses"`
 	RedactAddresses      bool `hcl:"-"`
@@ -176,6 +202,15 @@ type Listener struct {
 	// CustomMaxJSONToken determines the maximum number of tokens in a JSON.
 	CustomMaxJSONTokenRaw interface{} `hcl:"max_json_token"`
 	CustomMaxJSONToken    int64       `hcl:"-"`
+
+	// DisableTokenHeaderSizeParsing disables the token header size check. This is only applicable
+	// to the listener config passed into the Cluster listener since forwarded requests have already
+	// been checked via the API listener on the originating node.
+	DisableTokenHeaderSizeParsing bool `hcl:"-"`
+
+	// CustomMaxTokenHeaderSize defines the maximum allowed size in bytes for an authentication token header.
+	CustomMaxTokenHeaderSizeRaw interface{} `hcl:"max_token_header_size"`
+	CustomMaxTokenHeaderSize    int64       `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -194,6 +229,7 @@ func (l *Listener) GoString() string {
 
 func (l *Listener) Validate(path string) []ConfigError {
 	results := append(ValidateUnusedFields(l.UnusedKeys, path), ValidateUnusedFields(l.Telemetry.UnusedKeys, path)...)
+	results = append(results, l.validateForwardedForSettings(path)...)
 	return append(results, ValidateUnusedFields(l.Profiling.UnusedKeys, path)...)
 }
 
@@ -288,6 +324,7 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		l.parseCORSSettings,
 		l.parseHTTPHeaderSettings,
 		l.parseChrootNamespaceSettings,
+		l.parseOperatorNamespaceSettings,
 		l.parseRedactionSettings,
 		l.parseDisableReplicationStatusEndpointSettings,
 		l.parseDisableRequestLimiter,
@@ -434,6 +471,27 @@ func (l *Listener) parseChrootNamespaceSettings() error {
 	return nil
 }
 
+// parseOperatorNamespaceSettings attempts to parse the raw listener
+// operator_namespace_path setting. This setting works in conjunction with the
+// global operator_namespace_path configuration to implement listener-isolated
+// access control. When an operator_namespace_path is defined globally, only
+// listeners with a matching operator_namespace_path can access that namespace.
+func (l *Listener) parseOperatorNamespaceSettings() error {
+	var (
+		err     error
+		setting string
+	)
+
+	err = parseAndClearString(&l.OperatorNamespacePathRaw, &setting)
+	if err != nil {
+		return fmt.Errorf("invalid value for operator_namespace_path: %w", err)
+	}
+
+	l.OperatorNamespacePath = namespace.Canonicalize(setting)
+
+	return nil
+}
+
 // parseType attempts to sanitize and validate the type set on the listener.
 // If the listener has no type set, the fallback value will be used.
 // The state of the listener will be modified.
@@ -499,6 +557,13 @@ func (l *Listener) parseRequestSettings() error {
 		return err
 	}
 
+	if err := parseAndClearInt(&l.CustomMaxTokenHeaderSizeRaw, &l.CustomMaxTokenHeaderSize); err != nil {
+		return fmt.Errorf("error parsing max_token_header_size: %w", err)
+	}
+	// A negative value disables the check entirely, matching the max_request_size
+	// convention. Unlike the CustomMaxJSON* fields, negative is intentionally
+	// allowed here (not an error).
+
 	return nil
 }
 
@@ -524,6 +589,22 @@ func (l *Listener) parseTLSSettings() error {
 
 	if err := parseAndClearBool(&l.TLSDisableClientCertsRaw, &l.TLSDisableClientCerts); err != nil {
 		return fmt.Errorf("invalid value for tls_disable_client_certs: %w", err)
+	}
+
+	if err := parseAndClearDurationSecond(&l.TLSReloadIntervalRaw, &l.TLSReloadInterval); err != nil {
+		return fmt.Errorf("invalid value for tls_reload_interval: %w", err)
+	}
+
+	if l.TLSReloadInterval < 0 {
+		return fmt.Errorf("invalid value for tls_reload_interval: must not be negative")
+	}
+
+	if l.TLSReloadInterval > 0 && l.TLSReloadInterval < minTLSReloadInterval {
+		return fmt.Errorf("invalid value for tls_reload_interval: must be at least %s", minTLSReloadInterval)
+	}
+
+	if l.TLSReloadInterval > maxTLSReloadInterval {
+		return fmt.Errorf("invalid value for tls_reload_interval: must be at most %s", maxTLSReloadInterval)
 	}
 
 	// Clear raw values after successful parsing.
@@ -645,6 +726,80 @@ func (l *Listener) parseForwardedForSettings() error {
 	l.XForwardedForAuthorizedAddrsRaw = nil
 
 	return nil
+}
+
+func (l *Listener) validateForwardedForSettings(fileName string) []ConfigError {
+	configErrors := []ConfigError{}
+
+	if len(l.XForwardedForAuthorizedAddrs) == 0 {
+		if l.XForwardedForRejectNotAuthorizedRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_reject_not_authorized was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForRejectNotPresentRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_reject_not_present was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForHopSkipsRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_hops_skips was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForClientCertHeader != "" {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_client_cert_header was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForClientCertHeaderDecoders != "" {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_client_cert_header_decoders was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+	}
+
+	if l.XForwardedForClientCertHeader == "" && l.XForwardedForClientCertHeaderDecoders != "" {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header_decoders was set, but not x_forwarded_for_client_cert_header was set to be decoded",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+	if l.XForwardedForClientCertHeader != "" && l.XForwardedForClientCertHeaderDecoders == "" {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header was set, but no x_forwarded_for_client_cert_header_decoders were set to decode that header",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+	if strings.Contains(l.XForwardedForClientCertHeaderDecoders, "DER") && !strings.HasSuffix(l.XForwardedForClientCertHeaderDecoders, "DER") {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header_decoders DER decoder actually decodes PEM into DER, and therefore can only function as the final decoder",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+
+	return configErrors
 }
 
 // parseTelemetrySettings attempts to parse the raw listener telemetry settings.

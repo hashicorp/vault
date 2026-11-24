@@ -7,6 +7,7 @@ package vault
 
 import (
 	"context"
+	"time"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -24,6 +25,21 @@ func identityStoreLoginMFAEntUnauthedPaths() []string {
 	return []string{}
 }
 
+func identityStoreSCIMUnauthedPaths() []string {
+	return []string{}
+}
+
 func mfaLoginEnterprisePaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{}
 }
+
+func (i *IdentityStore) initializeEntityMetadataDB() error {
+	return nil
+}
+
+func (i *IdentityStore) recordEntityActivity(_, _ string, _, _ time.Time) {
+}
+
+func (i *IdentityStore) startEntityMetadataLoad(context.Context) {}
+
+func (i *IdentityStore) addEntityMetadataToResponse(string, map[string]interface{}) {}

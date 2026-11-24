@@ -25,7 +25,14 @@ export default class ConfigUiEngine extends Engine {
       'custom-messages',
       'api',
       'capabilities',
+      'theme',
+      // services needed for tools sidebar component
+      'permissions',
+      'current-cluster',
+      '-portal',
     ],
+    // 'vault', 'tool', 'messages', 'openApiExplorer', 'loginSettings' external routes are used in tools sidebar component
+    externalRoutes: ['vault', 'tool', 'messages', 'openApiExplorer', 'loginSettings'],
   };
 }
 

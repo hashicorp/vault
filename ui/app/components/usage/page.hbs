@@ -2,8 +2,11 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<VaultReporting::Views::Dashboard
+<Page::Breadcrumbs
+  @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Vault usage")}}
+  class="has-top-margin-s has-top-padding-m has-left-padding-s"
+/>
+<UsageReporting::Views::Dashboard
   @onFetchUsageData={{this.handleFetchUsageData}}
   @onFetchNamespaceData={{this.handleFetchNamespaceData}}
   @isVaultDedicated={{this.flags.isHvdManaged}}

@@ -5,28 +5,23 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { SystemListSyncDestinationsListEnum } from '@hashicorp/vault-client-typescript';
+import { SystemApiSystemListSyncDestinationsListEnum } from '@hashicorp/vault-client-typescript';
 import { listDestinationsTransform } from 'sync/utils/api-transforms';
 import { paginate } from 'core/utils/paginate-list';
 
 import type RouterService from '@ember/routing/router-service';
 import type { ModelFrom } from 'vault/vault/route';
-import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type Controller from '@ember/controller';
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
 import { ListDestination } from 'vault/vault/sync';
 
+export type SyncSecretsDestinationsRouteModel = ModelFrom<SyncSecretsDestinationsIndexRoute>;
+
 interface SyncSecretsDestinationsIndexRouteParams {
   name?: string;
   type?: string;
   page?: string;
-}
-
-interface SyncSecretsDestinationsRouteModel {
-  destinations: SyncDestinationModel[];
-  nameFilter: string | undefined;
-  typeFilter: string | undefined;
 }
 
 interface SyncSecretsDestinationsController extends Controller {
@@ -53,7 +48,7 @@ export default class SyncSecretsDestinationsIndexRoute extends Route {
     },
   };
 
-  redirect(model: ModelFrom<SyncSecretsDestinationsIndexRoute>) {
+  redirect(model: SyncSecretsDestinationsRouteModel) {
     if (!model.destinations.meta.total) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }
@@ -61,7 +56,9 @@ export default class SyncSecretsDestinationsIndexRoute extends Route {
 
   async model(params: SyncSecretsDestinationsIndexRouteParams) {
     const { name = '', type = '', page } = params;
-    const response = await this.api.sys.systemListSyncDestinations(SystemListSyncDestinationsListEnum.TRUE);
+    const response = await this.api.sys.systemListSyncDestinations(
+      SystemApiSystemListSyncDestinationsListEnum.TRUE
+    );
     // transform and paginate destinations response
     const destinations = listDestinationsTransform(response, name, type);
     const paginatedDestinations = paginate(destinations, { page: Number(page) || 1 });

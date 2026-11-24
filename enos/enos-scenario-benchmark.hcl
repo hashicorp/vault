@@ -26,7 +26,7 @@ scenario "benchmark" {
     Often times, when running benchmarks, you're wanting to run one very specific scenario, instead of running
     many possible scenarios at once. One example of this from the CLI would be:
 
-    enos scenario launch benchmark config_mode:file artifact_source:crt artifact_type:bundle seal:awskms ip_version:4 consul_version:1.20.6 edition:ent consul_edition:ent backend:consul
+    enos scenario launch benchmark config_mode:file artifact_source:crt artifact_type:bundle seal:awskms ip_version:4 edition:ent consul_edition:ent backend:consul
 
     This would run exactly 1 scenario, since I've specified every possible matrix parameter. This is what I used when
     running Consul/IS benchmarks.
@@ -72,7 +72,6 @@ scenario "benchmark" {
     backend         = global.backends
     config_mode     = global.config_modes
     consul_edition  = global.consul_editions
-    consul_version  = global.consul_versions
     distro          = ["ubuntu"]
     edition         = global.editions
     ip_version      = global.ip_versions
@@ -90,10 +89,10 @@ scenario "benchmark" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // softhsm packages not available for leap/sles.
+    // softhsm packages not available for sles (at the time of development)
     exclude {
       seal   = ["pkcs11"]
-      distro = ["leap", "sles"]
+      distro = ["sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -108,14 +107,14 @@ scenario "benchmark" {
   providers = [
     provider.aws.default,
     provider.enos.ec2_user,
-    provider.enos.ubuntu
+    provider.enos.ubuntu,
+    provider.time.default,
   ]
 
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       amzn   = provider.enos.ec2_user
-      leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
@@ -332,7 +331,7 @@ scenario "benchmark" {
       license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       }
     }
   }
@@ -394,7 +393,7 @@ scenario "benchmark" {
       consul_license          = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = matrix.consul_edition
-        version = matrix.consul_version
+        version = var.consul_version
       } : null
       enable_audit_devices = false
       enable_telemetry     = true

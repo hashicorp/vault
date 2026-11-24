@@ -1,0 +1,3 @@
+```release-note:breaking-change
+containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+```

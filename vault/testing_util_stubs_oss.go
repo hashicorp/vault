@@ -7,23 +7,11 @@ package vault
 
 import (
 	"crypto/ed25519"
-	"testing"
 )
-
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
 func GenerateTestLicenseKeys() (ed25519.PublicKey, ed25519.PrivateKey, error) { return nil, nil, nil }
 func testGetLicensingConfig(key ed25519.PublicKey) *LicensingConfig           { return &LicensingConfig{} }
-func testExtraTestCoreSetup(testing.TB, ed25519.PrivateKey, *TestClusterCore) {}
 func testAdjustUnderlyingStorage(tcc *TestClusterCore) {
 	tcc.UnderlyingStorage = tcc.physical
 }
-func testApplyEntBaseConfig(coreConfig, base *CoreConfig) {}
-
-// The following are stubs for PKI certificate counting, which is an enterprise feature.
-
-func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {}
-func (c *TestClusterCore) ResetPkiCertificateCounts()          {}
-func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
-}
-func (c *Core) testSetTestPubKeys(additionalKeys []interface{}) {}
+func TestApplyEntBaseConfig(coreConfig, base *CoreConfig) {}

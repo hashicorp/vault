@@ -215,12 +215,6 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		{
-			"HCPLinkConf overwrite",
-			&SharedConfig{},
-			&SharedConfig{},
-			&SharedConfig{},
-		},
-		{
 			"log fields overwrite",
 			&SharedConfig{
 				LogFile:           "file1.log",

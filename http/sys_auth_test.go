@@ -537,7 +537,7 @@ func TestSysRemountAuth(t *testing.T) {
 				"options":                map[string]interface{}{},
 				"plugin_version":         "",
 				"running_sha256":         "",
-				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"running_plugin_version": versions.DefaultBuiltinVersion,
 			},
 			"token/": map[string]interface{}{
 				"description":             "token based credentials",
@@ -572,7 +572,7 @@ func TestSysRemountAuth(t *testing.T) {
 			"options":                map[string]interface{}{},
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 		"token/": map[string]interface{}{
 			"description":             "token based credentials",

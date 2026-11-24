@@ -105,8 +105,8 @@ const createOrUpdateDestination = (schema, req) => {
     }
   }
   const data = { ...apiResponse, type, name };
-  // issue with mirages' update method not returning an id on the payload which causes ember data to error after 4.12.x upgrade.
-  // to work around this, determine if we're creating or updating a record first
+  // mirage's update method does not return an id on the payload,
+  // so determine if we're creating or updating a record first
   const records = schema.db.syncDestinations.where({ type, name });
 
   if (!records.length) {

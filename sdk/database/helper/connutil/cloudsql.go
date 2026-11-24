@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/cloudsqlconn"
-	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
+	"cloud.google.com/go/cloudsqlconn/postgres/pgxv5"
 )
 
 func (c *SQLConnectionProducer) getCloudSQLDriverType() (string, error) {
@@ -37,7 +37,7 @@ func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials s
 	// using switch case for future extensibility
 	switch typ {
 	case cloudSQLPostgres:
-		return pgxv4.RegisterDriver(driverName, opts...)
+		return pgxv5.RegisterDriver(driverName, opts...)
 	}
 
 	return nil, fmt.Errorf("unrecognized cloudsql type encountered: %s", typ)

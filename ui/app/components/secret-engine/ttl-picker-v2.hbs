@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Form::Field @layout="vertical" @isInvalid={{this.errorMessage}} as |F|>
+<Hds::Form::Field {{did-update this.onModelChange @model}} @layout="vertical" @isInvalid={{this.errorMessage}} as |F|>
   <F.Label data-test-form-field-label={{@ttlKey}}>{{this.formField.label}}</F.Label>
   <F.HelperText data-test-help-text={{@ttlKey}}>{{this.formField.helperText}}</F.HelperText>
   <F.Control>

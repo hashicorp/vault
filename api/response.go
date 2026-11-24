@@ -9,11 +9,39 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // Response is a raw response that wraps an HTTP response.
 type Response struct {
 	*http.Response
+}
+
+// cacheAge reports how long an intermediate cache held this response. It is
+// zero when no cache handled the response, or when the age it reported cannot
+// be understood, so that an unusable value is treated as a direct response
+// rather than failing the request that carried it.
+func (r *Response) cacheAge() time.Duration {
+	seconds, err := strconv.Atoi(strings.TrimSpace(r.Header.Get("Age")))
+	if err != nil || seconds < 0 {
+		return 0
+	}
+
+	return time.Duration(seconds) * time.Second
+}
+
+// toSecret reads the secret carried by this response, recording how long an
+// intermediate cache held it.
+func (r *Response) toSecret() (*Secret, error) {
+	secret, err := ParseSecret(r.Body)
+	if err != nil || secret == nil {
+		return secret, err
+	}
+	secret.Age = r.cacheAge()
+
+	return secret, nil
 }
 
 // DecodeJSON will decode the response body to a JSON structure. This

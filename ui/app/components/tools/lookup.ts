@@ -29,6 +29,10 @@ export default class ToolsLookup extends Component {
   @tracked lookupData: ReadWrappingPropertiesResponse | null = null;
   @tracked errorMessage = '';
 
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Lookup token' }];
+  }
+
   @action
   reset() {
     this.token = '';

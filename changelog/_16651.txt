@@ -1,0 +1,4 @@
+```release-note:improvement
+identity/scim: New SCIM extensions for Users and Groups are supported, but
+mutually exclusive with User metadata extension.
+```

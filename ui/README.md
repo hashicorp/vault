@@ -1,8 +1,5 @@
 **Table of Contents**
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 - [Vault UI](#vault-ui)
   - [Ember CLI Version Upgrade Matrix](#ember-cli-version-upgrade-matrix)
   - [Prerequisites](#prerequisites)
@@ -17,8 +14,6 @@
     - [Linting](#linting)
     - [Contributing / Best Practices](#contributing--best-practices)
   - [Further Reading / Useful Links](#further-reading--useful-links)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Vault UI
 
@@ -43,21 +38,17 @@ Respective versions for `ember-cli`, `ember-source` and `ember-data` for each ve
 You will need the following things properly installed on your computer.
 
 - [Git](https://git-scm.com/)
-- [Node.js](https://nodejs.org/)
-- [Yarn](https://yarnpkg.com/)
-- [Ember CLI](https://cli.emberjs.com/release/)
+- [nvm](https://github.com/nvm-sh/nvm) to install and switch to the Node.js version mirrored in the repo root `.nvmrc` and `.node-version` files
+- [pnpm](https://pnpm.io/)
 - [Google Chrome](https://google.com/chrome/)
-
-In order to enforce the same version of `yarn` across installs, the `yarn` binary is included in the repo
-in the `.yarn/releases` folder. To update to a different version of `yarn`, use the `yarn policies set-version VERSION` command. For more information on this, see the [documentation](https://yarnpkg.com/en/docs/cli/policies).
 
 ## Running a Vault Server
 
 Before running Vault UI locally, a Vault server must be running. First, ensure
 Vault dev is built according the instructions in `../README.md`.
 
-- To start a single local Vault server: `yarn vault`
-- To start a local Vault cluster: `yarn vault:cluster`
+- To start a single local Vault server: `pnpm vault`
+- To start a local Vault cluster: `pnpm vault:cluster`
 
 These commands may also be [aliased on your local device](https://github.com/hashicorp/vault-tools/blob/master/users/noelle/vault_aliases).
 
@@ -70,29 +61,33 @@ _All of the commands below assume you're in the `ui/` directory._
 > and enable live rebuilding of the application as you change the UI application code.
 > Visit your app at [http://localhost:4200](http://localhost:4200).
 
-1. Install dependencies:
+1. Use the mirrored Node.js version from the repo root:
 
-`yarn`
+`nvm use`
 
-2. Run Vault UI and proxy back to a Vault server running on the default port, 8200:
+2. Install dependencies:
 
-`yarn start`
+`pnpm i`
+
+3. Run Vault UI and proxy back to a Vault server running on the default port, 8200:
+
+`pnpm start`
 
 > If your Vault server is running on a different port you can use the
 > long-form version of the npm script:
 
-`ember server --proxy=http://localhost:PORT`
+`pnpm exec ember server --proxy=http://localhost:PORT`
 
 ### Mirage
 
 [Mirage](https://miragejs.com/docs/getting-started/introduction/) can be helpful for mocking backend endpoints.
 Look in [mirage/handlers](mirage/handlers/) for existing mocked backends.
 
-Run yarn with mirage: `export MIRAGE_DEV_HANDLER=<handler> && yarn start`
+Run pnpm with mirage: `export MIRAGE_DEV_HANDLER=<handler> && pnpm start`
 
 Where `handlername` is one of the options exported in [mirage/handlers/index](mirage/handlers/index.js)
 
-To stop using the handler, kill the yarn process (Ctrl+c) and then unset the environment variable.
+To stop using the handler, kill the pnpm process (Ctrl+c) and then unset the environment variable.
 `unset MIRAGE_DEV_HANDLER`
 
 ## Building Vault UI into a Vault Binary
@@ -114,42 +109,95 @@ setting `VAULT_UI` environment variable.
 
 | Command                                           | Description                                                             |
 | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `yarn start`                                      | start the app with live reloading (vault must be running on port :8200) |
-| `export MIRAGE_DEV_HANDLER=<handler>; yarn start` | start the app with the mocked mirage backend, with handler provided     |
+| `pnpm start`                                      | start the app with live reloading (vault must be running on port :8200) |
+| `export MIRAGE_DEV_HANDLER=<handler>; pnpm start` | start the app with the mocked mirage backend, with handler provided     |
 | `make static-dist && make dev-ui`                 | build a Vault binary with UI assets (run from root directory not `/ui`) |
-| `ember g component foo -ir core`                  | generate a component in the /addon engine                               |
-| `yarn test:filter`                                | run non-enterprise in the browser                                       |
-| `yarn test:filter -f='<test name>'`               | run tests in the browser, filtering by test name                        |
-| `yarn lint:js`                                    | lint javascript files                                                   |
+| `pnpm exec ember g component foo -ir core`        | generate a component in the /addon engine                               |
+| `pnpm test:filter`                                | run non-enterprise in the browser                                       |
+| `pnpm test:filter -f='<test name>'`               | run tests in the browser, filtering by test name                        |
+| `pnpm lint:js`                                    | lint javascript files                                                   |
 
 ### Code Generators
 
-Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
+Make use of the many generators for code, try `pnpm exec ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
 
 eg. a reusable component named foo that you'd like in the core engine (read more about Ember engines [here](https://ember-engines.com/docs)).
 
-- `ember g component foo -ir core`
+- `pnpm exec ember g component foo -ir core`
 
 The above command creates a template-only component by default. If you'd like to add a backing class, add the `-gc` flag:
 
-- `ember g component foo -gc -ir core`
+- `pnpm exec ember g component foo -gc -ir core`
 
 ### Running Tests
 
-Running tests will spin up a Vault dev server on port :9200 via a pretest script that testem (the test runner) executes. All of the acceptance tests then run, which proxy requests back to that server. The normal test scripts use `ember-exam` which split into parallel runs, which is excellent for speed but makes it harder to debug. So we have a custom yarn script that automatically opens all the tests in a browser, and we can pass the `-f` flag to target the test(s) we're debugging.
+Running tests will spin up a Vault dev server on port :9200 via a pretest script that testem (the test runner) executes. All of the acceptance tests then run, which proxy requests back to that server. The normal test scripts use `ember-exam` which split into parallel runs, which is excellent for speed but makes it harder to debug. So we have a custom package script that automatically opens all the tests in a browser, and we can pass the `-f` flag to target the test(s) we're debugging.
 
-- `yarn run test` lint & run all the tests (CI uses this)
-- `yarn run test:oss` lint & run all the non-enterprise tests (CI uses this)
-- `yarn run test:quick` run all the tests without linting
-- `yarn run test:quick-oss` run all the non-enterprise tests without linting
-- `yarn run test:filter -f="policies"` run the filtered test in the browser with no splitting. `-f` is set to `!enterprise` by default
+- `pnpm run test` lint & run all the tests (CI uses this)
+- `pnpm run test:oss` lint & run all the non-enterprise tests (CI uses this)
+- `pnpm run test:quick` run all the tests without linting
+- `pnpm run test:quick-oss` run all the non-enterprise tests without linting
+- `pnpm run test:filter -f="policies"` run the filtered test in the browser with no splitting. `-f` is set to `!enterprise` by default
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
+
+#### Playwright personas
+
+Playwright runs against real Vault servers with the UI embedded in the binary. Build
+the binary with the intended UI first (`make static-dist && make entdev-ui` from the
+repository root), and make it available as `vault` on `PATH`. Playwright starts,
+initializes, and unseals its own servers; do not start servers on its test ports.
+
+From `ui/`, run a focused spec with its persona:
+
+```sh
+pnpm exec playwright test e2e/tests/raft/storage.spec.ts --project=chrome:raft
+```
+
+[test-users.ts](e2e/test-users.ts) defines personas independently of
+[policy definitions](e2e/policies/index.ts):
+
+- `name` identifies the setup/browser projects, test directory, and session/key files.
+- `storage` selects an implemented backend (`inmem` or `raft`).
+- `policy` selects a key from `USER_POLICY_MAP`, not a second persona name.
+
+The existing `superuser` and `raft` personas share the `superuser` policy, but run
+on separate in-memory and Raft servers. Their project names remain
+`chrome:superuser` and `chrome:raft`. The `readonly` persona (`chrome:readonly`)
+uses the [readonly policy](e2e/policies/readonly.hcl) to verify that list and
+detail views hide actions the token cannot perform. Its specs seed data with the
+persona's root token through [rootApi](e2e/fixtures/root-api.ts). Add a persona entry and a matching
+`e2e/tests/<name>/` directory to add a scenario; add a policy only when permissions
+actually differ. Setup verifies the backend and issued token's policy, then saves
+an isolated session for the browser project.
+
+Only implemented environment dimensions belong in the persona type. Consul,
+license variants, edition, and version selection need runner support and tests
+before being added; an unused field would not prove that environment was tested.
+The Raft persona includes a single-node overview test and an isolated membership
+flow in [membership.spec.ts](e2e/tests/raft/membership.spec.ts). The latter starts
+two disposable Raft nodes on dynamically allocated loopback ports. It joins an
+uninitialized peer through the UI, unseals it, verifies both backend membership and
+the reloaded overview, then removes that peer through the UI and verifies its
+persisted absence. It uses a non-root persona token for membership read-back and
+removal. Nodes and temporary data are cleaned up even when the test fails, and
+retries get a fresh cluster. Credential-entry traces, videos, and screenshots are
+disabled for this test.
+Non-secret membership responses and rendered rows are attached to the test report
+before joining, after joining/reload, and after removal/reload.
+
+```sh
+pnpm exec playwright test e2e/tests/raft --project=chrome:raft
+```
+
+For migration verification, run the same membership spec against binaries built
+with the pre- and post-migration UI and retain both results. Passing against only
+one binary does not establish before/after equivalence.
 
 ### Linting
 
-- `yarn lint:js`
-- `yarn lint:hbs`
-- `yarn lint:fix`
+- `pnpm lint:js`
+- `pnpm lint:hbs`
+- `pnpm lint:fix`
 
 ### Contributing / Best Practices
 
@@ -158,24 +206,12 @@ Hello and thank you for contributing to the Vault UI! Below is a list of pattern
 > **Remember** prefixing your branch name with `ui/` will run UI tests and skip the go tests. If your PR includes backend changes, _do not_ prefix your branch, instead add the `ui` label on github. This will trigger the UI test suite to run, in addition to the backend Go tests.
 
 - [routing](docs/routing.md)
-- [serializers/adapters](docs/serializers-adapters.md)
-- [models](docs/models.md)
+- [capabilities](docs/capabilities.md)
+- [form validations](docs/form-validations.md)
 - [components](docs/components.md)
 - [forms](docs/forms.md)
 - [css](docs/css.md)
 - [ember engines](docs/engines.md)
-
-### Updating @hashicorp-internal/vault-reporting
-
-Code regarding vault-reporting module lives in the [shared-secure-ui](https://github.com/hashicorp/shared-secure-ui) repo, and it is being used as a tarball in this repo.
-
-We use the script [update-vault-reporting-addon.sh](scripts/update-vault-reporting-addon.sh) to fetch the latest tarball from artifactory and update `package.json` accordingly. To run the script, you'll need to have [Doormat CLI](https://docs.prod.secops.hashicorp.services/doormat/cli/) and [jq](https://formulae.brew.sh/formula/jq) installed locally.
-
-Example:
-
-```
-./scripts/update-vault-reporting-addon.sh
-```
 
 ## Further Reading / Useful Links
 

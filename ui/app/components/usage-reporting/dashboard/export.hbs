@@ -1,0 +1,24 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if @data}}
+  <Hds::Dropdown @matchToggleWidth={{true}} as |D|>
+    <D.ToggleButton data-test-vault-reporting-export-toggle @text="Export" />
+    <D.Interactive
+      data-test-vault-reporting-export-json
+      @href={{this.dataAsDownloadableJSONString}}
+      download="vault-usage-dashboard.json"
+    >
+      JSON
+    </D.Interactive>
+    <D.Interactive
+      data-test-vault-reporting-export-csv
+      @href={{this.dataAsDownloadableCSVString}}
+      download="vault-usage-dashboard.csv"
+    >
+      CSV
+    </D.Interactive>
+  </Hds::Dropdown>
+{{/if}}

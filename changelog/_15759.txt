@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Correctly handle string values ("true"/"false") for `tls_disable` when displaying TLS status in the Cluster Configuration widget.
+```

@@ -6,8 +6,7 @@
 import Route from '@ember/routing/route';
 import { findDestination } from 'core/helpers/sync-destinations';
 import formResolver from 'vault/forms/sync/resolver';
-
-import type { DestinationType } from 'vault/sync';
+import { DestinationType } from 'sync/utils/constants';
 
 type Params = {
   type: DestinationType;

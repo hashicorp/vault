@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -7,8 +7,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v83/github"
 	"github.com/shurcooL/githubv4"
 	slogctx "github.com/veqryn/slog-context"
 )
@@ -22,7 +23,8 @@ func createPullRequestComment(
 	pullNumber int,
 	body string,
 ) (*libgithub.IssueComment, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -43,6 +45,72 @@ func createPullRequestComment(
 	return comment, err
 }
 
+// findPullRequestCommentByMarker returns the first issue comment on the pull
+// request whose body contains marker, or nil if there isn't one.
+func findPullRequestCommentByMarker(
+	ctx context.Context,
+	github *libgithub.Client,
+	owner string,
+	repo string,
+	pullNumber int,
+	marker string,
+) (*libgithub.IssueComment, error) {
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.Int("pull-number", pullNumber),
+	), "listing pull request comments")
+
+	opts := &libgithub.IssueListCommentsOptions{
+		ListOptions: libgithub.ListOptions{PerPage: PerPageMax},
+	}
+	for {
+		comments, res, err := github.Issues.ListComments(ctx, owner, repo, pullNumber, opts)
+		if err != nil {
+			return nil, fmt.Errorf("listing pull request comments: %w", err)
+		}
+		for _, c := range comments {
+			if strings.Contains(c.GetBody(), marker) {
+				return c, nil
+			}
+		}
+
+		if res.NextPage == 0 {
+			return nil, nil
+		}
+
+		opts.Page = res.NextPage
+	}
+}
+
+// updatePullRequestComment replaces the body of an existing comment.
+func updatePullRequestComment(
+	ctx context.Context,
+	github *libgithub.Client,
+	owner string,
+	repo string,
+	commentID int64,
+	body string,
+) error {
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.Int64("comment-id", commentID),
+	), "updating pull request comment")
+
+	limitedBody := limitCharacters(body)
+	_, _, err := github.Issues.EditComment(ctx, owner, repo, commentID, &libgithub.IssueComment{
+		Body: &limitedBody,
+	})
+	if err != nil {
+		return fmt.Errorf("updating pull request comment: %w", err)
+	}
+
+	return nil
+}
+
 // getPullRequest gets for the pull request details.
 func getPullRequest(
 	ctx context.Context,
@@ -51,7 +119,8 @@ func getPullRequest(
 	repo string,
 	pullNumber int,
 ) (*libgithub.PullRequest, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -74,7 +143,8 @@ func closePullRequest(
 	repo string,
 	pullNumber int,
 ) error {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -96,7 +166,8 @@ func listPullRequestCommits(
 	repo string,
 	pullNumber int,
 ) ([]*libgithub.RepositoryCommit, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -128,7 +199,8 @@ func listPullRequestReviews(
 	repo string,
 	pullNumber int,
 ) ([]*libgithub.PullRequestReview, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -162,7 +234,8 @@ func listPullRequestClosingIssues(
 	repo string,
 	pullNumber int,
 ) ([]*ClosingIssueRef, error) {
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),

@@ -26,6 +26,13 @@ export default class LoginSettingsList extends Component {
   @tracked ruleToDelete = null; // set to the rule intended to delete
   @service api;
 
+  get breadcrumbs() {
+    return [
+      { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
+      { label: 'UI login settings' },
+    ];
+  }
+
   @action
   async onDelete() {
     try {

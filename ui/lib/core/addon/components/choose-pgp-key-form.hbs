@@ -28,7 +28,7 @@
         @color="secondary"
         @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
         @isTruncated={{true}}
-        data-test-pgp-key-copy
+        data-test-copy-snippet="pgp-key"
         @container="#shamir-flow-modal"
       />
     </div>
@@ -41,7 +41,7 @@
         data-test-confirm-pgp-back-button
       />
 
-      <Hds::Button @text={{this.buttonText}} type="submit" disabled={{not this.pgpKey}} data-test-confirm-pgp-key-submit />
+      <Hds::Button @text={{this.buttonText}} type="submit" disabled={{not this.pgpKey}} data-test-submit />
     </Hds::ButtonSet>
   </form>
 {{else}}
@@ -49,7 +49,7 @@
     id="choose-pgp-key"
     {{on "submit" this.usePgpKey}}
     aria-label="provide PGP key"
-    data-test-choose-pgp-key-form="begin"
+    data-test-dr-token-flow-step="choose-pgp-key"
   >
     <div class="has-bottom-margin-m">
       <p data-test-choose-pgp-key-description>
@@ -58,14 +58,8 @@
       <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{this.setKey}} />
     </div>
     <Hds::ButtonSet>
-      <Hds::Button
-        @text="Back"
-        @color="tertiary"
-        @icon="chevron-left"
-        {{on "click" @onCancel}}
-        data-test-use-pgp-key-cancel
-      />
-      <Hds::Button @text="Use PGP Key" type="submit" disabled={{not this.pgpKeyFile.value}} data-test-use-pgp-key-button />
+      <Hds::Button @text="Back" @color="tertiary" @icon="chevron-left" {{on "click" @onCancel}} data-test-cancel />
+      <Hds::Button @text="Use PGP Key" type="submit" disabled={{not this.pgpKeyFile.value}} data-test-button="use-pgp-key" />
     </Hds::ButtonSet>
   </form>
 {{/if}}

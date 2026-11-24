@@ -75,3 +75,9 @@ func AddPluginIdentityTokenFieldsWithGroup(m map[string]*framework.FieldSchema, 
 func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
 	AddPluginIdentityTokenFieldsWithGroup(m, "default")
 }
+
+// Equals returns true if the plugin identity token parameters match the other instance.
+// Useful for detecting configuration changes after parsing new field data.
+func (p *PluginIdentityTokenParams) Equals(other PluginIdentityTokenParams) bool {
+	return *p == other
+}

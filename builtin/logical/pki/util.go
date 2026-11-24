@@ -38,6 +38,13 @@ var (
 	errKeyNameInUse      = errutil.UserError{Err: "key name already in use"}
 )
 
+func verifyReasonCode(reasonCode int) error {
+	if reasonCode < 0 || reasonCode == 7 || reasonCode > 10 {
+		return fmt.Errorf("invalid revocation reason code %d: %w", reasonCode, ErrBadRevocationReason)
+	}
+	return nil
+}
+
 func serialFromCert(cert *x509.Certificate) string {
 	return parsing.SerialFromCert(cert)
 }

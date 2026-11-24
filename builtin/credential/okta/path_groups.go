@@ -23,8 +23,11 @@ func pathGroupsList(b *backend) *framework.Path {
 			ItemType:        "Group",
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathGroupList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathGroupList,
+				Summary:  "List groups configured in the Okta auth method.",
+			},
 		},
 
 		HelpSynopsis:    pathGroupHelpSyn,
@@ -58,10 +61,36 @@ func pathGroups(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.DeleteOperation: b.pathGroupDelete,
-			logical.ReadOperation:   b.pathGroupRead,
-			logical.UpdateOperation: b.pathGroupWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathGroupDelete,
+				Summary:  "Delete an Okta auth method group.",
+				Responses: map[int][]framework.Response{
+					204: {{Description: "No Content"}},
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathGroupRead,
+				Summary:  "Return the properties of an Okta auth method group.",
+				Responses: map[int][]framework.Response{
+					200: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"policies": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "List of policies associated with the group.",
+							},
+						},
+					}},
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathGroupWrite,
+				Summary:  "Create or update an Okta auth method group.",
+				Responses: map[int][]framework.Response{
+					204: {{Description: "No Content"}},
+				},
+			},
 		},
 
 		HelpSynopsis:    pathGroupHelpSyn,
@@ -165,8 +194,15 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 		name = strings.ToLower(name)
 	}
 
+	policies := policyutil.ParsePolicies(d.Get("policies"))
+	for _, policy := range policies {
+		if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+			return logical.ErrorResponse("invalid policy name %q: %s", policy, err), nil
+		}
+	}
+
 	entry, err := logical.StorageEntryJSON("group/"+name, &GroupEntry{
-		Policies: policyutil.ParsePolicies(d.Get("policies")),
+		Policies: policies,
 	})
 	if err != nil {
 		return nil, err
@@ -205,7 +241,7 @@ type GroupEntry struct {
 }
 
 const pathGroupHelpSyn = `
-Manage users allowed to authenticate.
+Manage groups allowed to authenticate.
 `
 
 const pathGroupHelpDesc = `

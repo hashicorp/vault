@@ -74,9 +74,6 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 	if dstP == nil {
 		return nil, fmt.Errorf("no such destination key to export to")
 	}
-	if !b.System().CachingDisabled() {
-		dstP.Lock(false)
-	}
 	defer dstP.Unlock()
 
 	srcP, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -89,9 +86,6 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 	if srcP == nil {
 		return nil, fmt.Errorf("no such source key for export")
 	}
-	if !b.System().CachingDisabled() {
-		srcP.Lock(false)
-	}
 	defer srcP.Unlock()
 
 	if !srcP.Exportable {
@@ -103,6 +97,7 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 	}
 
 	retKeys := map[string]string{}
+	var exportVersion *int
 	switch version {
 	case "":
 		for k, v := range srcP.Keys {
@@ -139,7 +134,15 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 		}
 
 		retKeys[strconv.Itoa(versionValue)] = exportKey
+		exportVersion = &versionValue
 	}
+
+	metadata := b.keyPolicyObservationMetadata(srcP)
+	if exportVersion != nil {
+		metadata["export_version"] = *exportVersion
+	}
+	metadata["destination_key"] = dstP.Name
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExportBYOK, metadata)
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{

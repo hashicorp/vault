@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 )
 
 // PKCS7 Represents a PKCS7 structure
@@ -122,8 +121,7 @@ func getDigestOIDForSignatureAlgorithm(digestAlg x509.SignatureAlgorithm) (asn1.
 // getOIDForEncryptionAlgorithm takes the private key type of the signer and
 // the OID of a digest algorithm to return the appropriate signerInfo.DigestEncryptionAlgorithm
 func getOIDForEncryptionAlgorithm(pkey crypto.PrivateKey, OIDDigestAlg asn1.ObjectIdentifier) (asn1.ObjectIdentifier, error) {
-	switch pkey.(type) {
-	case *rsa.PrivateKey:
+	rsaAlgos := func() (asn1.ObjectIdentifier, error) {
 		switch {
 		default:
 			return OIDEncryptionAlgorithmRSA, nil
@@ -138,7 +136,8 @@ func getOIDForEncryptionAlgorithm(pkey crypto.PrivateKey, OIDDigestAlg asn1.Obje
 		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA512):
 			return OIDEncryptionAlgorithmRSASHA512, nil
 		}
-	case *ecdsa.PrivateKey:
+	}
+	ecdsaAlgos := func() (asn1.ObjectIdentifier, error) {
 		switch {
 		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA1):
 			return OIDDigestAlgorithmECDSASHA1, nil
@@ -148,10 +147,32 @@ func getOIDForEncryptionAlgorithm(pkey crypto.PrivateKey, OIDDigestAlg asn1.Obje
 			return OIDDigestAlgorithmECDSASHA384, nil
 		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA512):
 			return OIDDigestAlgorithmECDSASHA512, nil
+		default:
+			return nil, fmt.Errorf("pkcs7: unsupported ECDSA digest algorithm: %s", OIDDigestAlg.String())
 		}
+	}
+	switch pkey.(type) {
+	case *rsa.PrivateKey:
+		return rsaAlgos()
+	case *ecdsa.PrivateKey:
+		return ecdsaAlgos()
 	case *dsa.PrivateKey:
 		return OIDDigestAlgorithmDSA, nil
 	}
+
+	// Support managed keys
+	if decrypter, ok := pkey.(crypto.Decrypter); ok {
+		if _, ok := decrypter.Public().(*rsa.PublicKey); ok {
+			return rsaAlgos()
+		}
+		if _, ok := decrypter.Public().(*ecdsa.PublicKey); ok {
+			return ecdsaAlgos()
+		}
+		if _, ok := decrypter.Public().(*dsa.PublicKey); ok {
+			return OIDDigestAlgorithmDSA, nil
+		}
+	}
+
 	return nil, fmt.Errorf("pkcs7: cannot convert encryption algorithm to oid, unknown private key type %T", pkey)
 }
 
@@ -213,17 +234,6 @@ func (raw rawCertificates) Parse() ([]*x509.Certificate, error) {
 
 	var val asn1.RawValue
 	if _, err := asn1.Unmarshal(raw.Raw, &val); err != nil {
-		return nil, err
-	}
-
-	stdlibCerts, err := x509.ParseCertificates(val.Bytes)
-	if err == nil {
-		// If the parsing was successful, return the stdlib certs and don't worry about
-		// our workarounds
-		return stdlibCerts, nil
-	}
-
-	if !strings.Contains(err.Error(), "authority key identifier incorrectly marked critical") {
 		return nil, err
 	}
 

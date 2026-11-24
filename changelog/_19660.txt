@@ -1,0 +1,9 @@
+```release-note:bug
+auth/tpm: Use sealwrap for CAs in storage.
+```
+```release-note:bug
+auth/tpm: Fix broken implementation of alias-lookahead and resolve-role operations.
+```
+```release-note:bug
+auth/tpm: Improve locking during login operations.  Return permission denied for login renew with invalid role.  Fix inconsistent case handling on login endpoints.
+```

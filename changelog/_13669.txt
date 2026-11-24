@@ -1,0 +1,4 @@
+```release-note:feature
+**SCIM 2.0 Identity Provisioning Beta (Beta/Enterprise)**: Adds beta support for Vault to act as a SCIM 2.0 server,
+allowing external management of Vault entities, aliases and groups.
+```

@@ -26,7 +26,6 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
   hooks.beforeEach(async function () {
     this.backend = `kv-create-${uuidv4()}`;
-    this.store = this.owner.lookup('service:store');
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, 'app/first', 'foo', 'bar', 2);
@@ -54,7 +53,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
@@ -69,7 +68,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.breadcrumbAtIdx(4));
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
     });
@@ -180,10 +179,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -254,7 +260,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/new')}/details?version=1`,
         'Details url has version param'
       );
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item('new')).exists('Lists new secret in sub-dir');
     });
@@ -262,7 +268,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,
@@ -356,7 +362,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (dr)', async function (assert) {
@@ -436,10 +442,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -502,7 +515,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
@@ -583,10 +596,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -649,7 +669,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
@@ -750,10 +770,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -794,7 +821,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 2');
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,
@@ -842,7 +869,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(PAGE.breadcrumbAtIdx(1));
+      await click(PAGE.breadcrumbAtIdx(2));
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (sc)', async function (assert) {
@@ -862,7 +889,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.breadcrumbAtIdx(4));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/first')}`,
@@ -976,10 +1003,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -1043,7 +1077,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets-engines/${backend}/kv/${encodeURIComponent('app/new')}/details`,
         'navigates to details'
       );
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
     });

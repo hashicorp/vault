@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/identity/mfa"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	otplib "github.com/pquerna/otp"
 	"github.com/stretchr/testify/assert"

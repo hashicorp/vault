@@ -5,6 +5,7 @@
 
 import { computed } from '@ember/object';
 import Controller from '@ember/controller';
+import { service } from '@ember/service';
 
 const DEFAULTS = {
   keyData: null,
@@ -16,6 +17,8 @@ const DEFAULTS = {
 };
 
 export default Controller.extend(DEFAULTS, {
+  api: service(),
+
   reset() {
     this.setProperties(DEFAULTS);
   },
@@ -26,10 +29,11 @@ export default Controller.extend(DEFAULTS, {
     this.model.reload();
   },
 
-  initError(e) {
+  async initError(e) {
     this.set('loading', false);
-    if (e.httpStatus === 400) {
-      this.set('errors', e.errors);
+    const { status, message, response } = await this.api.parseError(e);
+    if (status === 400) {
+      this.set('errors', response?.errors ?? [message]);
     } else {
       throw e;
     }
@@ -72,18 +76,17 @@ export default Controller.extend(DEFAULTS, {
 
       delete data.use_pgp;
       delete data.use_pgp_for_root;
-      const store = this.model.store;
       this.setProperties({
         loading: true,
         errors: null,
       });
-      store
-        .adapterFor('cluster')
-        .initCluster(data)
-        .then(
-          (resp) => this.initSuccess(resp),
-          (...errArgs) => this.initError(...errArgs)
-        );
+      // an uninitialized cluster has no token to send. Overriding headers replaces the generated client's
+      // headers, so the JSON content type must be set again.
+      const { headers } = this.api.buildHeaders({ token: '' });
+      this.api.sys.initialize(data, { headers: { 'Content-Type': 'application/json', ...headers } }).then(
+        (resp) => this.initSuccess(resp),
+        (...errArgs) => this.initError(...errArgs)
+      );
     },
 
     setKeys(data) {

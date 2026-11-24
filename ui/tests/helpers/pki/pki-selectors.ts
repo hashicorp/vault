@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -81,6 +81,8 @@ export const PKI_ISSUER_DETAILS = {
   crossSign: '[data-test-pki-issuer-cross-sign]',
   defaultGroup: '[data-test-details-group="default"]',
   download: '[data-test-issuer-download]',
+  downloadPem: '[data-test-issuer-download-type="pem"]',
+  downloadDer: '[data-test-issuer-download-type="der"]',
   groupTitle: '[data-test-group-title]',
   parsingAlertBanner: '[data-test-parsing-error-alert-banner]',
   rotateModal: '#pki-rotate-root-modal',
@@ -116,6 +118,7 @@ export const PKI_ROLE_FORM = {
 
 export const PKI_ROLE_GENERATE = {
   form: '[data-test-pki-generate-cert-form]',
+  alert: '[data-test-alert]',
   downloadButton: '[data-test-pki-cert-download-button]',
   revokeButton: '[data-test-pki-cert-revoke-button]',
 };
@@ -136,6 +139,7 @@ export const PKI_CONFIG_EDIT = {
   crlToggleInput: (attr: string) => `[data-test-input="${attr}"] input`,
   crlTtlInput: (attr: string) => `[data-test-ttl-value="${attr}"]`,
   crlFieldLabel: (attr: string) => `[data-test-input="${attr}"] label`,
+  crlFieldHelperText: (attr: string) => `[data-test-input="${attr}"] [data-test-ttl-form-subtext]`,
   saveButton: '[data-test-configuration-edit-save]',
   cancelButton: '[data-test-configuration-edit-cancel]',
   validationAlert: '[data-test-configuration-edit-validation-alert]',

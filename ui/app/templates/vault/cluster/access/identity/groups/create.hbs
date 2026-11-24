@@ -1,0 +1,18 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Create {{titleize this.model.identityType}}">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label=(titleize this.model.identityType) route="vault.cluster.access.identity.groups.index")
+        (hash label="Create")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
+<Identity::EditForm @mode="create" @model={{this.model}} @onSave={{action "navAfterSave"}} />

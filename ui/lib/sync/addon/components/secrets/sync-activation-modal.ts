@@ -9,6 +9,7 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
+import type { TaskGenerator } from 'ember-concurrency';
 import type FlagsService from 'vault/services/flags';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
@@ -30,7 +31,7 @@ export default class SyncActivationModal extends Component<Args> {
 
   @task
   @waitFor
-  *onFeatureConfirm() {
+  *onFeatureConfirm(): TaskGenerator<void> {
     // clear any previous errors in the parent component
     this.args.onConfirm();
 

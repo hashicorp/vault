@@ -4,20 +4,9 @@
  */
 
 import { module, test } from 'qunit';
-import {
-  _getPathParam,
-  combineOpenApiAttrs,
-  expandOpenApiProps,
-  getHelpUrlForModel,
-  pathToHelpUrlSegment,
-} from 'vault/utils/openapi-helpers';
-import Model, { attr } from '@ember-data/model';
-import { setupTest } from 'ember-qunit';
-import { camelize } from '@ember/string';
+import { _getPathParam, expandOpenApiProps, pathToHelpUrlSegment } from 'vault/utils/openapi-helpers';
 
-module('Unit | Utility | OpenAPI helper utils', function (hooks) {
-  setupTest(hooks);
-
+module('Unit | Utility | OpenAPI helper utils', function () {
   test(`pathToHelpUrlSegment`, function (assert) {
     [
       { path: '/auth/{username}', result: '/auth/example' },
@@ -41,103 +30,6 @@ module('Unit | Utility | OpenAPI helper utils', function (hooks) {
       { path: undefined, result: false },
     ].forEach((test) => {
       assert.strictEqual(_getPathParam(test.path), test.result, `returns first param for ${test.path}`);
-    });
-  });
-
-  test(`getHelpUrlForModel`, function (assert) {
-    [
-      { modelType: 'kmip/config', result: '/v1/foobar/config?help=1' },
-      { modelType: 'does-not-exist', result: null },
-      { modelType: 4, result: null },
-      { modelType: '', result: null },
-      { modelType: undefined, result: null },
-    ].forEach((test) => {
-      assert.strictEqual(
-        getHelpUrlForModel(test.modelType, 'foobar'),
-        test.result,
-        `returns first param for ${test.path}`
-      );
-    });
-  });
-
-  test('combineOpenApiAttrs should combine attributes correctly', async function (assert) {
-    class FooModel extends Model {
-      @attr('string', {
-        label: 'Foo',
-        subText: 'A form field',
-      })
-      foo;
-      @attr('boolean', {
-        label: 'Bar',
-        subText: 'Maybe a checkbox',
-      })
-      bar;
-      @attr('number', {
-        label: 'Baz',
-        subText: 'A number field',
-      })
-      baz;
-    }
-    this.owner.register('model:foo', FooModel);
-    const myModel = this.owner.lookup('service:store').modelFor('foo');
-    const newProps = {
-      foo: {
-        editType: 'ttl',
-      },
-      baz: {
-        type: 'number',
-        editType: 'slider',
-        label: 'Old label',
-      },
-      foobar: {
-        type: 'string',
-        label: 'Foo-bar',
-      },
-    };
-    const expected = [
-      {
-        name: 'foo',
-        type: 'string',
-        options: {
-          label: 'Foo',
-          subText: 'A form field',
-          editType: 'ttl',
-        },
-      },
-      {
-        name: 'bar',
-        type: 'boolean',
-        options: {
-          label: 'Bar',
-          subText: 'Maybe a checkbox',
-        },
-      },
-      {
-        name: 'baz',
-        type: 'number',
-        options: {
-          label: 'Baz', // uses the value we set on the model
-          editType: 'slider',
-          subText: 'A number field',
-        },
-      },
-      {
-        name: 'foobar',
-        type: 'string',
-        options: {
-          label: 'Foo-bar',
-        },
-      },
-    ];
-    const { attrs, newFields } = combineOpenApiAttrs(myModel.attributes, newProps);
-    assert.deepEqual(newFields, ['foobar'], 'correct newFields added');
-
-    // When combineOpenApiAttrs
-    assert.strictEqual(attrs.length, 4, 'correct number of attributes returned');
-    expected.forEach((exp) => {
-      const name = exp.name;
-      const attr = attrs.find((a) => a.name === name);
-      assert.deepEqual(attr, exp, `${name} combined properly`);
     });
   });
 
@@ -187,23 +79,23 @@ module('Unit | Utility | OpenAPI helper utils', function (hooks) {
     };
     const EXPANDED_PROPS = {
       ttl: {
-        helpText: 'this is a TTL!',
+        subText: 'this is a TTL!',
         editType: 'ttl',
         label: 'TTL',
         fieldGroup: 'default',
       },
-      awesomePeople: {
+      'awesome-people': {
         editType: 'stringArray',
         defaultValue: 'Grace Hopper,Lady Ada',
         fieldGroup: 'default',
       },
-      favoriteIceCream: {
+      'favorite-ice-cream': {
         editType: 'string',
         type: 'string',
         possibleValues: ['vanilla', 'chocolate', 'strawberry'],
         fieldGroup: 'default',
       },
-      defaultValue: {
+      'default-value': {
         editType: 'number',
         type: 'number',
         defaultValue: 300,
@@ -215,11 +107,11 @@ module('Unit | Utility | OpenAPI helper utils', function (hooks) {
         defaultValue: 30,
         fieldGroup: 'default',
       },
-      superSecret: {
+      'super-secret': {
         type: 'string',
         editType: 'string',
         sensitive: true,
-        helpText: 'A really secret thing',
+        subText: 'A really secret thing',
         fieldGroup: 'default',
       },
     };
@@ -262,14 +154,14 @@ module('Unit | Utility | OpenAPI helper utils', function (hooks) {
 
     const STRING_ARRAY_DESCRIPTIONS = {
       token_bound_cidrs: {
-        helpText:
+        subText:
           'List of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.',
       },
       blah_blah: {
-        helpText: 'Comma-separated list of policies',
+        subText: 'Comma-separated list of policies',
       },
       only_display_description: {
-        helpText: 'Hello there, you look nice today',
+        subText: 'Hello there, you look nice today',
       },
     };
     test('it creates objects from OpenAPI schema props', function (assert) {
@@ -284,9 +176,9 @@ module('Unit | Utility | OpenAPI helper utils', function (hooks) {
       const generatedProps = expandOpenApiProps(OPENAPI_DESCRIPTIONS);
       for (const propName in STRING_ARRAY_DESCRIPTIONS) {
         assert.strictEqual(
-          generatedProps[camelize(propName)].helpText,
-          STRING_ARRAY_DESCRIPTIONS[propName].helpText,
-          `correctly updates helpText for ${propName}`
+          generatedProps[propName].subText,
+          STRING_ARRAY_DESCRIPTIONS[propName].subText,
+          `correctly updates subText for ${propName}`
         );
       }
     });

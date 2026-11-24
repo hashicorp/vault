@@ -3,21 +3,24 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { action, set } from '@ember/object';
+import { service } from '@ember/service';
+import { waitFor } from '@ember/test-waiters';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { service } from '@ember/service';
-import { action, set } from '@ember/object';
+import { filterEnginesByMountCategory } from 'core/utils/all-engines-metadata';
 import { task } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { MOUNT_CATEGORIES } from 'vault/utils/plugin-catalog-helpers';
+import { ALL_ENGINES } from 'core/utils/all-engines-metadata';
+import { IdentityApiOidcListKeysListEnum } from '@hashicorp/vault-client-typescript';
+import OidcKeyForm from 'vault/forms/oidc/key';
+import { AUTH_METHOD_CREATED } from 'vault/utils/analytic-events';
 
-import type FlashMessageService from 'vault/services/flash-messages';
-import type Store from '@ember-data/store';
 import type AuthMethodForm from 'vault/forms/auth/method';
-import type CapabilitiesService from 'vault/services/capabilities';
+import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
-import type { ApiError } from '@ember-data/adapter/error';
+import type CapabilitiesService from 'vault/services/capabilities';
+import type FlashMessageService from 'vault/services/flash-messages';
 import type { ValidationMap } from 'vault/vault/app-types';
 
 /**
@@ -32,24 +35,33 @@ import type { ValidationMap } from 'vault/vault/app-types';
  *
  */
 
+interface TypeInfo {
+  type: string;
+  displayName: string;
+  glyph: string;
+}
 interface Args {
   mountModel: AuthMethodForm;
+  mountTypes: TypeInfo[] | undefined;
   onMountSuccess: (type: string, path: string, useEngineRoute: boolean) => void;
 }
 
 const AUTH_MOUNT_CATEGORY = MOUNT_CATEGORIES.AUTH;
 
+type ApiError = string | { [key: string]: unknown; title?: string; message?: string };
+
 export default class MountBackendForm extends Component<Args> {
-  @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly capabilities: CapabilitiesService;
   @service declare readonly api: ApiService;
+  @service declare readonly analytics: AnalyticsService;
 
   // validation related properties
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormAlert: string | null = null;
-
   @tracked errorMessage: string | string[] = '';
+  @tracked oidcKeys: { id: string }[] = [];
+  @tracked oidcKeyForm: OidcKeyForm | null = null;
 
   get mountForm(): AuthMethodForm {
     return this.args.mountModel;
@@ -57,6 +69,16 @@ export default class MountBackendForm extends Component<Args> {
 
   get showEnable(): boolean {
     return !!this.mountForm.type;
+  }
+
+  get title(): string {
+    const typeInfo = (this.args?.mountTypes || []).find(
+      (mountType: TypeInfo) => this.mountForm.type === mountType.type
+    );
+    if (this.showEnable) {
+      return `Enable ${typeInfo?.displayName || this.mountForm.type} Authentication Method`;
+    }
+    return 'Enable an Authentication Method';
   }
 
   constructor(owner: unknown, args: Args) {
@@ -110,6 +132,31 @@ export default class MountBackendForm extends Component<Args> {
     }
   }
 
+  async fetchOidcKeys(type: string) {
+    // an additional form field for identity_token_key is displayed for WIF engines
+    // fetch oidc keys to populate the search select component
+    this.oidcKeys = [];
+    const isWIF = !!ALL_ENGINES.find((engine) => engine.type === type && engine.isWIF);
+    if (isWIF) {
+      try {
+        const { keys } = await this.api.identity.oidcListKeys(IdentityApiOidcListKeysListEnum.TRUE);
+        // SearchSelect requires options to be objects
+        this.oidcKeys = keys?.map((key) => ({ id: key })) || [];
+      } catch (e) {
+        // swallow fetch error and fallback component will be used
+      }
+    }
+  }
+
+  private trackAuthCreationEvent(type: string, successFlag: boolean) {
+    this.analytics.trackEvent(AUTH_METHOD_CREATED, {
+      objectType: 'auth-method',
+      object: type,
+      process: 'UI',
+      successFlag,
+    });
+  }
+
   @task
   @waitFor
   *mountBackend(event: Event) {
@@ -127,11 +174,13 @@ export default class MountBackendForm extends Component<Args> {
 
     try {
       yield this.api.sys.authEnableMethod(path, data);
+      this.trackAuthCreationEvent(type, true);
       this.flashMessages.success(`Successfully mounted the ${mountModel.type} auth method at ${path}.`);
       this.args.onMountSuccess(type, path, false);
     } catch (error) {
+      this.trackAuthCreationEvent(type, false);
       const { status, response, message } = yield this.api.parseError(error);
-      this.onMountError(status, response.errors, message);
+      this.onMountError(status, response?.errors, message);
     }
   }
 
@@ -144,6 +193,7 @@ export default class MountBackendForm extends Component<Args> {
   @action
   setMountType(value: string) {
     this.mountForm.type = value;
+    this.fetchOidcKeys(value);
     this.checkPathChange(value);
   }
 
@@ -152,5 +202,10 @@ export default class MountBackendForm extends Component<Args> {
     // if array, it's coming from the search-select component, otherwise it hit the fallback component and will come in as a string.
     const { config } = this.mountForm.data;
     config.identity_token_key = Array.isArray(value) ? value[0] : value;
+  }
+
+  @action
+  onCreateOidcKey(name: string) {
+    this.oidcKeyForm = new OidcKeyForm({ name }, { isNew: true });
   }
 }

@@ -25,11 +25,8 @@ func TestRecoverFromPanic(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
 	err := client.Sys().Mount("noop", &api.MountInput{

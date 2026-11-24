@@ -6,7 +6,7 @@
 <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
   <div>
     <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
-      <div class="is-flex-between">
+      <Hds::Layout::Flex @justify="space-between" @align="center">
         <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
         {{#if
           (has-capability
@@ -21,13 +21,13 @@
             @color="tertiary"
             @icon="arrow-up-right"
             data-test-check-out
-            {{on "click" (fn (mut this.showCheckOutPrompt) true)}}
+            {{on "click" (fn this.toggleCheckOutPrompt true)}}
           />
         {{/if}}
-      </div>
+      </Hds::Layout::Flex>
 
       <p class="has-text-grey is-size-8">The accounts within this library</p>
-      <hr class="has-background-gray-200" />
+      <Hds::Separator />
 
       <Hds::Table @model={{@statuses}} @columns={{array (hash label="Accounts") (hash label="Status")}}>
         <:body as |Body|>
@@ -75,7 +75,7 @@
 </div>
 
 {{#if this.showCheckOutPrompt}}
-  <Hds::Modal id="account-check-out-modal" @onClose={{fn (mut this.showCheckOutPrompt) false}} as |M|>
+  <Hds::Modal id="account-check-out-modal" @onClose={{fn this.toggleCheckOutPrompt false}} as |M|>
     <M.Header>
       Account Check-out
     </M.Header>

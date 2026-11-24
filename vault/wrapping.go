@@ -12,12 +12,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/armon/go-metrics"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -233,7 +233,7 @@ DONELISTHANDLING:
 			c.logger.Error("failed to create JWT builder", "error", err)
 			return nil, ErrInternalError
 		}
-		ser, err := jwt.Signed(sig).Claims(claims).Claims(priClaims).CompactSerialize()
+		ser, err := jwt.Signed(sig).Claims(claims).Claims(priClaims).Serialize()
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to serialize JWT", "error", err)
@@ -348,8 +348,7 @@ DONELISTHANDLING:
 }
 
 // validateWrappingToken checks whether a token is a wrapping token. The passed
-// in logical request will be updated if the wrapping token was provided within
-// a JWT token.
+// in logical request may be updated.
 func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
@@ -409,14 +408,9 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	// Check for it being a JWT. If it is, and it is valid, we extract the
-	// internal client token from it and use that during lookup. The second
-	// check is a quick check to verify that we don't consider a namespaced
-	// token to be a JWT -- namespaced tokens have two dots too, but Vault
-	// token types (for now at least) begin with a letter representing a type
-	// and then a dot.
+	// internal client token from it and use that during lookup.
 	if IsJWT(token) {
-		// Implement the jose library way
-		parsedJWT, err := jwt.ParseSigned(token)
+		parsedJWT, err := jwt.ParseSigned(token, []jose.SignatureAlgorithm{jose.ES512})
 		if err != nil {
 			return false, fmt.Errorf("wrapping token could not be parsed: %w", err)
 		}

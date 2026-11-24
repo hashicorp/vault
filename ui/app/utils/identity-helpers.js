@@ -1,0 +1,393 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import {
+  IdentityApiEntityListByIdListEnum,
+  IdentityApiGroupListByIdListEnum,
+  IdentityApiAliasListByIdListEnum,
+} from '@hashicorp/vault-client-typescript';
+
+/**
+ * Fetches identity items (entities or groups) from the API
+ * @param {Object} params - Parameters object
+ * @param {string} params.identityType - The type of identity ('entity' or 'group')
+ * @param {Object} params.api - The API service instance
+ * @returns {Promise<Array>} Array of identity items
+ */
+export async function fetchIdentityItems({ identityType, api }) {
+  const methodType = identityType === 'group' ? 'groupListById' : 'entityListById';
+  const listEnum =
+    identityType === 'group' ? IdentityApiGroupListByIdListEnum : IdentityApiEntityListByIdListEnum;
+  const response = await api.identity[methodType](listEnum.TRUE);
+
+  return api.keyInfoToArray(response);
+}
+
+/**
+ * Fetches all aliases for a given identity type (entity or group)
+ * @param {Object} params - Parameters object
+ * @param {string} params.identityType - The type of the parent identity ('entity' or 'group')
+ * @param {Object} params.api - The API service instance
+ * @returns {Promise<Array>} Array of alias items, or an empty array if none exist
+ */
+export async function fetchAliases({ identityType, api }) {
+  const method = identityType === 'group' ? 'groupListAliasesById' : 'entityListAliasesById';
+  try {
+    const response = await api.identity[method](IdentityApiAliasListByIdListEnum.TRUE);
+    return api.keyInfoToArray(response);
+  } catch (err) {
+    const { status } = await api.parseError(err);
+    if (status === 404) return [];
+    throw err;
+  }
+}
+
+/**
+ * Fetches identity items (entities or groups) with their capabilities attached
+ * @param {Object} params - Parameters object
+ * @param {string} params.identityType - The type of identity ('entity' or 'group')
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.capabilities - The capabilities service instance
+ * @returns {Promise<Array>} Array of items with capabilities attached (canDelete, canEdit, canAddAlias, type, alias)
+ */
+export async function fetchIdentityItemsWithCapabilities({ identityType, api, capabilities }) {
+  const items = await fetchIdentityItems({ identityType, api });
+
+  // Build capability paths for all items
+  const capabilityPaths = items.flatMap((item) => [
+    capabilities.pathFor('identityCapabilities', {
+      identityType,
+      id: item.id,
+    }),
+    capabilities.pathFor('groupAlias'),
+  ]);
+
+  // For groups, fetch detailed data (type and alias) in parallel with capabilities
+  const detailsPromise =
+    identityType === 'group'
+      ? Promise.all(items.map((item) => api.identity.groupReadById(item.id)))
+      : Promise.resolve([]);
+
+  // Fetch capabilities and details in parallel
+  const [capabilitiesMap, detailsResponses] = await Promise.all([
+    capabilities.fetch(capabilityPaths),
+    detailsPromise,
+  ]);
+
+  // Create a map of item details for quick lookup
+  const detailsMap = {};
+  if (identityType === 'group') {
+    detailsResponses.forEach((response) => {
+      if (response?.data) {
+        detailsMap[response.data.id] = {
+          type: response.data.type,
+          alias: response.data.alias,
+        };
+      }
+    });
+  }
+
+  // Attach capabilities and details to each item
+  const groupAliasPath = capabilities.pathFor('groupAlias');
+  const groupAliasCapabilities = capabilitiesMap[groupAliasPath];
+
+  const itemsWithCapabilities = items.map((item) => {
+    const itemCapabilityPath = capabilities.pathFor('identityCapabilities', {
+      identityType,
+      id: item.id,
+    });
+    const itemCapabilities = capabilitiesMap[itemCapabilityPath];
+    const details = detailsMap[item.id] || {};
+
+    return {
+      ...item,
+      ...details,
+      canDelete: itemCapabilities?.canDelete || false,
+      canEdit: itemCapabilities?.canUpdate || false,
+      canAddAlias: groupAliasCapabilities?.canCreate || false,
+    };
+  });
+
+  return itemsWithCapabilities;
+}
+
+/**
+ * Attach canEdit/canDelete capabilities to one or more identity aliases
+ * @param {Object} params - Parameters object
+ * @param {Object|Object[]} params.aliases - A single alias object or an array of alias objects
+ * @param {string} params.identityType - The type of the parent identity ('entity' or 'group')
+ * @param {Object} params.capabilities - The capabilities service instance
+ * @returns {Promise<Object|Object[]>} The alias(es) with canEdit/canDelete attached, matching the input shape
+ */
+export async function attachAliasCapabilities({ aliases, identityType, capabilities }) {
+  if (!aliases) return aliases;
+
+  const isSingle = !Array.isArray(aliases);
+  const aliasList = isSingle ? [aliases] : aliases;
+  // Avoid an API call guaranteed to fail: the capabilities-self endpoint requires at least one path.
+  if (!aliasList.length) return aliases;
+
+  const capabilityPaths = aliasList.map((alias) =>
+    capabilities.pathFor('identityCapabilities', { identityType, id: alias.id })
+  );
+  const capabilitiesMap = await capabilities.fetch(capabilityPaths);
+
+  const aliasesWithCapabilities = aliasList.map((alias, index) => {
+    const aliasCapabilities = capabilitiesMap[capabilityPaths[index]];
+
+    return {
+      ...alias,
+      canDelete: aliasCapabilities?.canDelete || false,
+      canEdit: aliasCapabilities?.canUpdate || false,
+    };
+  });
+
+  return isSingle ? aliasesWithCapabilities[0] : aliasesWithCapabilities;
+}
+
+/**
+ * Build request parameters for group operations
+ * @param {Object} data - Form data
+ * @returns {Object} Request parameters for group API calls
+ */
+export function buildGroupRequestParams(data) {
+  return {
+    name: data.name,
+    type: data.type,
+    metadata: data.metadata,
+    policies: data.policies,
+    member_group_ids: data.member_group_ids,
+    member_entity_ids: data.member_entity_ids,
+  };
+}
+
+/**
+ * Build request parameters for entity operations
+ * @param {Object} data - Form data
+ * @returns {Object} Request parameters for entity API calls
+ */
+export function buildEntityRequestParams(data) {
+  return {
+    name: data.name,
+    disabled: data.disabled,
+    policies: data.policies,
+    metadata: data.metadata,
+  };
+}
+
+/**
+ * Build request parameters for entity merge operations
+ * @param {Object} data - Form data
+ * @returns {Object} Request parameters for entity merge API calls
+ */
+export function buildEntityMergeRequestParams(data) {
+  return {
+    from_entity_ids: data.from_entity_ids,
+    to_entity_id: data.to_entity_id,
+    force: data.force,
+  };
+}
+
+/**
+ * Build request parameters for alias operations
+ * @param {Object} data - Form data
+ * @returns {Object} Request parameters for alias API calls
+ */
+export function buildAliasRequestParams(data) {
+  return {
+    canonical_id: data.canonical_id,
+    mount_accessor: data.mount_accessor,
+    name: data.name,
+  };
+}
+
+/**
+ * Handle entity merge operation
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.data - Form data
+ * @returns {Promise<Object>} API response
+ */
+export async function handleEntityMerge({ api, data }) {
+  const params = buildEntityMergeRequestParams(data);
+  return await api.identity.entityMerge(params);
+}
+
+/**
+ * Handle alias creation
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The model object
+ * @param {Object} params.data - Form data
+ * @returns {Promise<Object>} API response
+ */
+export async function handleAliasCreate({ api, model, data }) {
+  const params = buildAliasRequestParams(data);
+  const method = model.identityType === 'group' ? 'groupCreateAlias' : 'entityCreateAlias';
+  return await api.identity[method](params);
+}
+
+/**
+ * Handle alias update
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The model object
+ * @param {Object} params.data - Form data
+ * @returns {Promise<Object>} API response
+ */
+export async function handleAliasUpdate({ api, model, data }) {
+  const params = buildAliasRequestParams(data);
+  const method = model.identityType === 'group' ? 'groupUpdateAliasById' : 'entityUpdateAliasById';
+  return await api.identity[method](data.id, params);
+}
+
+/**
+ * Handle entity/group update
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The model object
+ * @param {Object} params.data - Form data
+ * @returns {Promise<Object>} API response
+ */
+export async function handleUpdate({ api, model, data }) {
+  const isGroup = model.identityType === 'group';
+  const params = isGroup ? buildGroupRequestParams(data) : buildEntityRequestParams(data);
+  const method = isGroup ? 'groupUpdateById' : 'entityUpdateById';
+  return await api.identity[method](model.itemId, params);
+}
+
+/**
+ * Update only the given fields of an entity or group. Vault treats update-by-id as a partial update,
+ * so fields that are not sent keep their stored value (an empty array or object clears just that field).
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The show-route model (expects `id` and `identityType`)
+ * @param {Object} params.fields - The fields to change, e.g. `{ policies: ['default'] }`
+ * @returns {Promise<Object>} API response
+ */
+export async function handlePartialUpdate({ api, model, fields }) {
+  const method = model.identityType === 'group' ? 'groupUpdateById' : 'entityUpdateById';
+  return await api.identity[method](model.id, fields);
+}
+
+/**
+ * Refresh the entity/group show route so the tab re-fetches after a partial update. The refresh is scoped to
+ * this route because a bare `router.refresh()` also re-renders `vault.cluster`, which destroys the flash
+ * message that was just queued.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.router - The router service instance
+ * @param {Object} params.model - The show-route model (expects `identityType`)
+ */
+export function refreshIdentityShow({ router, model }) {
+  const section = model.identityType === 'group' ? 'groups' : 'entities';
+  return router.refresh(`vault.cluster.access.identity.${section}.show`);
+}
+
+/**
+ * Handle entity/group creation
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The model object
+ * @param {Object} params.data - Form data
+ * @returns {Promise<Object>} API response
+ */
+export async function handleCreate({ api, model, data }) {
+  const isGroup = model.identityType === 'group';
+  const method = isGroup ? 'groupCreate' : 'entityCreate';
+  const params = isGroup ? buildGroupRequestParams(data) : buildEntityRequestParams(data);
+  return await api.identity[method](params);
+}
+
+/**
+ * Checks whether a name being submitted to create a new entity or group already exists. Vault
+ * silently updates the existing item instead of erroring, so the UI must catch this before submitting.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.model - The model object (expects `identityType`, `entities`, `groups`)
+ * @param {string} params.mode - The operation mode ('create', 'edit', 'merge')
+ * @param {Object} params.data - Form data
+ * @returns {string|null} A user-facing error message if the name is already taken, otherwise null
+ */
+export function findDuplicateNameError({ model, mode, data }) {
+  const isAlias = model.form.identityFormType === 'alias';
+  if (mode !== 'create' || isAlias) return null;
+
+  const { identityType } = model;
+  const existingItems = identityType === 'group' ? model.groups : model.entities;
+  const name = data?.name?.trim().toLowerCase();
+  if (!name || !existingItems?.length) return null;
+
+  const isDuplicate = existingItems.some((item) => item.name?.toLowerCase() === name);
+  return isDuplicate
+    ? `A ${identityType} named "${data.name}" already exists. Please choose a different name.`
+    : null;
+}
+
+/**
+ * Checks whether an alias name already exists on the same auth mount. Vault silently reassigns the
+ * existing alias to the new entity/group instead of erroring, so the UI must catch this before submitting.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.model - The model object (expects `form.identityFormType`, `aliases`)
+ * @param {string} params.mode - The operation mode ('create', 'edit', 'merge')
+ * @param {Object} params.data - Form data
+ * @returns {string|null} A user-facing error message if the alias already exists, otherwise null
+ */
+export function findDuplicateAliasError({ model, mode, data }) {
+  const isAlias = model.form.identityFormType === 'alias';
+  if (mode !== 'create' || !isAlias) return null;
+
+  const name = data?.name?.trim().toLowerCase();
+  const mountAccessor = data?.mount_accessor;
+  if (!name || !mountAccessor || !model.aliases?.length) return null;
+
+  const isDuplicate = model.aliases.some(
+    (alias) => alias.name?.toLowerCase() === name && alias.mount_accessor === mountAccessor
+  );
+  return isDuplicate
+    ? `An alias named "${data.name}" already exists on this auth mount. Please choose a different name or auth backend.`
+    : null;
+}
+
+/**
+ * Determine which API operation to perform based on mode and model type
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The model object
+ * @param {string} params.mode - The operation mode ('create', 'edit', 'merge')
+ * @param {Object} params.data - Form data
+ * @returns {Promise<Object>} API response
+ */
+export async function performSaveOperation({ api, model, mode, data }) {
+  const isAlias = model.form.identityFormType === 'alias';
+
+  if (mode === 'merge') {
+    return await handleEntityMerge({ api, data });
+  }
+
+  if (isAlias) {
+    return mode === 'create'
+      ? await handleAliasCreate({ api, model, data })
+      : await handleAliasUpdate({ api, model, data });
+  }
+
+  return mode === 'edit'
+    ? await handleUpdate({ api, model, data })
+    : await handleCreate({ api, model, data });
+}
+
+/**
+ * Extract the ID from the save response
+ * @param {Object} params - Parameters object
+ * @param {string} params.mode - The operation mode
+ * @param {Object} params.data - Form data
+ * @param {Object} params.response - API response
+ * @param {Object} params.model - The model object
+ * @returns {string} The extracted ID
+ */
+export function extractSavedId({ mode, data, response, model }) {
+  if (mode === 'merge') {
+    return data?.to_entity_id;
+  }
+  return response?.data?.id || model.itemId;
+}

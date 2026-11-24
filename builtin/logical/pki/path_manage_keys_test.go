@@ -6,6 +6,7 @@ package pki
 import (
 	"context"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
@@ -78,6 +79,81 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 					require.NotEmpty(t, resp.Data["key_id"], "returned an empty key_id field, should never happen")
 					require.Equal(t, keyName, resp.Data["key_name"], "key name was not processed correctly")
 					require.Nil(t, resp.Data["private_key"], "private_key field should not appear in internal generation type.")
+					require.Nil(t, resp.Data["parameter_set"], "parameter_set field should not appear for non-ML-DSA key types")
+				}
+			})
+		}
+	}
+}
+
+func TestPKI_PathManageKeys_GenerateInternalKeys_MLDSA(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	tests := []struct {
+		name           string
+		keyType        string
+		parameterSets  []string
+		wantLogicalErr bool
+		entOnly        bool
+	}{
+		{"ml-dsa", "ml-dsa", []string{"", "ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false, true},
+		{"error-ml-dsa", "ml-dsa", []string{"14"}, true, false},
+	}
+	for _, tt := range tests {
+		for _, paramSet := range tt.parameterSets {
+			subtestName := fmt.Sprintf("%s-%s", tt.name, paramSet)
+			if paramSet != "" {
+				subtestName = fmt.Sprintf("%s-ps%s", subtestName, paramSet)
+			}
+			t.Run(subtestName, func(t *testing.T) {
+				t.Parallel()
+
+				data := make(map[string]interface{})
+				if tt.keyType != "" {
+					data["key_type"] = tt.keyType
+				}
+				if paramSet != "" {
+					data["parameter_set"] = paramSet
+				}
+				keyName := genUuid() + "-" + tt.keyType + "-key-name"
+				data["key_name"] = keyName
+				resp, err := b.HandleRequest(context.Background(), &logical.Request{
+					Operation:  logical.UpdateOperation,
+					Path:       "keys/generate/internal",
+					Storage:    s,
+					Data:       data,
+					MountPoint: "pki/",
+				})
+				require.NoError(t, err,
+					"unexpected transport error generating key with values key_type:%s parameter_set:%s key_name:%s",
+					tt.keyType, paramSet, keyName)
+				require.NotNil(t, resp,
+					"got nil response generating key with values key_type:%s parameter_set:%s key_name:%s",
+					tt.keyType, paramSet, keyName)
+				if tt.wantLogicalErr {
+					require.True(t, resp.IsError(), "expected logical error but the request passed:\n%#v", resp)
+				} else {
+					require.False(t, resp.IsError(),
+						"got logical error response when not expecting one, "+
+							"generating key with values key_type:%s parameter_set:%s key_name:%s\n%s",
+						tt.keyType, paramSet, keyName, resp.Error())
+
+					require.Equal(t, tt.keyType, resp.Data["key_type"], "key_type field contained an invalid type")
+					require.NotEmpty(t, resp.Data["key_id"], "returned an empty key_id field, should never happen")
+					require.Equal(t, keyName, resp.Data["key_name"], "key name was not processed correctly")
+					require.Nil(t, resp.Data["private_key"], "private_key field should not appear in internal generation type")
+
+					// For ML-DSA keys, verify that the parameter set echoed in the response
+					// matches what was requested (or the default "44" when none was sent).
+					if tt.keyType == "ml-dsa" {
+						expectedParamSet := paramSet
+						if expectedParamSet == "" {
+							expectedParamSet = "ml-dsa-44"
+						}
+						require.Equal(t, certutil.ParameterSet(expectedParamSet), resp.Data["parameter_set"],
+							"parameter_set field in response did not match the requested value")
+					}
 				}
 			})
 		}
@@ -119,13 +195,66 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 	require.Equal(t, elliptic.P224(), key.Curve, "got unexpected curve value in returned private key")
 }
 
+func TestPKI_PathManageKeys_GenerateExportedKeys_MLDSA(t *testing.T) {
+	t.Parallel()
+	// We tested a lot of the logic above within the internal test, so just make sure we honor the exported contract
+	b, s := CreateBackendWithStorage(t)
+
+	parameterSets := []string{certutil.MLDSA44, certutil.MLDSA65, certutil.MLDSA87}
+
+	for _, params := range parameterSets {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "keys/generate/exported",
+			Storage:   s,
+			Data: map[string]interface{}{
+				"key_type":      "ml-dsa",
+				"parameter_set": params,
+			},
+			MountPoint: "pki/",
+		})
+		schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("keys/generate/exported"), logical.UpdateOperation), resp, true)
+
+		require.NoError(t, err, "Failed generating exported key")
+		require.NotNil(t, resp, "Got nil response generating exported key")
+		require.Equal(t, "ml-dsa", resp.Data["key_type"], "key_type field contained an invalid type")
+		require.NotEmpty(t, resp.Data["key_id"], "returned an empty key_id field, should never happen")
+		require.Empty(t, resp.Data["key_name"], "key name should have been empty but was not")
+		require.NotEmpty(t, resp.Data["private_key"], "private_key field should not be empty in exported generation type.")
+
+		// Make sure we can decode our private key as expected
+		keyData := resp.Data["private_key"].(string)
+		block, rest := pem.Decode([]byte(keyData))
+		require.Empty(t, rest, "should not have had any trailing data")
+		require.NotEmpty(t, block, "failed decoding pem block")
+
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		require.NoError(t, err, "failed parsing pem block as ec private key")
+
+		mldsaKey, ok := key.(*mldsa.PrivateKey)
+		require.True(t, ok, "got unexpected key type %T", key)
+
+		var expectedParams mldsa.Parameters
+		switch params {
+		case certutil.MLDSA44:
+			expectedParams = mldsa.MLDSA44()
+		case certutil.MLDSA65:
+			expectedParams = mldsa.MLDSA65()
+		case certutil.MLDSA87:
+			expectedParams = mldsa.MLDSA87()
+		}
+
+		require.Equal(t, expectedParams, mldsaKey.PublicKey().Parameters(), "got unexpected parameters in returned private key")
+	}
+}
+
 func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
 
-	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
+	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader, "")
 	require.NoError(t, err, "failed generating an ec key bundle")
-	bundle2, err := certutil.CreateKeyBundle("rsa", 2048, rand.Reader)
+	bundle2, err := certutil.CreateKeyBundle("rsa", 2048, rand.Reader, "")
 	require.NoError(t, err, "failed generating an rsa key bundle")
 	pem1, err := bundle1.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ec key to pem")
@@ -195,7 +324,7 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	require.Equal(t, keyId1, keyIdReimport, "the re-imported key did not return the same key id")
 
 	// Make sure we can not reuse an existing name across different keys.
-	bundle3, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
+	bundle3, err := certutil.CreateKeyBundle("ec", 224, rand.Reader, "")
 	require.NoError(t, err, "failed generating an ec key bundle")
 	pem3, err := bundle3.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting rsa key to pem")
@@ -253,6 +382,53 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	keyId2Reimport := resp.Data["key_id"].(issuing.KeyID)
 
 	require.NotEqual(t, keyId2, keyId2Reimport, "re-importing key 2 did not generate a new key id")
+}
+
+func TestPKI_PathManageKeys_ImportKeyBundle_MLDSA(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	mldsa44Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-44")
+	require.NoError(t, err, "failed generating an ml-dsa key bundle")
+	mldsa44Pem, err := mldsa44Bundle.ToPrivateKeyPemString()
+	require.NoError(t, err, "failed converting ml-dsa key to pem")
+
+	mldsa65Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-65")
+	require.NoError(t, err, "failed generating an ml-dsa key bundle")
+	mldsa65Pem, err := mldsa65Bundle.ToPrivateKeyPemString()
+	require.NoError(t, err, "failed converting ml-dsa key to pem")
+
+	mldsa87Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-87")
+	require.NoError(t, err, "failed generating an ml-dsa key bundle")
+	mldsa87Pem, err := mldsa87Bundle.ToPrivateKeyPemString()
+	require.NoError(t, err, "failed converting ml-dsa key to pem")
+
+	testCases := map[string]string{
+		"mldsa-44": mldsa44Pem,
+		"mldsa-65": mldsa65Pem,
+		"mldsa-87": mldsa87Pem,
+	}
+
+	for name, keyPem := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resp, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "keys/import",
+				Storage:   s,
+				Data: map[string]interface{}{
+					"key_name":   name,
+					"pem_bundle": keyPem,
+				},
+				MountPoint: "pki/",
+			})
+			require.NoError(t, err, "Failed importing ml-dsa key")
+			require.NotNil(t, resp, "Got nil response importing ml-dsa key")
+			require.False(t, resp.IsError(), "received an error response: %v", resp.Error())
+			require.NotEmpty(t, resp.Data["key_id"], "key id for ml-dsa import response was empty")
+			require.Equal(t, name, resp.Data["key_name"], "key_name was incorrect for ml-dsa key")
+			require.Equal(t, certutil.MLDSAPrivateKey, resp.Data["key_type"])
+		})
+	}
 }
 
 func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
@@ -367,6 +543,160 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 	require.True(t, resp.IsError(), "expected an error updating key with a bad name, but did not get one.")
 }
 
+// TestPKI_PathManageKeys_UpdateKeyDetails_DuplicateNameRejected verifies all key rename scenarios: duplicate
+// duplicate names rejected, self-rename allowed(no error thrown but no change made either), rename to its own UUID allowed(happens in TestObservationsPKIKeys), clear name, freed name claimable, other key's UUID rejected.
+func TestPKI_PathManageKeys_UpdateKeyDetails_DuplicateNameRejected(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "keys/generate/internal",
+		Storage:    s,
+		Data:       map[string]interface{}{"key_type": "ec", "key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "Failed generating first key")
+	require.NotNil(t, resp, "Got nil response generating first key")
+	require.False(t, resp.IsError(), "resp contained errors generating first key: %#v", resp.Error())
+	keyId1 := resp.Data["key_id"].(issuing.KeyID)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "keys/generate/internal",
+		Storage:    s,
+		Data:       map[string]interface{}{"key_type": "ec", "key_name": "key-two"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "Failed generating second key")
+	require.NotNil(t, resp, "Got nil response generating second key")
+	require.False(t, resp.IsError(), "resp contained errors generating second key: %#v", resp.Error())
+	keyId2 := resp.Data["key_id"].(issuing.KeyID)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed updating second key with duplicate name")
+	require.NotNil(t, resp, "Got nil response updating second key with duplicate name")
+	require.True(t, resp.IsError(), "expected an error updating key with a duplicate name, but did not get one.")
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId2.String()), logical.ReadOperation), resp, true)
+	require.NoError(t, err, "failed reading second key after rejected rename")
+	require.NotNil(t, resp, "Got nil response reading second key")
+	require.False(t, resp.IsError(), "unexpected error reading second key: %#v", resp.Error())
+	keyName := resp.Data["key_name"].(string)
+	require.Equal(t, "key-two", keyName, "second key name should be unchanged after rejected rename, expected: key-two was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed updating first key with its own current name")
+	require.NotNil(t, resp, "Got nil response updating first key with its own current name")
+	require.False(t, resp.IsError(), "unexpected error updating key with its own current name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, "key-one", keyName, "failed to update key_name expected: key-one was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": keyId1.String()},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed updating first key with its own UUID as name")
+	require.NotNil(t, resp, "Got nil response updating first key with its own UUID as name")
+	require.False(t, resp.IsError(), "unexpected error updating key with its own UUID as name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, keyId1.String(), keyName, "expected key name to be own UUID, was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed restoring first key name")
+	require.False(t, resp.IsError(), "unexpected error restoring first key name: %#v", resp.Error())
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": ""},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed clearing first key name")
+	require.NotNil(t, resp, "Got nil response clearing first key name")
+	require.False(t, resp.IsError(), "unexpected error clearing key name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, "", keyName, "expected key name to be empty after clear, was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed restoring first key name after clear")
+	require.False(t, resp.IsError(), "unexpected error restoring first key name after clear: %#v", resp.Error())
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one-renamed"},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed renaming first key to free up key-one")
+	require.NotNil(t, resp, "Got nil response renaming first key")
+	require.False(t, resp.IsError(), "unexpected error renaming first key: %#v", resp.Error())
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId2.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed updating second key with now-free name")
+	require.NotNil(t, resp, "Got nil response updating second key with now-free name")
+	require.False(t, resp.IsError(), "unexpected error updating second key with now-free name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, "key-one", keyName, "failed to update key_name expected: key-one was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": keyId1.String()},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed updating second key with different key UUID as name")
+	require.NotNil(t, resp, "Got nil response updating second key with different key UUID as name")
+	require.True(t, resp.IsError(), "expected an error updating key with a different key's UUID as name, but did not get one.")
+}
+
 func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
@@ -405,9 +735,9 @@ func TestPKI_PathManageKeys_ImportKeyRejectsMultipleKeys(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
 
-	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
+	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader, "")
 	require.NoError(t, err, "failed generating an ec key bundle")
-	bundle2, err := certutil.CreateKeyBundle("rsa", 2048, rand.Reader)
+	bundle2, err := certutil.CreateKeyBundle("rsa", 2048, rand.Reader, "")
 	require.NoError(t, err, "failed generating an rsa key bundle")
 	pem1, err := bundle1.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ec key to pem")

@@ -44,5 +44,8 @@
     </InfoTableRow>
   </div>
 {{else}}
-  <EmptyState @title="No config yet" @message="Performance Mount Filtering is not configured for this secondary" />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No config yet" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="Performance Mount Filtering is not configured for this secondary." data-test-empty-state-message />
+  </Hds::ApplicationState>
 {{/if}}

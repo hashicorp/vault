@@ -10,22 +10,48 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
+
+// awsutilMockIAM adapts the limited awsutil/v2 mock IAM client (which only
+// implements GetUser, ListAccessKeys, CreateAccessKey, and DeleteAccessKey) to
+// the backend's broader iamAPI interface. The embedded iamAPI supplies stubs
+// for the methods the static-role and rotation tests do not exercise; calling
+// any of those would panic.
+type awsutilMockIAM struct {
+	iamAPI
+	client awsutil.IAMClient
+}
+
+func (m awsutilMockIAM) GetUser(ctx context.Context, in *iam.GetUserInput, optFns ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+	return m.client.GetUser(ctx, in, optFns...)
+}
+
+func (m awsutilMockIAM) ListAccessKeys(ctx context.Context, in *iam.ListAccessKeysInput, optFns ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
+	return m.client.ListAccessKeys(ctx, in, optFns...)
+}
+
+func (m awsutilMockIAM) CreateAccessKey(ctx context.Context, in *iam.CreateAccessKeyInput, optFns ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
+	return m.client.CreateAccessKey(ctx, in, optFns...)
+}
+
+func (m awsutilMockIAM) DeleteAccessKey(ctx context.Context, in *iam.DeleteAccessKeyInput, optFns ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
+	return m.client.DeleteAccessKey(ctx, in, optFns...)
+}
 
 // TestStaticRolesValidation verifies that valid requests pass validation and that invalid requests fail validation.
 // This includes the user already existing in IAM roles, and the rotation period being sufficiently long.
 func TestStaticRolesValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	bgCTX := context.Background() // for brevity
+	bgCTX := t.Context() // for brevity
 
 	cases := []struct {
 		name        string
@@ -36,17 +62,17 @@ func TestStaticRolesValidation(t *testing.T) {
 		{
 			name: "all good",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iamtypes.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
 						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
 						UserName:        aws.String("jane-doe"),
 					},
 				}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
-					IsTruncated:       aws.Bool(false),
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{},
+					IsTruncated:       false,
 				}),
 			},
 			requestData: map[string]interface{}{
@@ -70,7 +96,7 @@ func TestStaticRolesValidation(t *testing.T) {
 		{
 			name: "user mismatch",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("ms-impostor"), UserId: aws.String("fake-id")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iamtypes.User{UserName: aws.String("ms-impostor"), UserId: aws.String("fake-id")}}),
 			},
 			requestData: map[string]interface{}{
 				"name":            "test",
@@ -82,7 +108,7 @@ func TestStaticRolesValidation(t *testing.T) {
 		{
 			name: "bad rotation period",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iamtypes.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
 			},
 			requestData: map[string]interface{}{
 				"name":            "test",
@@ -101,8 +127,8 @@ func TestStaticRolesValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Used to override the real IAM client creation to return the mocked client
-			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
-				return miam, nil
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
+				return awsutilMockIAM{client: miam}, nil
 			}
 			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
@@ -126,7 +152,7 @@ func TestStaticRolesValidation(t *testing.T) {
 // TestStaticRolesWrite validates that we can write a new entry for a new static role, and that we correctly
 // do not write if the request is invalid in some way.
 func TestStaticRolesWrite(t *testing.T) {
-	bgCTX := context.Background()
+	bgCTX := t.Context()
 
 	cases := []struct {
 		name string
@@ -148,13 +174,13 @@ func TestStaticRolesWrite(t *testing.T) {
 		{
 			name: "happy path",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iamtypes.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
-					IsTruncated:       aws.Bool(false),
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{},
+					IsTruncated:       false,
 				}),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
 						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
 						UserName:        aws.String("jane-doe"),
@@ -184,13 +210,13 @@ func TestStaticRolesWrite(t *testing.T) {
 		{
 			name: "update existing user, decreased rotation duration",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iamtypes.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
-					IsTruncated:       aws.Bool(false),
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{},
+					IsTruncated:       false,
 				}),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
 						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
 						UserName:        aws.String("john-doe"),
@@ -208,13 +234,13 @@ func TestStaticRolesWrite(t *testing.T) {
 		{
 			name: "update existing user, increased rotation duration",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iamtypes.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
-					IsTruncated:       aws.Bool(false),
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{},
+					IsTruncated:       false,
 				}),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
 						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
 						UserName:        aws.String("john-doe"),
@@ -248,8 +274,8 @@ func TestStaticRolesWrite(t *testing.T) {
 
 			b := Backend(config)
 			// Used to override the real IAM client creation to return the mocked client
-			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
-				return miam, nil
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
+				return awsutilMockIAM{client: miam}, nil
 			}
 			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
@@ -359,7 +385,7 @@ func TestStaticRolesWrite(t *testing.T) {
 func TestStaticRoleRead(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	bgCTX := context.Background()
+	bgCTX := t.Context()
 
 	// test cases are run against an inmem storage holding a role called "test" attached to an IAM user called "jane-doe"
 	cases := []struct {
@@ -426,7 +452,7 @@ func TestStaticRoleRead(t *testing.T) {
 // TestStaticRoleDelete validates that we correctly remove a role on a delete request, and that we correctly do not
 // remove anything if a role does not exist with that name.
 func TestStaticRoleDelete(t *testing.T) {
-	bgCTX := context.Background()
+	bgCTX := t.Context()
 
 	// test cases are run against an inmem storage holding a role called "test" attached to an IAM user called "jane-doe"
 	cases := []struct {
@@ -464,8 +490,8 @@ func TestStaticRoleDelete(t *testing.T) {
 
 			b := Backend(config)
 			// Used to override the real IAM client creation to return the mocked client
-			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
-				return miam, nil
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
+				return awsutilMockIAM{client: miam}, nil
 			}
 
 			// put in storage
@@ -538,7 +564,7 @@ func TestStaticRoleDelete(t *testing.T) {
 func TestStaticRolesList(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	bgCTX := context.Background()
+	bgCTX := t.Context()
 
 	staticRoles := []staticRoleEntry{}
 	for i := 1; i <= 10; i++ {

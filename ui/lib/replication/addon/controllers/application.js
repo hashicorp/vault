@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,7 +7,7 @@ import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { service } from '@ember/service';
 import Controller from '@ember/controller';
-import { resolve } from 'rsvp';
+import PathFilterConfigForm from 'vault/forms/path-filter-config';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import { buildWaiter } from '@ember/test-waiters';
 
@@ -18,10 +18,6 @@ const DEFAULTS = {
   errors: [],
   primary_api_addr: null,
   primary_cluster_addr: null,
-  filterConfig: {
-    mode: null,
-    paths: [],
-  },
 };
 const waiter = buildWaiter('replication-actions');
 
@@ -29,37 +25,69 @@ const waiter = buildWaiter('replication-actions');
  * @type Class
  */
 export default Controller.extend(structuredClone(DEFAULTS), {
+  api: service(),
+  filterConfig: null,
   isModalActive: false,
   isTokenCopied: false,
   expirationDate: null,
   router: service('app-router'),
-  store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
   secondaryToRevoke: null,
 
-  submitError(e) {
-    if (e.errors) {
-      this.set('errors', e.errors);
+  init() {
+    this._super(...arguments);
+    this.set('filterConfig', new PathFilterConfigForm({}, { isNew: true }));
+  },
+
+  async submitError(e) {
+    const { status, message, response } = await this.api.parseError(e);
+    if (response?.errors) {
+      this.set('errors', response.errors);
+    } else if (status) {
+      // errors returned as { data: { error } } or without a body are summarized in the message
+      this.set('errors', [message]);
     } else {
       throw e;
     }
   },
 
-  saveFilterConfig() {
-    const config = this.filterConfig;
-    const id = this.id;
-    config.id = id;
-    // if there is no mode, then they don't want to filter, so we don't save a filter config
-    if (!config.mode) {
-      return resolve();
+  replicationRequest(action, replicationMode, clusterMode, data) {
+    const { sys } = this.api;
+    if (clusterMode === 'primary') {
+      if (action === 'secondary-token') {
+        return replicationMode === 'dr'
+          ? sys.systemWriteReplicationDrPrimarySecondaryToken(data)
+          : sys.systemWriteReplicationPerformancePrimarySecondaryToken(data);
+      }
+      if (action === 'revoke-secondary') {
+        return replicationMode === 'dr'
+          ? sys.systemWriteReplicationDrPrimaryRevokeSecondary(data)
+          : sys.systemWriteReplicationPerformancePrimaryRevokeSecondary(data);
+      }
     }
-    const configRecord = this.store.createRecord('path-filter-config', config);
-    return configRecord.save().catch((e) => this.submitError(e));
+    throw new Error(`Unsupported replication action: ${replicationMode}/${clusterMode}/${action}`);
+  },
+
+  async saveFilterConfig() {
+    const { data } = this.filterConfig.toJSON();
+    if (!data.mode) {
+      return;
+    }
+    try {
+      await this.api.sys.systemWriteReplicationPerformancePrimaryPathsFilterId(this.id, data);
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      // Keep filter errors on the form without discarding an already-created secondary token.
+      this.set('errors', [message]);
+    }
   },
 
   reset() {
-    this.setProperties(structuredClone(DEFAULTS));
+    this.setProperties({
+      ...structuredClone(DEFAULTS),
+      filterConfig: new PathFilterConfigForm({}, { isNew: true }),
+    });
   },
 
   submitSuccess(resp, action) {
@@ -91,7 +119,7 @@ export default Controller.extend(structuredClone(DEFAULTS), {
     return;
   },
 
-  submitHandler(action, clusterMode, data, event) {
+  async submitHandler(action, clusterMode, data, event) {
     const waiterToken = waiter.beginAsync();
     const replicationMode = this.replicationMode;
     if (event && event.preventDefault) {
@@ -111,21 +139,19 @@ export default Controller.extend(structuredClone(DEFAULTS), {
       }, {});
     }
 
-    return this.store
-      .adapterFor('cluster')
-      .replicationAction(action, replicationMode, clusterMode, data)
-      .then(
-        (resp) => {
-          return this.saveFilterConfig().then(() => {
-            return this.submitSuccess(resp, action, clusterMode);
-          });
-        },
-        (...args) => this.submitError(...args)
-      )
-      .finally(() => {
-        this.set('secondaryToRevoke', null);
-        waiter.endAsync(waiterToken);
-      });
+    try {
+      let resp;
+      try {
+        resp = await this.replicationRequest(action, replicationMode, clusterMode, data);
+      } catch (e) {
+        return await this.submitError(e);
+      }
+      await this.saveFilterConfig();
+      return this.submitSuccess(resp, action, clusterMode);
+    } finally {
+      this.set('secondaryToRevoke', null);
+      waiter.endAsync(waiterToken);
+    }
   },
 
   actions: {

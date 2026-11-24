@@ -4,7 +4,7 @@
 }}
 
 <div class="box is-fullwidth is-bottomless is-sideless">
-  <MessageError @model={{this.model}} />
+  <MessageError @errorMessage={{this.errorMessage}} />
   <div class="control-group-header {{if this.isSuccess 'is-success'}}">
     <p>
       <Icon @name={{if this.isSuccess "check-circle-fill" "lock-fill"}} />
@@ -27,10 +27,10 @@
   {{else}}
     <div class="control-group">
       <div data-test-requestor-text>
-        {{#if this.model.requestEntity.canRead}}
+        {{#if (get @canReadEntity this.model.requestEntity.id)}}
           <LinkTo
-            @route="vault.cluster.access.identity.show"
-            @models={{array "entities" this.model.requestEntity.id "details"}}
+            @route="vault.cluster.access.identity.entities.show"
+            @models={{array this.model.requestEntity.id "details"}}
           >
             {{this.requestorName}}
           </LinkTo>
@@ -76,8 +76,8 @@
           </span>
           Already approved by
           {{#each this.model.authorizations as |authorization index|}}
-            {{~#if authorization.canRead~}}
-              <LinkTo @route="vault.cluster.access.identity.show" @models={{array "entities" authorization.id "details"}}>
+            {{~#if (get @canReadEntity authorization.id)~}}
+              <LinkTo @route="vault.cluster.access.identity.entities.show" @models={{array authorization.id "details"}}>
                 {{authorization.name}}
               </LinkTo>
             {{~else~}}

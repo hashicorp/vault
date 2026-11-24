@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 )
 
@@ -36,11 +37,13 @@ func TestRecovery(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, &conf, &opts)
-		cluster.Start()
-		defer cluster.Cleanup()
 
 		client := cluster.Cores[0].Client
 		rootToken = client.Token()
+		_, err = client.Logical().Write("sys/mounts/secret", map[string]interface{}{
+			"type": "kv",
+		})
+		require.NoError(t, err)
 		fooVal := map[string]interface{}{"bar": 1.0}
 		_, err = client.Logical().Write("secret/foo", fooVal)
 		if err != nil {
@@ -84,8 +87,6 @@ func TestRecovery(t *testing.T) {
 		}
 		cluster := vault.NewTestCluster(t, &conf, &opts)
 		cluster.BarrierKeys = keys
-		cluster.Start()
-		defer cluster.Cleanup()
 
 		client := cluster.Cores[0].Client
 		recoveryToken := testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRecovery)
@@ -122,8 +123,6 @@ func TestRecovery(t *testing.T) {
 		}
 		cluster := vault.NewTestCluster(t, &conf, &opts)
 		cluster.BarrierKeys = keys
-		cluster.Start()
-		defer cluster.Cleanup()
 
 		testhelpers.EnsureCoresUnsealed(t, cluster)
 		vault.TestWaitActive(t, cluster.Cores[0].Core)

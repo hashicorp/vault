@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+// TestJobManager_NewJobManager verifies that NewJobManager creates a job manager
+// with the correct number of workers, defaulting to 1 if an invalid count is provided.
 func TestJobManager_NewJobManager(t *testing.T) {
 	testCases := []struct {
 		name               string
@@ -69,6 +71,8 @@ func TestJobManager_NewJobManager(t *testing.T) {
 	}
 }
 
+// TestJobManager_Start verifies that the job manager can be started and processes
+// jobs correctly across multiple worker queues.
 func TestJobManager_Start(t *testing.T) {
 	numJobs := 10
 	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"), nil)
@@ -105,6 +109,8 @@ func TestJobManager_Start(t *testing.T) {
 	}
 }
 
+// TestJobManager_StartAndPause verifies that the job manager can be paused and
+// resumed, with jobs being processed only when not paused.
 func TestJobManager_StartAndPause(t *testing.T) {
 	numJobs := 10
 	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"), nil)
@@ -170,6 +176,8 @@ func TestJobManager_StartAndPause(t *testing.T) {
 	}
 }
 
+// TestJobManager_Stop verifies that stopping the job manager prevents new jobs
+// from being processed and cleans up resources properly.
 func TestJobManager_Stop(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"), nil)
 
@@ -191,6 +199,8 @@ func TestJobManager_Stop(t *testing.T) {
 	}
 }
 
+// TestFairshare_StopMultiple verifies that calling Stop multiple times on a job
+// manager is safe and doesn't cause panics or errors.
 func TestFairshare_StopMultiple(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"), nil)
 
@@ -237,6 +247,8 @@ func TestFairshare_StopMultiple(t *testing.T) {
 	}
 }
 
+// TestJobManager_AddJob verifies that jobs can be added to the job manager and
+// are properly queued for execution in their respective worker queues.
 func TestJobManager_AddJob(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -289,6 +301,8 @@ func TestJobManager_AddJob(t *testing.T) {
 	}
 }
 
+// TestJobManager_GetPendingJobCount verifies that the pending job count is
+// accurately tracked as jobs are added and processed.
 func TestJobManager_GetPendingJobCount(t *testing.T) {
 	numJobs := 15
 	j := NewJobManager("test-job-mgr", 3, newTestLogger("jobmanager-test"), nil)
@@ -304,6 +318,8 @@ func TestJobManager_GetPendingJobCount(t *testing.T) {
 	}
 }
 
+// TestJobManager_GetWorkQueueLengths verifies that the work queue lengths are
+// correctly reported for each worker queue in the job manager.
 func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 3, newTestLogger("jobmanager-test"), nil)
 
@@ -327,6 +343,8 @@ func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 	}
 }
 
+// TestJobManager_removeLastQueueAccessed verifies that the internal tracking of
+// the last accessed queue is properly maintained and updated.
 func TestJobManager_removeLastQueueAccessed(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 1, newTestLogger("jobmanager-test"), nil)
 
@@ -402,6 +420,8 @@ func TestJobManager_removeLastQueueAccessed(t *testing.T) {
 	}
 }
 
+// TestJobManager_EndToEnd verifies the complete lifecycle of the job manager
+// including starting, adding jobs, processing, and stopping.
 func TestJobManager_EndToEnd(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -505,6 +525,8 @@ func TestJobManager_EndToEnd(t *testing.T) {
 	}
 }
 
+// TestFairshare_StressTest verifies that the job manager handles high load
+// correctly by processing many concurrent jobs across multiple queues.
 func TestFairshare_StressTest(t *testing.T) {
 	var wg sync.WaitGroup
 	ex := func(name string) error {
@@ -548,6 +570,8 @@ func TestFairshare_StressTest(t *testing.T) {
 	}
 }
 
+// TestFairshare_nilLoggerJobManager verifies that the job manager can operate
+// correctly even when initialized with a nil logger.
 func TestFairshare_nilLoggerJobManager(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 1, nil, nil)
 	if j.logger == nil {
@@ -555,6 +579,8 @@ func TestFairshare_nilLoggerJobManager(t *testing.T) {
 	}
 }
 
+// TestFairshare_getNextQueue verifies that the internal queue selection algorithm
+// properly distributes work across available queues in a fair manner.
 func TestFairshare_getNextQueue(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 18, nil, nil)
 
@@ -605,6 +631,8 @@ func TestFairshare_getNextQueue(t *testing.T) {
 	}
 }
 
+// TestJobManager_pruneEmptyQueues verifies that empty worker queues are properly
+// removed from the job manager to prevent resource leaks.
 func TestJobManager_pruneEmptyQueues(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 18, nil, nil)
 
@@ -663,6 +691,8 @@ func TestJobManager_pruneEmptyQueues(t *testing.T) {
 	}
 }
 
+// TestFairshare_WorkerCount_IncrementAndDecrement verifies that the worker count
+// can be dynamically adjusted and that workers are properly added or removed.
 func TestFairshare_WorkerCount_IncrementAndDecrement(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 18, nil, nil)
 
@@ -705,6 +735,8 @@ func TestFairshare_WorkerCount_IncrementAndDecrement(t *testing.T) {
 	}
 }
 
+// TestFairshare_queueWorkersSaturated verifies that the job manager correctly
+// detects when all workers in a queue are busy processing jobs.
 func TestFairshare_queueWorkersSaturated(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 20, nil, nil)
 
@@ -748,6 +780,8 @@ func TestFairshare_queueWorkersSaturated(t *testing.T) {
 	}
 }
 
+// TestJobManager_GetWorkerCounts_RaceCondition verifies that getting worker counts
+// is thread-safe and doesn't cause race conditions under concurrent access.
 func TestJobManager_GetWorkerCounts_RaceCondition(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 20, nil, nil)
 	var wg sync.WaitGroup

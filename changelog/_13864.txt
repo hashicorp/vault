@@ -1,0 +1,3 @@
+```release-note:security
+core/identity: reject wildcards in rendered identity templates
+```

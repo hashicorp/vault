@@ -42,6 +42,13 @@ var cacheExceptionsPaths = []string{
 	// to ensure the changes to the autoloaded license on the active node
 	// is observed on the perfStandby nodes
 	"core/autoloaded-license",
+
+	// Secure Hub enrollment data is ignored by replication, so writes on the
+	// active node produce no WAL entry so invalidation of cache/memory
+	// does not happen on follower nodes.
+	// Follower nodes should be forced to read data from storage, not from the
+	// the cache.
+	"secure-hub/",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the

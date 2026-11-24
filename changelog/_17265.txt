@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix `vault operator migrate -start` command when migrating to raft integrated storage. 
+```

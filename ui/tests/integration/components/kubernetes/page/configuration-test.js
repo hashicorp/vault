@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
@@ -49,14 +49,15 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     };
   });
 
-  test('it should render tab page header, config cta and mount config', async function (assert) {
+  test('it should render tab page header', async function (assert) {
     await this.renderComponent();
-    assert.dom('.title svg').hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
-    assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
+    assert
+      .dom(GENERAL.icon('kubernetes-color'))
+      .hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('kubernetes-test configuration', 'Mount path renders in title');
     assert.dom(SES.configure).doesNotExist('Toolbar action does not render when engine is not configured');
-    assert.dom(GENERAL.emptyStateTitle).hasText('Kubernetes not configured');
-    assert.dom(GENERAL.emptyStateActions).hasText('Configure Kubernetes');
-    assert.dom('[data-test-mount-config]').exists('Mount config renders');
   });
 
   test('it should render message for inferred configuration', async function (assert) {
@@ -81,7 +82,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
 
     assert.dom('[data-test-row-label="Certificate"]').exists('Certificate label renders');
     assert.dom('[data-test-certificate-card]').exists('Certificate card component renders');
-    assert.dom('[data-test-certificate-icon]').hasClass('hds-icon-certificate', 'Certificate icon renders');
+    assert.dom(GENERAL.icon('certificate')).exists();
     assert.dom(GENERAL.copyButton).exists('Certificate copy button renders');
     assert.dom('[data-test-certificate-label]').hasText('PEM Format', 'Certificate label renders');
     assert

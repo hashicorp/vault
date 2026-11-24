@@ -48,6 +48,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const maxVersion = '101';
       await mountSecrets.visit();
       await click(GENERAL.cardContainer('kv'));
+      await click(GENERAL.button('next'));
       await fillIn(GENERAL.inputByAttr('path'), enginePath);
 
       await fillIn(GENERAL.inputByAttr('kv_config.max_versions'), maxVersion);
@@ -58,7 +59,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       await click(GENERAL.submitButton);
 
-      await click(PAGE.secretTab('Configuration'));
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
+      await click(GENERAL.tabLink('plugin-settings'));
 
       assert
         .dom(PAGE.infoRowValue('Maximum number of versions'))
@@ -140,8 +143,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       // mount version 1 engine
       await mountSecrets.visit();
       await click(GENERAL.cardContainer('kv'));
+      await click(GENERAL.button('next'));
       await fillIn(GENERAL.inputByAttr('path'), this.backend);
-      await click(GENERAL.button('Method Options'));
+      await click(GENERAL.button('View additional settings'));
       await mountSecrets.version(1);
       await click(GENERAL.submitButton);
     });
@@ -359,7 +363,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
           'vault.cluster.secrets.backend.show',
           `${path}: show page renders correctly`
         );
-        assert.dom('h1.title').hasText(`${path}/2`, 'shows correct page title');
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${path}/2`, 'shows correct page title');
       }
     });
 

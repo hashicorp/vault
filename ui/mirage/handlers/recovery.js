@@ -71,6 +71,14 @@ export default function (server) {
           local: false,
           path: 'kv/',
         },
+        'kv-v2/': {
+          type: 'kv',
+          local: false,
+          path: 'kv-v2/',
+          options: {
+            version: 2,
+          },
+        },
         'database/': {
           type: 'database',
           local: true,
@@ -129,6 +137,17 @@ export default function (server) {
     };
   });
 
+  server.get('/kv-v2/data/:path', () => {
+    return {
+      data: {
+        data: {
+          foo: 'bar',
+          baz: 'qux',
+        },
+      },
+    };
+  });
+
   server.get('/database/static-roles/:path', () => {
     return {
       data: {
@@ -148,6 +167,10 @@ export default function (server) {
   }));
 
   server.post('/kv/:path', () => ({
+    data: {},
+  }));
+
+  server.post('/kv-v2/data/:path', () => ({
     data: {},
   }));
 

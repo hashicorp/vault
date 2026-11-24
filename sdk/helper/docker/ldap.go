@@ -1,0 +1,119 @@
+// Copyright IBM Corp. 2016, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package docker
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"runtime"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/hashicorp/cap/ldap"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+)
+
+// safeBuffer is a thread-safe bytes.Buffer wrapper
+type safeBuffer struct {
+	buf bytes.Buffer
+	mu  sync.Mutex
+}
+
+func (s *safeBuffer) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
+// DefaultLDAPVersion is the default version of the container to pull.
+// NOTE: This is currently pinned to a sha instead of "master", see: https://github.com/rroemhild/docker-test-openldap/issues/62
+const DefaultLDAPVersion = "sha256:f4d9c5ba97f9662e9aea082b4aa89233994ca6e232abc1952d5d90da7e16b0eb"
+
+func PrepareLDAPTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
+	// note: this image isn't supported on arm64 architecture in CI.
+	// but if you're running on Apple Silicon, feel free to comment out the code below locally.
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
+	logsWriter := &safeBuffer{}
+
+	runner, err := NewServiceRunner(RunOptions{
+		ImageRepo:     "ghcr.io/rroemhild/docker-test-openldap",
+		ImageTag:      version,
+		ContainerName: "ldap",
+		Ports:         []string{"10389/tcp"},
+		// Env:        []string{"LDAP_DEBUG_LEVEL=384"},
+		LogStderr: logsWriter,
+		LogStdout: logsWriter,
+	})
+	if err != nil {
+		t.Fatalf("could not start local LDAP docker container: %s", err)
+	}
+
+	cfg = new(ldaputil.ConfigEntry)
+	cfg.UserDN = "ou=people,dc=planetexpress,dc=com"
+	cfg.UserAttr = "cn"
+	cfg.UserFilter = "({{.UserAttr}}={{.Username}})"
+	cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
+	cfg.BindPassword = "GoodNewsEveryone"
+	cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"
+	cfg.GroupAttr = "cn"
+	cfg.RequestTimeout = 60
+	cfg.MaximumPageSize = 1000
+
+	var started bool
+
+	ctx, _ := context.WithTimeout(t.Context(), 1*time.Minute)
+	for i := 0; i < 3; i++ {
+		svc, err := runner.StartService(ctx, func(ctx context.Context, host string, port int) (ServiceConfig, error) {
+			connURL := fmt.Sprintf("ldap://%s:%d", host, port)
+			cfg.Url = connURL
+
+			client, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg))
+			if err != nil {
+				return nil, err
+			}
+
+			defer client.Close(ctx)
+
+			_, err = client.Authenticate(ctx, "Philip J. Fry", "fry")
+			if err != nil {
+				return nil, err
+			}
+
+			return NewServiceURLParse(connURL)
+		})
+		if err != nil {
+			t.Logf("could not start local LDAP docker container: %s", err)
+			t.Log("Docker container logs: ")
+			t.Log(logsWriter.String())
+			continue
+		}
+
+		started = true
+		cleanup = func() {
+			if t.Failed() {
+				t.Log(logsWriter.String())
+			}
+			svc.Cleanup()
+		}
+		break
+	}
+
+	if !started {
+		t.FailNow()
+	}
+
+	return cleanup, cfg
+}

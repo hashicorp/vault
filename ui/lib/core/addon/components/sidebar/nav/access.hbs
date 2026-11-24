@@ -1,0 +1,129 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppSideNav::Portal
+  @ariaLabel="Access Navigation Links"
+  tabindex="0"
+  role="region"
+  data-test-sidebar-nav-panel="Access control"
+  as |Nav|
+>
+  <Nav.BackLink
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  {{! Policies }}
+  {{#if (or (has-permission "policies") (has-permission "access"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Access control">Access control</Nav.Title>
+  {{/if}}
+  {{#if (has-permission "policies")}}
+    {{#if (has-permission "policies" routeParams="acl")}}
+      <Nav.Link
+        id="nav-acl-policies"
+        @route="vault.cluster.policies.acl"
+        @current-when={{if
+          (eq this.currentPolicyType "acl")
+          "vault.cluster.policies.acl vault.cluster.policy"
+          "vault.cluster.policies.acl"
+        }}
+        @text="ACL policies"
+        data-test-sidebar-nav-link="ACL policies"
+        {{on "click" (fn this.trackNavClick this.navEvents.aclPolicies "nav-acl-policies" "ACL policies")}}
+      />
+    {{/if}}
+    {{#if (and (has-feature "Sentinel") (has-permission "policies" routeParams="rgp"))}}
+      <Nav.Link
+        @route="vault.cluster.policies.rgp"
+        @current-when={{if
+          (eq this.currentPolicyType "rgp")
+          "vault.cluster.policies.rgp vault.cluster.policy"
+          "vault.cluster.policies.rgp"
+        }}
+        @text="Role governing policies"
+        data-test-sidebar-nav-link="Role governing policies"
+      />
+    {{/if}}
+    {{#if (and (has-feature "Sentinel") (has-permission "policies" routeParams="egp"))}}
+      <Nav.Link
+        @route="vault.cluster.policies.egp"
+        @current-when={{if
+          (eq this.currentPolicyType "egp")
+          "vault.cluster.policies.egp vault.cluster.policy"
+          "vault.cluster.policies.egp"
+        }}
+        @text="Endpoint governing policies"
+        data-test-sidebar-nav-link="Endpoint governing policies"
+      />
+    {{/if}}
+  {{/if}}
+
+  {{#if (has-permission "access")}}
+    {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
+      <Nav.Link
+        @route="vault.cluster.access.control-groups"
+        @current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"
+        @text="Approval workflow"
+        data-test-sidebar-nav-link="Approval workflow"
+      />
+    {{/if}}
+    {{#if (has-permission "access" routeParams="leases")}}
+      <Nav.Link
+        @route="vault.cluster.access.leases"
+        @current-when="vault.cluster.access.leases.list-root vault.cluster.access.leases.list vault.cluster.access.leases.show"
+        @text="Leases"
+        data-test-sidebar-nav-link="Leases"
+      />
+    {{/if}}
+
+    {{! Authentication }}
+    {{#if (has-permission "access" routeParams=(array "methods" "mfa" "oidc"))}}
+      <Nav.Title data-test-sidebar-nav-heading="Authentication">Authentication</Nav.Title>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="methods")}}
+      <Nav.Link
+        id="nav-auth-methods"
+        @route="vault.cluster.access.methods"
+        @current-when="vault.cluster.access.methods vault.cluster.access.method vault.cluster.settings.auth"
+        @text="Authentication methods"
+        data-test-sidebar-nav-link="Authentication methods"
+        {{on "click" (fn this.trackNavClick this.navEvents.authMethods "nav-auth-methods" "Authentication methods")}}
+      />
+    {{/if}}
+    {{#if (has-permission "access" routeParams="mfa")}}
+      <Nav.Link
+        @route="vault.cluster.access.mfa.methods"
+        @current-when="vault.cluster.access.mfa.methods vault.cluster.access.mfa.enforcements vault.cluster.access.mfa.index"
+        @text="Multi-factor authentication"
+        data-test-sidebar-nav-link="Multi-factor authentication"
+      />
+    {{/if}}
+    {{#if (has-permission "access" routeParams="oidc")}}
+      <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC provider" data-test-sidebar-nav-link="OIDC provider" />
+    {{/if}}
+
+    {{#if (has-permission "access" routeParams=(array "namespaces" "groups" "entities"))}}
+      <Nav.Title data-test-sidebar-nav-heading="Organization">Organization</Nav.Title>
+    {{/if}}
+    {{#if (and (has-feature "Namespaces") (has-permission "access" routeParams="namespaces"))}}
+      <Nav.Link
+        id="nav-namespaces"
+        @route="vault.cluster.access.namespaces"
+        @text="Namespaces"
+        data-test-sidebar-nav-link="Namespaces"
+        {{on "click" (fn this.trackNavClick this.navEvents.namespaces "nav-namespaces" "Namespaces")}}
+      />
+    {{/if}}
+    {{#if (has-permission "access" routeParams="groups")}}
+      <Nav.Link @route="vault.cluster.access.identity.groups" @text="Groups" data-test-sidebar-nav-link="Groups" />
+    {{/if}}
+    {{#if (has-permission "access" routeParams="entities")}}
+      <Nav.Link @route="vault.cluster.access.identity.entities" @text="Entities" data-test-sidebar-nav-link="Entities" />
+    {{/if}}
+  {{/if}}
+</Hds::AppSideNav::Portal>

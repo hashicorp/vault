@@ -4,7 +4,6 @@
 package aws
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -21,7 +20,7 @@ func TestStaticCredsRead(t *testing.T) {
 	// setup
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	bgCTX := context.Background() // for brevity later
+	bgCTX := t.Context() // for brevity later
 
 	// insert a cred to get
 	creds := &awsCredentials{

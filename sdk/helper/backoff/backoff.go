@@ -4,6 +4,7 @@
 package backoff
 
 import (
+	"context"
 	"errors"
 	"math"
 	"math/rand"
@@ -75,6 +76,19 @@ func (b *Backoff) NextSleep() error {
 	}
 	time.Sleep(next)
 	return nil
+}
+
+func (b *Backoff) NextSleepCtx(ctx context.Context) error {
+	next, err := b.Next()
+	if err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(next):
+		return nil
+	}
 }
 
 // Reset resets the state to the initial backoff amount and 0 retries.

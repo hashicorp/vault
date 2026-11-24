@@ -13,7 +13,7 @@ import (
 	"time"
 
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
@@ -46,9 +46,6 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 	}
 
 	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
-
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	core := cluster.Cores[0].Core
 
@@ -181,9 +178,6 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 
 	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
 
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	core := cluster.Cores[0].Core
 	TestWaitActive(t, core)
 
@@ -295,9 +289,6 @@ func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
 	}
 
 	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
-
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	core := cluster.Cores[0].Core
 	TestWaitActive(t, core)

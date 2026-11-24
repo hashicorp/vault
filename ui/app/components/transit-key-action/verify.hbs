@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -47,7 +47,7 @@
       />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
-    {{#if (and @key.supportsSigning @key.derived (not @hmac))}}
+    {{#if (and @key.supports_signing @key.derived (not @hmac))}}
       <div class="field">
         <label for="context" class="is-label">
           Context
@@ -62,7 +62,7 @@
         </div>
       </div>
     {{/if}}
-    {{#if @key.supportsSigning}}
+    {{#if @key.supports_signing}}
       <div class="columns is-5">
         <div class="column is-one-third">
           <div class="field">

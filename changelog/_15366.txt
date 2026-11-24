@@ -1,0 +1,7 @@
+```release-note:security
+core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+```
+
+```release-note:change
+core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+```

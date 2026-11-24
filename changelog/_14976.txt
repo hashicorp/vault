@@ -1,0 +1,3 @@
+```release-note:security
+secrets/spiffe (enterprise): Ensure template values are properly escaped.
+```

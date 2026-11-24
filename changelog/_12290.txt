@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Buffer the POST body on binary paths to allow re-reading on non-logical forwarding attempts. Addresses an issue for SCEP, EST and CMPv2 certificate issuances with slow replication of entities
+```

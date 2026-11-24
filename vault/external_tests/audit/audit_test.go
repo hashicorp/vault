@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package audit
@@ -9,15 +9,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/userpass"
+	vaultaudit "github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -25,6 +33,493 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
+
+// TestAuditPrefixConfiguration_File verifies that file audit devices reject
+// prefixes when disabled
+func TestAuditPrefixConfiguration_File(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		allowAuditLogPrefixing bool
+		prefix                 string
+		errContains            string
+	}{
+		{
+			name:                   "prefix forbidden but included",
+			allowAuditLogPrefixing: false,
+			prefix:                 "MY-TEST-PREFIX",
+			errContains:            "audit prefixing is not enabled",
+		},
+		{
+			name:                   "prefix allowed but contains newline",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\n",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains carriage return",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\r",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains null byte",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\x00",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode line separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2028",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode paragraph separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2029",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed and not included",
+			allowAuditLogPrefixing: true,
+		},
+		{
+			name:                   "prefix forbidden and not included",
+			allowAuditLogPrefixing: false,
+		},
+		{
+			name:                   "prefix allowed and included",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// start cluster with audit log prefixing enabled or disabled
+			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+				AllowAuditLogPrefixing: tc.allowAuditLogPrefixing,
+			})
+			client := cluster.Cores[0].Client
+
+			auditLogPath := filepath.Join(t.TempDir(), "audit.log")
+			require.NoError(t, os.WriteFile(auditLogPath, nil, 0o600))
+
+			options := map[string]any{
+				"file_path": auditLogPath,
+			}
+			if tc.prefix != "" {
+				options["prefix"] = tc.prefix
+			}
+
+			_, err := client.Logical().Write("sys/audit/test", map[string]any{
+				"type":    vaultaudit.TypeFile,
+				"options": options,
+			})
+
+			if tc.errContains != "" {
+				// validate request fails and no probe writes sneak through
+				require.ErrorContains(t, err, tc.errContains)
+				devices, listErr := client.Sys().ListAudit()
+				require.NoError(t, listErr)
+				require.NotContains(t, devices, "test/")
+				auditFile, readErr := os.ReadFile(auditLogPath)
+				require.NoError(t, readErr)
+				require.Empty(t, auditFile)
+				return
+			}
+
+			// validate request succeeds and file contains prefix
+			require.NoError(t, err)
+			auditFile, readErr := os.ReadFile(auditLogPath)
+			require.NoError(t, readErr)
+			require.NotEmpty(t, auditFile)
+			if tc.prefix != "" {
+				require.True(t, strings.HasPrefix(string(auditFile), tc.prefix))
+			}
+		})
+	}
+}
+
+// TestAuditPrefixConfiguration_PersistedPrefix verifies that a persisted audit
+// device remains available without its prefix when prefixing is later disabled.
+func TestAuditPrefixConfiguration_PersistedPrefix(t *testing.T) {
+	t.Parallel()
+
+	// start vault with prefixing allowed
+	config := &vault.CoreConfig{AllowAuditLogPrefixing: true}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	}
+	cluster := vault.NewTestCluster(t, config, opts)
+	client := cluster.Cores[0].Client
+
+	auditLogPath := filepath.Join(t.TempDir(), "audit.log")
+	prefix := "MY-TEST-PREFIX"
+	require.NoError(t, client.Sys().EnableAuditWithOptions("test", &api.EnableAuditOptions{
+		Type: vaultaudit.TypeFile,
+		Options: map[string]string{
+			"file_path":             auditLogPath,
+			vaultaudit.OptionPrefix: prefix,
+		},
+	}))
+
+	// confirm audit log entries contain MY-TEST-PREFIX
+	auditFile, err := os.ReadFile(auditLogPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, auditFile)
+	require.True(t, strings.HasPrefix(string(auditFile), prefix))
+
+	// stop vault, delete audit log contents
+	cluster.StopCore(t, 0)
+	require.NoError(t, os.Truncate(auditLogPath, 0))
+
+	// start vault with prefixing prohibited
+	cluster.Cores[0].CoreConfig.AllowAuditLogPrefixing = false
+	cluster.StartCore(t, 0, opts, false)
+	cluster.UnsealCores(t)
+
+	client = cluster.Cores[0].Client
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Contains(t, devices, "test/")
+
+	auditFile, err = os.ReadFile(auditLogPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, auditFile)
+	require.False(t, strings.HasPrefix(string(auditFile), prefix))
+}
+
+// TestAuditPrefixConfiguration_PersistedInvalidControlPrefix verifies that a
+// persisted audit device with a control-character prefix is still loaded, with
+// the invalid prefix ignored at setup time.
+func TestAuditPrefixConfiguration_PersistedInvalidControlPrefix(t *testing.T) {
+	t.Parallel()
+
+	config := &vault.CoreConfig{
+		AllowAuditLogPrefixing: true,
+		EnableRaw:              true,
+	}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	}
+	cluster := vault.NewTestCluster(t, config, opts)
+	client := cluster.Cores[0].Client
+
+	auditLogPath := filepath.Join(t.TempDir(), "audit.log")
+	require.NoError(t, client.Sys().EnableAuditWithOptions("test", &api.EnableAuditOptions{
+		Type: vaultaudit.TypeFile,
+		Options: map[string]string{
+			"file_path":             auditLogPath,
+			vaultaudit.OptionPrefix: "MY-TEST-PREFIX",
+		},
+	}))
+
+	const invalidPrefix = "MY-TEST-PREFIX\n"
+	rawAuditTable, err := client.Logical().Read("sys/raw/core/audit")
+	require.NoError(t, err)
+	require.NotNil(t, rawAuditTable)
+
+	rawValue, ok := rawAuditTable.Data["value"].(string)
+	require.True(t, ok)
+
+	var auditTable vault.MountTable
+	require.NoError(t, json.Unmarshal([]byte(rawValue), &auditTable))
+
+	var updated bool
+	for _, entry := range auditTable.Entries {
+		if entry.Path != "test/" {
+			continue
+		}
+		entry.Options[vaultaudit.OptionPrefix] = invalidPrefix
+		updated = true
+	}
+	require.True(t, updated)
+
+	updatedAuditTable, err := json.Marshal(auditTable)
+	require.NoError(t, err)
+	_, err = client.Logical().Write("sys/raw/core/audit", map[string]any{
+		"value": string(updatedAuditTable),
+	})
+	require.NoError(t, err)
+
+	cluster.StopCore(t, 0)
+	require.NoError(t, os.Truncate(auditLogPath, 0))
+
+	cluster.StartCore(t, 0, opts, false)
+	cluster.UnsealCores(t)
+	client = cluster.Cores[0].Client
+
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Contains(t, devices, "test/")
+
+	_, err = client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+
+	auditFile, err := os.ReadFile(auditLogPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, auditFile)
+	require.False(t, strings.HasPrefix(string(auditFile), "MY-TEST-PREFIX"))
+}
+
+// TestAuditPrefixConfiguration_Socket verifies that socket audit devices reject
+// prefixes when disabled
+func TestAuditPrefixConfiguration_Socket(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		allowAuditLogPrefixing bool
+		prefix                 string
+		errContains            string
+	}{
+		{
+			name:                   "prefix forbidden but included",
+			allowAuditLogPrefixing: false,
+			prefix:                 "MY-TEST-PREFIX",
+			errContains:            "audit prefixing is not enabled",
+		},
+		{
+			name:                   "prefix allowed but contains newline",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\n",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains carriage return",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\r",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains null byte",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\x00",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode line separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2028",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode paragraph separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2029",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed and not included",
+			allowAuditLogPrefixing: true,
+		},
+		{
+			name:                   "prefix forbidden and not included",
+			allowAuditLogPrefixing: false,
+		},
+		{
+			name:                   "prefix allowed and included",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX",
+		},
+	}
+
+	socketTimeout := 2 * time.Second
+	if !testhelpers.IsLocalOrRegressionTests() {
+		socketTimeout = 5 * time.Second
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// configure vault cluster with audit prefixing enabled or disabled
+			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+				AllowAuditLogPrefixing: tc.allowAuditLogPrefixing,
+			})
+			client := cluster.Cores[0].Client
+
+			// start tcp listener
+			socketListener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1")})
+			require.NoError(t, err)
+			require.NoError(t, socketListener.SetDeadline(time.Now().Add(socketTimeout)))
+			t.Cleanup(func() {
+				require.NoError(t, socketListener.Close())
+			})
+
+			socketCh := make(chan net.Conn, 1)
+			socketErrCh := make(chan error, 1)
+			// separate go routine that waits for vault to make connection with tcp listener
+			go func() {
+				conn, acceptErr := socketListener.Accept()
+				if acceptErr != nil {
+					socketErrCh <- acceptErr
+					return
+				}
+				socketCh <- conn
+			}()
+
+			options := map[string]any{
+				"address":     socketListener.Addr().String(),
+				"socket_type": "tcp",
+			}
+			if tc.prefix != "" {
+				options["prefix"] = tc.prefix
+			}
+
+			_, err = client.Logical().Write("sys/audit/test", map[string]any{
+				"type":    vaultaudit.TypeSocket,
+				"options": options,
+			})
+
+			if tc.errContains != "" {
+				// validate request fails and socket receives no probes
+				require.ErrorContains(t, err, tc.errContains)
+				devices, listErr := client.Sys().ListAudit()
+				require.NoError(t, listErr)
+				require.NotContains(t, devices, "test/")
+				select {
+				case conn := <-socketCh:
+					require.NoError(t, conn.Close())
+					require.FailNow(t, "rejected socket audit device received a test probe")
+				case acceptErr := <-socketErrCh:
+					// a timeout confirms that vault did not connect to the audit device
+					var netErr net.Error
+					require.ErrorAs(t, acceptErr, &netErr)
+					require.True(t, netErr.Timeout())
+				}
+				return
+			}
+
+			// validate request succeeds and socket includes prefix
+			require.NoError(t, err)
+			select {
+			case conn := <-socketCh:
+				t.Cleanup(func() {
+					require.NoError(t, conn.Close())
+				})
+				// add timeout so that ReadFull doesn't wait indefinitely
+				require.NoError(t, conn.SetReadDeadline(time.Now().Add(socketTimeout)))
+				if tc.prefix != "" {
+					socketPrefix := make([]byte, len(tc.prefix))
+					_, readErr := io.ReadFull(conn, socketPrefix)
+					require.NoError(t, readErr)
+					require.Equal(t, tc.prefix, string(socketPrefix))
+					return
+				}
+
+				auditEntry := make([]byte, 1)
+				_, readErr := io.ReadFull(conn, auditEntry)
+				require.NoError(t, readErr)
+			case acceptErr := <-socketErrCh:
+				require.NoError(t, acceptErr)
+			}
+		})
+	}
+}
+
+// TestAuditPrefixConfiguration_Syslog verifies that syslog audit devices reject
+// prefixes when disabled
+func TestAuditPrefixConfiguration_Syslog(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		allowAuditLogPrefixing bool
+		prefix                 string
+		errContains            string
+	}{
+		{
+			name:                   "prefix forbidden but included",
+			allowAuditLogPrefixing: false,
+			prefix:                 "MY-TEST-PREFIX",
+			errContains:            "audit prefixing is not enabled",
+		},
+		{
+			name:                   "prefix allowed but contains newline",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\n",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains carriage return",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\r",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains null byte",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\x00",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode line separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2028",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode paragraph separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2029",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed and not included",
+			allowAuditLogPrefixing: true,
+		},
+		{
+			name:                   "prefix forbidden and not included",
+			allowAuditLogPrefixing: false,
+		},
+		{
+			name:                   "prefix allowed and included",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// configure vault cluster with audit prefixing allowed or disallowed
+			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+				AllowAuditLogPrefixing: tc.allowAuditLogPrefixing,
+			})
+			client := cluster.Cores[0].Client
+
+			options := map[string]any{
+				"facility": "LOCAL0",
+			}
+			if tc.prefix != "" {
+				options["prefix"] = tc.prefix
+			}
+
+			_, err := client.Logical().Write("sys/audit/test", map[string]any{
+				"type":    vaultaudit.TypeSyslog,
+				"options": options,
+			})
+
+			if tc.errContains != "" {
+				require.ErrorContains(t, err, tc.errContains)
+				devices, listErr := client.Sys().ListAudit()
+				require.NoError(t, listErr)
+				require.NotContains(t, devices, "test/")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
 
 // TestAudit_HMACFields verifies that all appropriate fields in audit
 // request and response entries are HMACed properly. The fields in question are:
@@ -356,7 +851,6 @@ func TestAudit_BeforePostUnseal(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNode(t, cluster)
 	err := cluster.Cores[0].Client.Sys().Mount("test", &api.MountInput{
@@ -368,4 +862,235 @@ func TestAudit_BeforePostUnseal(t *testing.T) {
 	cluster.UnsealCores(t)
 	testhelpers.WaitForActiveNode(t, cluster)
 	require.False(t, didPanic.Load())
+}
+
+// TestAudit_PluginDirectorySecurityCheck_WithPathOrFilePath validates that the
+// audit security check still rejects a real audit target inside the plugin
+// directory and that Windows-style drive-root paths passed via either 'path' or
+// 'file_path' do not trigger false plugin-directory rejections
+func TestAudit_PluginDirectorySecurityCheck_WithPathOrFilePath(t *testing.T) {
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+
+	tests := []struct {
+		name        string
+		pluginDir   string
+		auditPath   string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "inside plugin dir is rejected",
+			pluginDir:   pluginDir,
+			auditPath:   pluginDir + "/audit.log",
+			wantErr:     true,
+			errContains: "audit file target may not be in the plugin directory",
+		},
+		{
+			name:      "windows: outside plugin dir is allowed",
+			pluginDir: `C:\Vault\plugins`,
+			auditPath: `C:\Vault\logs\audit.log`,
+		},
+		{
+			name:      "windows: drive root is allowed",
+			pluginDir: `C:\Vault\plugins`,
+			auditPath: `C:\audit.log`,
+		},
+		{
+			name:      "windows: alternate drive outside plugin dir is allowed",
+			pluginDir: `D:\Vault\plugins`,
+			auditPath: `D:\Vault\logs\audit.log`,
+		},
+		{
+			name:      "windows: alternate drive root is allowed",
+			pluginDir: `D:\Vault\plugins`,
+			auditPath: `D:\audit.log`,
+		},
+		{
+			name:      "windows: cross-volume audit path is allowed",
+			pluginDir: `D:\Vault\plugins`,
+			auditPath: `E:\audit.log`,
+		},
+	}
+
+	for _, optionKey := range []string{"path", "file_path"} {
+		for _, tc := range tests {
+			t.Run(fmt.Sprintf("%s/%s", optionKey, tc.name), func(t *testing.T) {
+				cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+					PluginDirectory: tc.pluginDir,
+				})
+				client := cluster.Cores[0].Client
+
+				deviceData := map[string]any{
+					"type":        "file",
+					"description": "test audit device",
+					"local":       false,
+					"options": map[string]any{
+						optionKey: tc.auditPath,
+					},
+				}
+
+				_, err := client.Logical().Write("sys/audit/test", deviceData)
+				if tc.wantErr {
+					require.Error(t, err)
+					require.ErrorContains(t, err, tc.errContains)
+					return
+				}
+
+				if err != nil {
+					require.NotContains(t, err.Error(), "audit file target may not be in the plugin directory")
+				}
+			})
+		}
+	}
+}
+
+// TestAudit_PluginDirectoryGuard verifies that the API rejects a whitespace
+// padded path to a symlinked plugin directory and clears executable modes.
+func TestAudit_PluginDirectoryGuard(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	pluginDir := filepath.Join(root, "plugins")
+	require.NoError(t, os.Mkdir(pluginDir, 0o700))
+	pluginLink := filepath.Join(root, "plugin-link")
+	if err := os.Symlink(pluginDir, pluginLink); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("symlinks unavailable: %v", err)
+		}
+		require.NoError(t, err)
+	}
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{PluginDirectory: pluginLink})
+	client := cluster.Cores[0].Client
+
+	for _, option := range []string{"file_path", "path"} {
+		forbidden := filepath.Join(pluginDir, option)
+		err := client.Sys().EnableAuditWithOptions(option, &api.EnableAuditOptions{
+			Type: vaultaudit.TypeFile,
+			Options: map[string]string{
+				option: " " + forbidden + " ",
+				"mode": "0755",
+			},
+		})
+		require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
+		require.NoFileExists(t, forbidden)
+	}
+
+	auditLink := filepath.Join(root, "audit-link")
+	require.NoError(t, os.Symlink(pluginDir, auditLink))
+	symlinkedTarget := filepath.Join(auditLink, "symlinked.log")
+	err := client.Sys().EnableAuditWithOptions("symlinked", &api.EnableAuditOptions{
+		Type:    vaultaudit.TypeFile,
+		Options: map[string]string{"file_path": symlinkedTarget},
+	})
+	require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
+	require.NoFileExists(t, symlinkedTarget)
+
+	require.NoError(t, os.Mkdir(filepath.Join(pluginDir, "sub"), 0o700))
+	subLink := filepath.Join(root, "sub-link")
+	require.NoError(t, os.Symlink(filepath.Join(pluginDir, "sub"), subLink))
+	sep := string(filepath.Separator)
+	err = client.Sys().EnableAuditWithOptions("dotdot", &api.EnableAuditOptions{
+		Type:    vaultaudit.TypeFile,
+		Options: map[string]string{"file_path": subLink + sep + ".." + sep + "dotdot.log"},
+	})
+	require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
+	require.NoFileExists(t, filepath.Join(pluginDir, "dotdot.log"))
+
+	linkedTarget := filepath.Join(pluginDir, "linked.log")
+	fileLink := filepath.Join(root, "file-link.log")
+	require.NoError(t, os.Symlink(linkedTarget, fileLink))
+	err = client.Sys().EnableAuditWithOptions("filelink", &api.EnableAuditOptions{
+		Type:    vaultaudit.TypeFile,
+		Options: map[string]string{"file_path": fileLink},
+	})
+	require.Error(t, err)
+	require.NoFileExists(t, linkedTarget)
+
+	safe := filepath.Join(root, "logs", "audit.log")
+	forbidden := filepath.Join(pluginDir, "ignored.log")
+	require.NoError(t, client.Sys().EnableAuditWithOptions("safe", &api.EnableAuditOptions{
+		Type: vaultaudit.TypeFile,
+		Options: map[string]string{
+			"file_path": safe,
+			"path":      forbidden,
+			"mode":      "0755",
+		},
+	}))
+	require.NoFileExists(t, forbidden)
+	info, err := os.Stat(safe)
+	require.NoError(t, err)
+	if runtime.GOOS != "windows" {
+		require.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+	}
+}
+
+// TestAudit_PersistedPluginDirectoryGuard verifies that neither standby
+// preflight nor active startup opens an unsafe persisted file audit device.
+func TestAudit_PersistedPluginDirectoryGuard(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	pluginDir := filepath.Join(root, "plugins")
+	require.NoError(t, os.Mkdir(pluginDir, 0o700))
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
+		PluginDirectory: pluginDir,
+		EnableRaw:       true,
+	}, &vault.TestClusterOptions{NumCores: 2}, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	client := cluster.Cores[0].Client
+	cluster.StopCore(t, 1)
+
+	healthy := filepath.Join(root, "healthy.log")
+	for name, path := range map[string]string{
+		"healthy": healthy,
+		"unsafe":  filepath.Join(root, "before-restart.log"),
+	} {
+		require.NoError(t, client.Sys().EnableAuditWithOptions(name, &api.EnableAuditOptions{
+			Type:    vaultaudit.TypeFile,
+			Options: map[string]string{"file_path": path},
+		}))
+	}
+
+	raw, err := client.Logical().Read("sys/raw/core/audit")
+	require.NoError(t, err)
+	require.NotNil(t, raw)
+	rawValue, ok := raw.Data["value"].(string)
+	require.True(t, ok)
+	var table vault.MountTable
+	require.NoError(t, json.Unmarshal([]byte(rawValue), &table))
+
+	forbidden := filepath.Join(pluginDir, "forbidden")
+	var updated bool
+	for _, entry := range table.Entries {
+		if entry.Path == "unsafe/" {
+			entry.Options["file_path"] = " " + forbidden + " "
+			entry.Options["mode"] = "0755"
+			updated = true
+		}
+	}
+	require.True(t, updated)
+	encoded, err := json.Marshal(table)
+	require.NoError(t, err)
+	_, err = client.Logical().Write("sys/raw/core/audit", map[string]any{"value": string(encoded)})
+	require.NoError(t, err)
+
+	cluster.StartCore(t, 1, opts, false)
+	cluster.UnsealCore(t, cluster.Cores[1])
+	require.NoFileExists(t, forbidden)
+
+	cluster.StopCore(t, 1)
+	cluster.StopCore(t, 0)
+	cluster.StartCore(t, 0, opts, false)
+	cluster.StartCore(t, 1, opts, false)
+	cluster.UnsealCores(t)
+	require.NoFileExists(t, forbidden)
+
+	before, err := os.Stat(healthy)
+	require.NoError(t, err)
+	_, err = cluster.Cores[0].Client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+	content, err := os.ReadFile(healthy)
+	require.NoError(t, err)
+	require.Greater(t, int64(len(content)), before.Size())
+	require.Contains(t, string(content[before.Size():]), `"path":"auth/token/lookup-self"`)
 }

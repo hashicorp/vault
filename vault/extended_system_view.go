@@ -7,13 +7,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var _ logical.ExtendedSystemView = (*extendedSystemViewImpl)(nil)
+var (
+	_ logical.ExtendedSystemView         = (*extendedSystemViewImpl)(nil)
+	_ logical.CertificateCountSystemView = (*extendedSystemViewImpl)(nil)
+)
 
 type extendedSystemViewImpl struct {
 	dynamicSystemView
@@ -33,7 +36,17 @@ func (e extendedSystemViewImpl) ForwardGenericRequest(ctx context.Context, req *
 		ctx = namespace.ContextWithNamespace(ctx, e.mountEntry.Namespace())
 		ctx = logical.IndexStateContext(ctx, &logical.WALState{})
 		ctx = context.WithValue(ctx, ctxKeyForwardedRequestMountAccessor{}, e.mountEntry.Accessor)
-		return forward(ctx, e.core, req)
+		resp, err := forward(ctx, e.core, req)
+		if err != nil {
+			return nil, err
+		}
+		if req.LastRemoteWAL() > 0 && !e.core.EntWaitUntilWALShipped(ctx, req.LastRemoteWAL()) {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
+		}
+		return resp, nil
 	}
 
 	return nil, logical.ErrReadOnly
@@ -84,14 +97,10 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	// Add the inline policy if it's set
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy)
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(e.core.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			e.core.logger.Error("failed to parse the token's inline policy", "error", err)
 			return false
-		}
-		if duplicate {
-			e.core.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 	}
@@ -141,4 +150,8 @@ func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context,
 // GetPinnedPluginVersion implements logical.ExtendedSystemView.
 func (e extendedSystemViewImpl) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
 	return e.core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+}
+
+func (e extendedSystemViewImpl) GetCertificateCounter() logical.CertificateCounter {
+	return e.core.GetCertificateCounter()
 }

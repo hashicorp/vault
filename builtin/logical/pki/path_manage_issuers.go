@@ -102,6 +102,11 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 								Description: `The private key if exported was specified.`,
 								Required:    false,
 							},
+							"private_key_parameter_set": {
+								Type:        framework.TypeString,
+								Description: `The ML-DSA parameter set of the private key, if applicable.`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -115,10 +120,11 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 		HelpDescription: pathGenerateRootHelpDesc,
 	}
 
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{}, supportedFormats(true))
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
 	ret.Fields = addCACertKeyUsage(ret.Fields)
+	ret.Fields = addJKSPrivateKeyAlias(ret.Fields)
 	return ret
 }
 
@@ -190,7 +196,8 @@ func buildPathGenerateIntermediate(b *backend, pattern string, displayAttrs *fra
 		HelpDescription: pathGenerateIntermediateHelpDesc,
 	}
 
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
+	// PKCS#12 (pkcs12_bundle) is not a valid format for encoding CSRs
+	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{}, supportedFormats(false))
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
 		Type: framework.TypeBool,
@@ -417,6 +424,11 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		} else {
 			existingIssuers = append(existingIssuers, cert.ID.String())
 		}
+	}
+
+	err := enforceCommonCriteriaOnUploadedCAs(sc, issuerKeyMap, createdIssuers)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Error validating trust chain of Certificate Authorities matching key material: %v", err)), nil
 	}
 
 	response := &logical.Response{

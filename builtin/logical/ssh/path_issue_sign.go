@@ -13,7 +13,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/ssh/managed_key"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -54,57 +54,57 @@ type creationBundle struct {
 	Extensions      map[string]string
 }
 
-func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, publicKey ssh.PublicKey) (*logical.Response, error) {
+func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, publicKey ssh.PublicKey) (*logical.Response, map[string]interface{}, error) {
 	// Note that these various functions always return "user errors" so we pass
 	// them as 4xx values
 	keyID, err := b.calculateKeyID(data, req, role, publicKey)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	certificateType, err := b.calculateCertificateType(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
 		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, role.AllowedDomainsTemplate, validateValidPrincipalForHosts(role))
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+			return logical.ErrorResponse(err.Error()), nil, nil
 		}
 	} else {
 		defaultPrincipal := role.DefaultUser
 		if role.DefaultUserTemplate {
 			defaultPrincipal, err = b.renderPrincipal(role.DefaultUser, req)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, defaultPrincipal, role.AllowedUsers, role.AllowedUsersTemplate, strutil.StrListContains)
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+			return logical.ErrorResponse(err.Error()), nil, nil
 		}
 	}
 
 	ttl, err := b.calculateTTL(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	criticalOptions, err := b.calculateCriticalOptions(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	extensions, addExtTemplatingWarning, err := b.calculateExtensions(data, req, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	signer, err := b.getCASigner(ctx, req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("error creating signer: %w", err)
+		return nil, nil, fmt.Errorf("error creating signer: %w", err)
 	}
 
 	cBundle := creationBundle{
@@ -121,13 +121,16 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 
 	certificate, err := cBundle.sign()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
 	if len(signedSSHCertificate) == 0 {
-		return nil, errors.New("error marshaling signed certificate")
+		return nil, nil, errors.New("error marshaling signed certificate")
 	}
+
+	mountInfo := sshMountAttribution(ctx, req, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
+	b.sshCertificateCounter.Increment().WithMountInfo(mountInfo).AddSSHCertificate(ttl)
 
 	response := &logical.Response{
 		Data: map[string]interface{}{
@@ -140,7 +143,14 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		response.AddWarning("default_extension templating enabled with at least one extension requiring identity templating. However, this request lacked identity entity information, causing one or more extensions to be skipped from the generated certificate.")
 	}
 
-	return response, nil
+	metadata := map[string]interface{}{
+		"certificate_type": certificateType,
+		"ttl":              ttl.String(),
+		"serial_number":    strconv.FormatUint(certificate.Serial, 16),
+		"key_id":           keyID,
+	}
+
+	return response, metadata, nil
 }
 
 func (b *backend) renderPrincipal(principal string, req *logical.Request) (string, error) {
@@ -495,16 +505,30 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 
 	now := time.Now()
 
-	sshAlgorithmSigner, ok := b.Signer.(ssh.AlgorithmSigner)
-	if !ok {
-		return nil, fmt.Errorf("failed to generate signed SSH key: signer is not an AlgorithmSigner")
+	algo := b.Role.AlgorithmSigner
+	if algo == DefaultAlgorithmSigner {
+		if b.Signer.PublicKey().Type() == ssh.KeyAlgoRSA {
+			algo = ssh.KeyAlgoRSASHA256
+		} else {
+			algo = ""
+		}
+	}
+
+	authority := b.Signer
+	if algo != "" {
+		sshAlgorithmSigner, ok := b.Signer.(ssh.AlgorithmSigner)
+		if !ok {
+			return nil, fmt.Errorf("failed to generate signed SSH key: signer is not an AlgorithmSigner")
+		}
+
+		algorithmRestrictedSigner, err := ssh.NewSignerWithAlgorithms(sshAlgorithmSigner, []string{algo})
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate signed SSH key: failed to restrict signer algorithm: %w", err)
+		}
+		authority = algorithmRestrictedSigner
 	}
 
 	// prepare certificate for signing
-	nonce := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce: %w", err)
-	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),
 		Key:             b.PublicKey,
@@ -517,30 +541,11 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 			CriticalOptions: b.CriticalOptions,
 			Extensions:      b.Extensions,
 		},
-		Nonce:        nonce,
-		SignatureKey: sshAlgorithmSigner.PublicKey(),
 	}
 
-	// get bytes to sign; this is based on Certificate.bytesForSigning() from the go ssh lib
-	out := certificate.Marshal()
-	// Drop trailing signature length.
-	certificateBytes := out[:len(out)-4]
-
-	algo := b.Role.AlgorithmSigner
-
-	// Handle the new default algorithm selection process correctly.
-	if algo == DefaultAlgorithmSigner && sshAlgorithmSigner.PublicKey().Type() == ssh.KeyAlgoRSA {
-		algo = ssh.SigAlgoRSASHA2256
-	} else if algo == DefaultAlgorithmSigner {
-		algo = ""
-	}
-
-	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
-	if err != nil {
+	if err := certificate.SignCert(rand.Reader, authority); err != nil {
 		return nil, fmt.Errorf("failed to generate signed SSH key: sign error: %w", err)
 	}
-
-	certificate.Signature = sig
 
 	return certificate, nil
 }
@@ -597,4 +602,26 @@ func (b *backend) getCASigner(ctx context.Context, s logical.Storage) (ssh.Signe
 	}
 
 	return signer, nil
+}
+
+// sshMountAttribution builds a MountAttribution from the current request context.
+// The Count field is left as nil/zero — it is filled in by AddSSHCertificate or AddSSHOTP.
+func sshMountAttribution(ctx context.Context, req *logical.Request, backendUUID string, getParentNsID func(string) string) logical.MountAttribution {
+	attr := logical.MountAttribution{
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	if req != nil {
+		attr.MountAccessor = req.MountAccessor
+		attr.MountPath = req.MountPoint
+		attr.MountType = req.MountType
+		attr.BackendAwareUUID = backendUUID
+		attr.MountRunningVersion = req.MountRunningVersion()
+		attr.IsExternal = req.MountIsExternalPlugin()
+	}
+	if ns, err := namespace.FromContext(ctx); err == nil {
+		attr.NamespaceID = ns.ID
+		attr.NamespacePath = ns.Path
+		attr.ParentNamespaceID = getParentNsID(ns.Path)
+	}
+	return attr
 }

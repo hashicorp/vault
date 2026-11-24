@@ -3,28 +3,22 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq @mode "create")}}
-        Create Connection
-      {{else if (eq @mode "edit")}}
-        Edit Connection
-      {{else}}
-        {{@model.id}}
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{this.title}}>
+  <:breadcrumbs>
+    <KeyValueHeader
+      @path="vault.cluster.secrets.backend.show"
+      @mode={{this.mode}}
+      @root={{this.breadcrumbs}}
+      @showCurrent={{true}}
+    />
+  </:breadcrumbs>
+</Page::Header>
 
-{{#if @model.isAvailablePlugin}}
+{{#if this.isAvailablePlugin}}
   {{#if (eq @mode "show")}}
     <Toolbar>
       <ToolbarActions>
-        {{#if @model.canDelete}}
+        {{#if @capabilities.canDelete}}
           <Hds::Button
             @text="Delete connection"
             @color="secondary"
@@ -33,7 +27,7 @@
             data-test-database-connection-delete
           />
         {{/if}}
-        {{#if @model.canReset}}
+        {{#if @capabilities.canReset}}
           <ConfirmAction
             @buttonText="Reset connection"
             class="toolbar-button"
@@ -44,10 +38,10 @@
             data-test-database-connection-reset
           />
         {{/if}}
-        {{#if (or @model.canReset @model.canDelete)}}
+        {{#if (or @capabilities.canReset @capabilities.canDelete)}}
           <div class="toolbar-separator"></div>
         {{/if}}
-        {{#if @model.canRotateRoot}}
+        {{#if @capabilities.canRotateRoot}}
           {{! template-lint-disable quotes }}
           <ConfirmAction
             @buttonText="Rotate root credentials"
@@ -61,7 +55,7 @@
           />
           {{! template-lint-enable }}
         {{/if}}
-        {{#if @model.canAddRole}}
+        {{#if @capabilities.canAddRole}}
           <ToolbarSecretLink
             @secret=""
             @mode="create"
@@ -73,9 +67,9 @@
             Add role
           </ToolbarSecretLink>
         {{/if}}
-        {{#if @model.canEdit}}
+        {{#if @capabilities.canEdit}}
           <ToolbarSecretLink
-            @secret={{@model.id}}
+            @secret={{@model.name}}
             @mode="edit"
             @backend={{@model.backend}}
             data-test-edit-link={{true}}
@@ -154,7 +148,10 @@
             {{/each-in}}
           {{/each}}
         {{else}}
-          <EmptyState @title="No plugin selected" @message="Select a plugin type to be able to configure it." />
+          <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+            <A.Header data-test-empty-state-title @title="No plugin selected" @titleTag="h2" />
+            <A.Body data-test-empty-state-message @text="Select a plugin type to be able to configure it." />
+          </Hds::ApplicationState>
         {{/if}}
       </fieldset>
     </div>
@@ -165,7 +162,10 @@
       <div class="form-section box is-shadowless is-fullwidth">
         <h3 class="title is-5">Statements</h3>
         {{#if (eq @model.statementFields null)}}
-          <EmptyState @title="No plugin selected" @message="Select a plugin type to be able to configure it." />
+          <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+            <A.Header data-test-empty-state-title @title="No plugin selected" @titleTag="h2" />
+            <A.Body data-test-empty-state-message @text="Select a plugin type to be able to configure it." />
+          </Hds::ApplicationState>
         {{else}}
           {{#each @model.statementFields as |attr|}}
             <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -193,7 +193,7 @@
       </div>
     </div>
   </form>
-{{else if (and (eq @mode "edit") @model.isAvailablePlugin)}}
+{{else if (and (eq @mode "edit") this.isAvailablePlugin)}}
   <form {{on "submit" this.handleUpdateConnection}} aria-label="plugin config form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (or (eq attr.name "name") (eq attr.name "plugin_name"))}}
@@ -224,35 +224,35 @@
                         {{capitalize (or attr.options.label attr.name)}}
                       </label>
                       <div class="field">
-                        <Toggle
-                          @name="show-{{attr.name}}"
-                          @onChange={{fn this.updateShowPassword (not this.showPasswordField)}}
-                          @checked={{this.showPasswordField}}
+                        <Hds::Form::Toggle::Field
+                          checked={{this.showPasswordField}}
+                          {{on "change" (fn this.updateShowPassword (not this.showPasswordField))}}
+                          data-test-toggle-input="show-{{attr.name}}"
                           data-test-toggle={{attr.name}}
+                          as |F|
                         >
-                          <span class="ttl-picker-label has-text-grey">Update password</span><br />
-                          <div class="description has-text-grey">
-                            <span>
-                              {{if
-                                this.showPasswordField
-                                "The new password that will be used when connecting to the database"
-                                "Vault will use the existing password"
-                              }}
-                            </span>
-                          </div>
-                          {{#if this.showPasswordField}}
-                            <Input
-                              {{on "change" (fn this.updatePassword attr.name)}}
-                              @type="password"
-                              @value={{get @model attr.name}}
-                              name={{attr.name}}
-                              class="input"
-                              {{! Prevents browsers from auto-filling }}
-                              autocomplete="new-password"
-                              spellcheck="false"
-                            />
-                          {{/if}}
-                        </Toggle>
+                          <F.Label data-test-toggle-label="show-{{attr.name}}">Update password</F.Label>
+                          <F.HelperText>
+                            {{if
+                              this.showPasswordField
+                              "The new password that will be used when connecting to the database"
+                              "Vault will use the existing password"
+                            }}
+                          </F.HelperText>
+                        </Hds::Form::Toggle::Field>
+                        {{#if this.showPasswordField}}
+                          <Input
+                            {{on "change" (fn this.updatePassword attr.name)}}
+                            aria-label="New password"
+                            @type="password"
+                            @value={{get @model attr.name}}
+                            name={{attr.name}}
+                            class="input has-top-margin-xs"
+                            {{! Prevents browsers from auto-filling }}
+                            autocomplete="new-password"
+                            spellcheck="false"
+                          />
+                        {{/if}}
                       </div>
                     </div>
                   {{else}}
@@ -312,24 +312,25 @@
       </div>
     </div>
   </form>
-{{else if (eq @model.isAvailablePlugin false)}}
-  <EmptyState
-    @title="Database type unavailable"
-    @subTitle="Not supported in the UI"
-    @icon="skip"
-    @message="This database type cannot be viewed in the UI. You will have to use the API or CLI to perform actions here."
-    @bottomBorder={{true}}
-  >
-    <Hds::Link::Standalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backend.list-root" />
-    <Hds::Link::Standalone
-      @icon="docs-link"
-      @iconPosition="trailing"
-      @text="Database API docs"
-      @href={{doc-link "/vault/api-docs/secret/databases"}}
+{{else if (not this.isAvailablePlugin)}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header data-test-empty-state-title @icon="skip" @title="Database type unavailable" @titleTag="h2" />
+    <A.Body
+      data-test-empty-state-message
+      @text="This database type cannot be viewed in the UI. You will have to use the API or CLI to perform actions here."
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backend.list-root" />
+      <F.LinkStandalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="Database API docs"
+        @href={{doc-link "/vault/api-docs/secret/databases"}}
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{else}}
-  {{#each @model.showAttrs as |attr|}}
+  {{#each this.showAttrs as |attr|}}
     {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
@@ -348,7 +349,7 @@
           @queryParam="role"
           @type={{attr.type}}
         />
-      {{else if (eq attr.name "skip_static_role_rotation_import")}}
+      {{else if (eq attr.name "skip_static_role_import_rotation")}}
         <InfoTableRow
           @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
@@ -411,5 +412,5 @@
     Deleting the connection means that any associated roles won't be able to generate credentials until the connection is
     reconfigured.
   </p>
-  <MessageError @model={{this.model}} @errorMessage={{this.error}} />
+  <MessageError @errorMessage={{this.error}} />
 </ConfirmationModal>

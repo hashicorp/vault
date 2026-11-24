@@ -75,6 +75,7 @@ export const fillInLoginFields = async (loginFields: LoginFields, { toggleOption
 };
 
 const LOGIN_DATA = {
+  cert: { name: 'app-client' },
   token: { token: 'mysupersecuretoken' },
   username: { username: 'matilda', password: 'some-password' },
   role: { role: 'some-dev' },
@@ -94,6 +95,8 @@ export const AUTH_METHOD_LOGIN_DATA = {
   oidc: LOGIN_DATA.role,
   jwt: LOGIN_DATA.jwt,
   saml: LOGIN_DATA.role,
+  // cert is its own thing
+  cert: LOGIN_DATA.cert,
 };
 
 // Mock response for `sys/internal/ui/mounts`

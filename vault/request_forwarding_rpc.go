@@ -5,17 +5,20 @@ package vault
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -98,7 +101,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		replicationLagMillis: in.ReplicationPrimaryCanaryAgeMillis,
 	}
 	if in.ClusterAddr != "" {
-		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, ttlcache.DefaultTTL)
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
@@ -136,11 +139,60 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	return reply, nil
 }
 
+func (s *forwardedRequestRPCServer) SendSecureHubCredentials(ctx context.Context, in *SendSecureHubCredentialsRequest) (*SendSecureHubCredentialsResponse, error) {
+	s.core.logger.Info("forwarding client: received secure hub cluster credentials")
+	if s.core.HAState() == consts.Active {
+		secureHubManager := s.core.GetSecureHubManager()
+		if secureHubManager == nil {
+			return &SendSecureHubCredentialsResponse{}, fmt.Errorf("secure hub manager is not initialized; cluster credentials are lost")
+		}
+		err := secureHubManager.WriteClusterCredentialsToStorage(ctx, in.ID, in.Value)
+		return &SendSecureHubCredentialsResponse{}, err
+	} else {
+		return &SendSecureHubCredentialsResponse{}, fmt.Errorf("node is not leader; cluster credentials are lost")
+	}
+}
+
+// SendSecureHubState receives a node's Secure Hub connection and stream health
+// report and stores it in the active node's per-node cache so it can be served
+// by the sys/secure-hub/status endpoint. Failures are logged on this (active)
+// node and returned to the sending node, which logs them as well.
+func (s *forwardedRequestRPCServer) SendSecureHubState(ctx context.Context, in *SendSecureHubStateRequest) (*SendSecureHubStateResponse, error) {
+	secureHubManager := s.core.GetSecureHubManager()
+	if secureHubManager == nil {
+		err := errors.New("secure hub manager is not initialized on the active node")
+		s.core.logger.Error("failed to record secure hub state reported by node", "node_id", in.GetNodeID(), "error", err)
+		return &SendSecureHubStateResponse{}, err
+	}
+	if err := secureHubManager.UpsertNodeState(in); err != nil {
+		s.core.logger.Error("failed to record secure hub state reported by node", "node_id", in.GetNodeID(), "error", err)
+		return &SendSecureHubStateResponse{}, fmt.Errorf("active node failed to record secure hub state: %w", err)
+	}
+	return &SendSecureHubStateResponse{}, nil
+}
+
 type forwardingClient struct {
 	RequestForwardingClient
 	core        *Core
 	echoTicker  *time.Ticker
 	echoContext context.Context
+}
+
+func (c *forwardingClient) SendSecureHubCredentials(ctx context.Context, id string, value []byte) error {
+	_, err := c.RequestForwardingClient.SendSecureHubCredentials(ctx, &SendSecureHubCredentialsRequest{
+		ID:    id,
+		Value: value,
+	})
+	return err
+}
+
+// SendSecureHubState forwards this node's Secure Hub connection and stream
+// health to the active node.
+func (c *forwardingClient) SendSecureHubState(ctx context.Context, req *SendSecureHubStateRequest) error {
+	if _, err := c.RequestForwardingClient.SendSecureHubState(ctx, req); err != nil {
+		return fmt.Errorf("failed to send secure hub state to the active node: %w", err)
+	}
+	return nil
 }
 
 // NOTE: we also take advantage of gRPC's keepalive bits, but as we send data
@@ -156,6 +208,9 @@ func (c *forwardingClient) startHeartbeat() {
 		}
 		var echoDuration time.Duration
 		var serverTimeDelta int64
+		// heldBackForAudit tracks whether we are currently advertising non-voter
+		// because of audit failure
+		var heldBackForAudit bool
 		tick := func() {
 			labels := make([]metrics.Label, 0, 1)
 			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
@@ -175,6 +230,23 @@ func (c *forwardingClient) startHeartbeat() {
 				req.RaftNodeID = raftBackend.NodeID()
 				req.RaftTerm = raftBackend.Term()
 				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
+
+				// Override to "non-voter" when the node is not ready to serve requests
+				auditFailed := c.core.auditConfigFailed.Load()
+				if req.RaftDesiredSuffrage == "voter" && auditFailed {
+					req.RaftDesiredSuffrage = "non-voter"
+				}
+
+				// Only log on state transitions between audit failure and recovery
+				switch {
+				case auditFailed && !heldBackForAudit:
+					c.core.logger.Warn("audit devices failed to initialize, signal non-voter so autopilot will not promote this node until audit is fixed")
+					heldBackForAudit = true
+				case !auditFailed && heldBackForAudit:
+					c.core.logger.Info("audit devices successfully initialized, resuming voter signal so autopilot can promote this node")
+					heldBackForAudit = false
+				}
+
 				req.RaftRedundancyZone = raftBackend.RedundancyZone()
 				req.RaftUpgradeVersion = raftBackend.UpgradeVersion()
 				labels = append(labels, metrics.Label{Name: "peer_id", Value: raftBackend.NodeID()})

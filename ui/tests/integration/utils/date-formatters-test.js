@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { buildISOTimestamp, isSameMonthUTC, parseAPITimestamp } from 'core/utils/date-formatters';
+import { formatInTimeZone } from 'date-fns-tz';
 
 module('Integration | Util | date formatters utils', function (hooks) {
   setupTest(hooks);
@@ -53,6 +54,18 @@ module('Integration | Util | date formatters utils', function (hooks) {
     assert.strictEqual(parsed.getUTCFullYear(), 9999, 'parsed future date has correct year');
     assert.strictEqual(parsed.getUTCMonth(), 11, 'parsed future date has correct month');
     assert.strictEqual(parsed.getUTCDate(), 31, 'parsed future date has correct day');
+  });
+
+  test('parseAPITimestamp: it handles date objects and formats in UTC', async function (assert) {
+    const date = new Date();
+    const parsed = parseAPITimestamp(date, 'MM dd yyyy');
+    assert.strictEqual(parsed, formatInTimeZone(date, 'UTC', 'MM dd yyyy'), 'it formats date object in UTC');
+  });
+
+  test('parseAPITimestamp: it returns null for Date object that is invalid', async function (assert) {
+    const invalidDate = new Date('invalid date string');
+    const parsed = parseAPITimestamp(invalidDate);
+    assert.strictEqual(parsed, null, 'it returns null for an invalid Date object');
   });
 
   test('buildISOTimestamp: it formats an ISO timestamp for the start of the month', async function (assert) {

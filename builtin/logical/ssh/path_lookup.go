@@ -72,6 +72,9 @@ func (b *backend) pathLookupWrite(ctx context.Context, req *logical.Request, d *
 		matchingRoles = append(matchingRoles, zeroAddressEntry.Roles...)
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHLookup, map[string]interface{}{
+		"role_names": matchingRoles,
+	})
 	// This list may potentially reveal more information than it is supposed to.
 	// The roles for which the client is not authorized to will also be displayed.
 	// However, if the client tries to use the role for which the client is not

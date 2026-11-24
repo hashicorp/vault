@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_BYOKExportImport(t *testing.T) {
@@ -36,7 +37,7 @@ func testBYOKExportImport(t *testing.T, keyType, feature string) {
 	var resp *logical.Response
 	var err error
 
-	b, s := createBackendWithStorage(t)
+	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
 	// Create a key
 	keyReq := &logical.Request{
@@ -92,6 +93,11 @@ func testBYOKExportImport(t *testing.T, keyType, feature string) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
+
+	obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyExportBYOK)
+	require.NotNil(t, obs)
+	require.Equal(t, "test-source", obs.Data["key_name"])
+	require.Equal(t, "wrapper", obs.Data["destination_key"])
 	keys := resp.Data["keys"].(map[string]string)
 
 	// Import the key to a new name.

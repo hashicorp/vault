@@ -4,7 +4,7 @@
 }}
 
 <Oidc::ScopeForm
-  @model={{this.model}}
-  @onCancel={{transition-to "vault.cluster.access.oidc.scopes.scope.details" this.model.name}}
-  @onSave={{transition-to "vault.cluster.access.oidc.scopes.scope.details" this.model.name}}
+  @form={{this.model}}
+  @onCancel={{transition-to "vault.cluster.access.oidc.scopes.scope.details" this.model.data.name}}
+  @onSave={{transition-to "vault.cluster.access.oidc.scopes.scope.details" this.model.data.name}}
 />

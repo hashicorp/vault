@@ -209,6 +209,15 @@ func (r *ListBinaryVersionsReq) Run(ctx context.Context) (*ListBinaryVersionsRes
 
 		// Find all variants associated with this version
 		variants := fetchAvailableVariants(availableVersions, normalized)
+		if strings.HasSuffix(normalized, "+ent") {
+			// An enterprise label also covers its hsm/fips flavors, e.g. 1.21.13+ent.hsm.fips1403
+			variants = nil
+			for _, v := range availableVersions {
+				if v == normalized || strings.HasPrefix(v, normalized+".") {
+					variants = append(variants, v)
+				}
+			}
+		}
 		if len(variants) == 0 {
 			res.InvalidVersions = append(res.InvalidVersions, display)
 			continue

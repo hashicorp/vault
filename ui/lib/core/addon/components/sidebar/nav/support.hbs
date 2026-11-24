@@ -1,0 +1,22 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppSideNav::Portal @ariaLabel="Support Navigation Links" data-test-sidebar-nav-panel="Support" as |Nav|>
+  <Nav.BackLink
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  <Nav.Title data-test-sidebar-nav-heading="Support">Support</Nav.Title>
+
+  <Nav.Link
+    @route="vault.cluster.support.upgrade"
+    @text="Upgrade path analyzer"
+    data-test-sidebar-nav-link="Upgrade Path Analyzer"
+  />
+</Hds::AppSideNav::Portal>

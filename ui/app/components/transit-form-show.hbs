@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -50,7 +50,7 @@
 {{#if (not-eq @tab "actions")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (and (eq @tab "versions") @key.canRotate)}}
+      {{#if (and (eq @tab "versions") @capabilities.canRotate)}}
         <ConfirmAction
           @buttonText="Rotate key"
           class="toolbar-button"
@@ -63,7 +63,7 @@
         />
       {{/if}}
       {{#if (eq @mode "show")}}
-        {{#if (or @model.canUpdate @model.canDelete)}}
+        {{#if (or @capabilities.canUpdate @capabilities.canDelete)}}
           <ToolbarSecretLink @secret={{@key.id}} @backend={{@key.backend}} @mode="edit" replace={{true}}>
             Edit key
           </ToolbarSecretLink>
@@ -75,9 +75,9 @@
 
 {{#if (eq @tab "actions")}}
   <div class="transit-card-container">
-    {{#each @model.supportedActions as |supportedAction|}}
+    {{#each @key.supportedActions as |supportedAction|}}
       <LinkedBlock
-        @params={{array "vault.cluster.secrets.backend.actions" @model.backend @model.id}}
+        @params={{array "vault.cluster.secrets.backend.actions" @key.backend @key.id}}
         @queryParams={{hash action=supportedAction.name}}
         class="transit-card"
         data-test-transit-card={{supportedAction.name}}
@@ -86,7 +86,7 @@
           <Icon
             @name={{supportedAction.glyph}}
             class="has-text-grey auto-width"
-            aria-label={{concat @backend.path " options"}}
+            aria-label={{concat @key.backend.path " options"}}
           />
         </div>
         <div class="transit-description">
@@ -118,13 +118,13 @@
           <div class="column is-4">
             <div class="td is-borderless">
               <small class="help has-text-grey">
-                {{date-from-now creationTimestamp addSuffix=true}}
+                {{this.getTimestamp creationTimestamp}}
               </small>
             </div>
           </div>
           <div class="column is-5">
             <div class="td is-borderless">
-              {{#if (coerce-eq @key.minDecryptionVersion version)}}
+              {{#if (coerce-eq @key.min_decryption_version version)}}
                 <p class="help level level-left">
                   <Icon @name="check-circle-fill" class="has-text-success" />
                   Current minimum decryption version
@@ -154,7 +154,7 @@
           </div>
           <div class="column is-4">
             <div class="td is-borderless">
-              {{#if (coerce-eq @key.minDecryptionVersion version)}}
+              {{#if (coerce-eq @key.min_decryption_version version)}}
                 <p class="help level level-left">
                   <Icon @name="check-circle-fill" class="has-text-success" />
                   Current minimum decryption version
@@ -181,12 +181,12 @@
   <InfoTableRow @label="Type" @value={{@key.type}} />
   <InfoTableRow
     @label="Auto-rotation period"
-    @value={{or (format-duration @key.autoRotatePeriod) "Key will not be automatically rotated"}}
+    @value={{or (format-duration @key.auto_rotate_period) "Key will not be automatically rotated"}}
   />
-  <InfoTableRow @label="Deletion allowed" @value={{stringify @key.deletionAllowed}} />
+  <InfoTableRow @label="Deletion allowed" @value={{stringify @key.deletion_allowed}} />
 
   {{#if @key.derived}}
     <InfoTableRow @label="Derived" @value={{@key.derived}} />
-    <InfoTableRow @label="Convergent encryption" @value={{@key.convergentEncryption}} />
+    <InfoTableRow @label="Convergent encryption" @value={{@key.convergent_encryption}} />
   {{/if}}
 {{/if}}

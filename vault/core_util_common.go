@@ -7,9 +7,21 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/server"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/cert_count"
 )
+
+type DiagnoseCheckLicenseGeneration struct {
+	Generate           bool
+	GenerateIBMLicense bool
+}
+
+// LicensingEntitlementSelectionConfig contains configuration options for selecting an IBM license entitlement
+type LicensingEntitlementSelectionConfig struct {
+	Edition string
+	AddOns  []string
+}
 
 // GetCoreConfigInternal returns the server configuration
 // in struct format.
@@ -68,4 +80,25 @@ func (c *Core) setupHeaderHMACKey(ctx context.Context, isPerfStandby bool) error
 	}
 	c.IndexHeaderHMACKey.Store([]byte(key))
 	return nil
+}
+
+func (c *Core) GetCertificateCounter() logical.CertificateCounter {
+	return c.certCountManager
+}
+
+// GetCertCountManager returns the underlying CertificateCountManager, available
+// to tests outside the vault package that need to inspect raw counts.
+func (c *Core) GetCertCountManager() cert_count.CertificateCountManager {
+	return c.certCountManager
+}
+
+func (c *Core) GetConsumptionBillingManager() logical.ConsumptionBillingManager {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return nil
+	}
+	return cb
 }

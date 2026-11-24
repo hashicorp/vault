@@ -36,7 +36,7 @@ func testFixture(t *testing.T) (*AzureBackend, func()) {
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vlt-%d", ts)
-	_ = os.Setenv("AZURE_BLOB_CONTAINER", name)
+	t.Setenv("AZURE_BLOB_CONTAINER", name)
 
 	cleanup := func() {}
 	backendConf := map[string]string{

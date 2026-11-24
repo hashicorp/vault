@@ -13,14 +13,18 @@
     <h2 data-test-cross-sign-status-count class="title is-5">Cross-signing complete ({{this.statusCount}})</h2>
     <p class="has-bottom-margin-xl">
       The next step is to
-      <DocLink class="has-font-weight-normal" @path="/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain">
-        update the manual_chain<Icon @name="docs-link" />
-      </DocLink>
+      <Hds::Link::Inline
+        class="has-font-weight-normal"
+        @href={{doc-link "/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain"}}
+        @isHrefExternal={{true}}
+        @icon="docs-link"
+        @iconPosition="trailing"
+      >update the manual_chain</Hds::Link::Inline>
       for each of your new certificates listed below, and the existing issuer.
     </p>
-    <div class="is-flex-start">
+    <Hds::Layout::Flex as |LF|>
       {{#each this.inputFields as |column|}}
-        <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
+        <LF.Item @grow={{true}} @shrink={{true}} @basis="0%" class="has-text-grey has-bottom-margin-xs">
           <h2 data-test-info-table-label={{column.key}}>
             {{column.label}}
             {{#if column.helpText}}
@@ -29,13 +33,13 @@
               </Hds::TooltipButton>
             {{/if}}
           </h2>
-        </div>
+        </LF.Item>
       {{/each}}
-    </div>
+    </Hds::Layout::Flex>
     <div class="box is-fullwidth is-sideless">
       {{#each this.signedIssuers as |crossSignRow idx|}}
         <div class="box is-marginless no-top-shadow has-slim-padding">
-          <div data-test-info-table-row={{idx}} class="is-flex-start">
+          <Hds::Layout::Flex data-test-info-table-row={{idx}}>
             <Icon
               @name={{if crossSignRow.hasError "alert-circle-fill" "check-circle"}}
               class={{if crossSignRow.hasError "has-text-danger" "has-text-success"}}
@@ -63,7 +67,7 @@
                 </div>
               {{/let}}
             {{/each}}
-          </div>
+          </Hds::Layout::Flex>
           {{#if crossSignRow.hasError}}
             <Hds::Alert @type="inline" @color="critical" as |A|>
               <A.Title data-test-cross-sign-alert-title>
@@ -88,7 +92,7 @@
         @onChange={{fn (mut this.formData)}}
         @validationErrors={{this.validationErrors}}
       />
-      <hr class="has-background-gray-100" />
+      <Hds::Separator />
       <Hds::ButtonSet>
         <Hds::Button
           @text="Cross-sign"

@@ -1,0 +1,34 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div data-test-card="learn-more" ...attributes>
+  <Hds::Text::Display @size="300" data-test-text-display="Learn more">Learn more</Hds::Text::Display>
+
+  <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-top-margin-s" data-test-text-body="Learn more description">
+    Explore the features of Vault and learn advance practices with the following tutorials and documentation.
+  </Hds::Text::Body>
+
+  <div class="has-top-margin-s" data-test-learn-more-links>
+    {{#each this.learnMoreLinks as |learnMoreLink|}}
+      {{#if
+        (or
+          (and learnMoreLink.requiredFeature @isEnterprise (has-feature learnMoreLink.requiredFeature))
+          (not learnMoreLink.requiredFeature)
+        )
+      }}
+        <Hds::Link::Standalone
+          data-test-learn-more-link={{learnMoreLink.title}}
+          @text={{learnMoreLink.title}}
+          @icon={{learnMoreLink.icon}}
+          @href={{doc-link learnMoreLink.link}}
+          @isHrefExternal={{true}}
+          @size="small"
+          class="has-bottom-margin-xxs"
+        />
+      {{/if}}
+
+    {{/each}}
+  </div>
+</div>

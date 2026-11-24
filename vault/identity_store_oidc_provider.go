@@ -16,12 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -344,6 +344,23 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListClient,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of unused eab keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `EAB details keyed by the eab key id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    "List OIDC clients",
@@ -409,6 +426,23 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListProvider,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of unused eab keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `EAB details keyed by the eab key id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    "List OIDC providers",
@@ -2157,12 +2191,30 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
 
+	// Track OIDC token generated for billing.
+	// Store duration (seconds), normalize later during storage flush.
+	if i.billingCounter != nil {
+		// req.MountAccessor is only set in the router's cleanup defer (after the
+		// handler returns), so we resolve the mount entry via the router instead.
+		validity := getMaxTokenTTL(client.AccessTokenTTL, client.IDTokenTTL).Seconds()
+		attr := i.oidcBillingAttribution(ctx, ns, validity)
+		i.billingCounter.IncrementOidcTokenCount(validity, attr)
+	}
+
 	return tokenResponse(map[string]interface{}{
 		"token_type":   "Bearer",
 		"access_token": accessToken.ID,
 		"id_token":     signedIDToken,
 		"expires_in":   int64(accessTokenExpiry.Sub(accessTokenIssuedAt).Seconds()),
 	}, "", "")
+}
+
+// getMaxTokenTTL returns the maximum of the given access token and ID token
+func getMaxTokenTTL(accessTokenTTL, idTokenTTL time.Duration) time.Duration {
+	if accessTokenTTL > idTokenTTL {
+		return accessTokenTTL
+	}
+	return idTokenTTL
 }
 
 // tokenResponse returns the OIDC Token Response. An error response is

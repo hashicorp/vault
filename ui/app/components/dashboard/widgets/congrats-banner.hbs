@@ -1,0 +1,79 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div ...attributes data-test-widget="congrats-banner">
+  <OnboardingCard @size="large" data-test-congrats-card>
+    <Hds::Layout::Flex @justify="space-between" @align="center" class="has-bottom-margin-m">
+      <Hds::Button
+        @text="Back"
+        @icon="arrow-left"
+        @iconPosition="leading"
+        @color="tertiary"
+        @size="small"
+        {{on "click" @onBack}}
+        data-test-congrats-back
+      />
+      <Hds::Button
+        @text="Hide"
+        @icon="eye-off"
+        @iconPosition="leading"
+        @color="tertiary"
+        @size="small"
+        {{on "click" @onDismiss}}
+        data-test-congrats-dismiss
+      />
+    </Hds::Layout::Flex>
+
+    <div class="has-bottom-margin-l">
+      <Hds::Text::Display @tag="h2" @size="300" class="has-bottom-margin-s">
+        Initial setup complete!
+      </Hds::Text::Display>
+
+      <Hds::Text::Body @tag="p" @size="200">
+        Congratulations on completing the guide. Now that your Vault is configured, use these resources to advance your
+        workflow.
+      </Hds::Text::Body>
+    </div>
+
+    <Hds::Layout::Grid @columnMinWidth="40%" @gap="32" data-test-congrats-actions>
+      <div>
+        <Hds::Text::Display @tag="h3" @size="200" class="has-bottom-margin-xs">
+          Read your first secret
+        </Hds::Text::Display>
+        <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-bottom-margin-s">
+          You just added your first set of secrets! Let's get you working with them in your cluster.
+        </Hds::Text::Body>
+        <Hds::Button
+          @text="How to use your secrets"
+          @icon="bulb"
+          @iconPosition="leading"
+          @color="primary"
+          @size="small"
+          @href="https://developer.hashicorp.com/vault/tutorials/secrets-management"
+          @isHrefExternal={{true}}
+          data-test-congrats-link-secrets
+        />
+      </div>
+
+      <div>
+        <Hds::Text::Display @tag="h3" @size="200" class="has-bottom-margin-xs">
+          Use replication
+        </Hds::Text::Display>
+        <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-bottom-margin-s">
+          Take advantage of cross-datacenter replication to ensure data availability.
+        </Hds::Text::Body>
+        <Hds::Button
+          @text="Replication"
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          @color="secondary"
+          @size="small"
+          @route="vault.cluster.replication"
+          data-test-congrats-link-replication
+        />
+      </div>
+    </Hds::Layout::Grid>
+  </OnboardingCard>
+</div>

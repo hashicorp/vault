@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -14,7 +14,9 @@
       @subText="The total number of roles that have been set up in this secret engine in order to generate credentials."
     >
       <:action>
-        <Hds::Link::Standalone @text="Create new" @route="roles.create" @icon="plus" @iconPosition="trailing" />
+        {{#if this.canCreateRole}}
+          <Hds::Link::Standalone @text="Create new" @route="roles.create" @icon="plus" @iconPosition="trailing" />
+        {{/if}}
       </:action>
       <:content>
         <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-count>

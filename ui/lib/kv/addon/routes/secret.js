@@ -65,14 +65,10 @@ export default class KvSecretRoute extends Route {
     const undeletePath = `${backend}/undelete/${path}`;
     const destroyPath = `${backend}/destroy/${path}`;
 
-    const perms = await this.capabilities.fetch([
-      metadataPath,
-      dataPath,
-      subkeysPath,
-      deletePath,
-      undeletePath,
-      destroyPath,
-    ]);
+    const apiPaths = [metadataPath, dataPath, subkeysPath, deletePath, undeletePath, destroyPath];
+    const perms = await this.capabilities.fetch(apiPaths, {
+      routeForCache: 'vault.cluster.secrets.backend.kv.secret',
+    });
 
     return {
       canReadData: perms[dataPath].canRead,

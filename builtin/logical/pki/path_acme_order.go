@@ -246,6 +246,18 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, req *logical.Reques
 func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
+	// Serialize concurrent finalize requests for the same order. Without this,
+	// two requests can both load the order while it is still "ready", both pass
+	// the readiness gate below, and both issue a separate certificate. The order
+	// only records one serial, so the other certificate becomes orphaned from
+	// every order-keyed lookup such as /acme/order/<id>/cert. Finalize always
+	// runs on the active node (ForwardPerformanceStandby), so an in-memory
+	// per-order lock is enough to guard the load, check, issue, and save
+	// sequence. See GH-31987.
+	orderLock := b.GetAcmeState().orderLockFor(orderId)
+	orderLock.Lock()
+	defer orderLock.Unlock()
+
 	csr, err := parseCsrFromFinalize(data)
 	if err != nil {
 		return nil, err
@@ -297,7 +309,8 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		if err != nil {
 			return nil, err
 		}
-		b.pkiCertificateCounter.AddIssuedCertificate(true)
+		mountInfo := issuing.MountAttributionFromRequest(ac.sc.Context, r, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
+		b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(true, signedCertBundle.Certificate)
 	}
 	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
 
@@ -555,6 +568,8 @@ func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateReq
 	}
 }
 
+// issueCertFromCsr signs a certificate for the given ACME order CSR using the
+// role and issuer on ac.
 func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuing.IssuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
@@ -585,6 +600,26 @@ func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest)
 	// Note that if set to certutil.AlwaysEnforceErr we will error out
 	if signingBundle.LeafNotAfterBehavior == certutil.ErrNotAfterBehavior {
 		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+	}
+
+	if ac.rejectUnverifiedSANs {
+		// sign-verbatim has no role to constrain SANs, and ACME challenges only
+		// verify DNS names and IP addresses. Reject CSRs that contain URI SANs,
+		// email SANs, or Other SANs so the client gets a clear error rather than
+		// a certificate missing SANs it requested.
+		if len(csr.URIs) > 0 {
+			return nil, "", fmt.Errorf("%w: CSR contains URI SANs which are not validated by ACME; use sign-verbatim-unsafe to allow", ErrBadCSR)
+		}
+		if len(csr.EmailAddresses) > 0 {
+			return nil, "", fmt.Errorf("%w: CSR contains email SANs which are not validated by ACME; use sign-verbatim-unsafe to allow", ErrBadCSR)
+		}
+		otherSANs, err := certutil.GetOtherSANsFromX509Extensions(csr.Extensions)
+		if err != nil {
+			return nil, "", fmt.Errorf("%w: CSR contains an unparseable Other SAN extension: %v", ErrBadCSR, err)
+		}
+		if len(otherSANs) > 0 {
+			return nil, "", fmt.Errorf("%w: CSR contains Other SANs which are not validated by ACME; use sign-verbatim-unsafe to allow", ErrBadCSR)
+		}
 	}
 
 	input := &inputBundle{

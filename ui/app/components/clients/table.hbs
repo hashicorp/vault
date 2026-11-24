@@ -69,7 +69,7 @@
       {{yield to="emptyState"}}
     {{else}}
       <Hds::ApplicationState as |A|>
-        <A.Header @title="No data to display" />
+        <A.Header @title="No data to display" @titleTag="h2" />
       </Hds::ApplicationState>
     {{/if}}
   </Hds::Card::Container>

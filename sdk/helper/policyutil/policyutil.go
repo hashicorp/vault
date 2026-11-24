@@ -4,6 +4,7 @@
 package policyutil
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -14,6 +15,32 @@ const (
 	AddDefaultPolicy      = true
 	DoNotAddDefaultPolicy = false
 )
+
+var (
+	errPolicyNameEmpty         = errors.New("policy name cannot be empty")
+	errPolicyNameDotSegment    = errors.New("policy name cannot contain '.' path segments")
+	errPolicyNameParentSegment = errors.New("policy name cannot contain '..' path segments")
+)
+
+// ValidatePolicyName validates a policy name and returns its canonical form.
+func ValidatePolicyName(name string) (string, error) {
+	canonicalName := CanonicalizePolicyName(name)
+
+	if canonicalName == "" {
+		return "", errPolicyNameEmpty
+	}
+
+	for _, segment := range strings.Split(canonicalName, "/") {
+		switch segment {
+		case ".":
+			return "", errPolicyNameDotSegment
+		case "..":
+			return "", errPolicyNameParentSegment
+		}
+	}
+
+	return canonicalName, nil
+}
 
 // ParsePolicies parses a comma-delimited list of policies.
 // The resulting collection will have no duplicate elements.
@@ -40,6 +67,15 @@ func ParsePolicies(policiesRaw interface{}) []string {
 	return SanitizePolicies(policies, false)
 }
 
+// CanonicalizePolicyName returns the canonical form of a single policy name.
+// Policy names are compared and stored case-insensitively and without
+// surrounding whitespace, so canonicalization trims leading and trailing
+// whitespace (including tabs, newlines, and Unicode space characters, per
+// unicode.IsSpace) and lowercases the result.
+func CanonicalizePolicyName(policy string) string {
+	return strings.ToLower(strings.TrimSpace(policy))
+}
+
 // SanitizePolicies performs the common input validation tasks
 // which are performed on the list of policies across Vault.
 // The resulting collection will have no duplicate elements.
@@ -51,7 +87,7 @@ func ParsePolicies(policiesRaw interface{}) []string {
 func SanitizePolicies(policies []string, addDefault bool) []string {
 	defaultFound := false
 	for i, p := range policies {
-		policies[i] = strings.ToLower(strings.TrimSpace(p))
+		policies[i] = CanonicalizePolicyName(p)
 		// Eliminate unnamed policies.
 		if policies[i] == "" {
 			continue

@@ -82,6 +82,14 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		tokenName = tokenName[:tokenNameLength]
 	}
 
+	metadata := map[string]interface{}{
+		"role_name":  name,
+		"token_type": role.TokenType,
+		"global":     role.Global,
+		"ttl":        leaseConfig.TTL.String(),
+		"max_ttl":    leaseConfig.MaxTTL.String(),
+	}
+
 	// Create it
 	token, _, err := c.ACLTokens().Create(&api.ACLToken{
 		Name:     tokenName,
@@ -90,6 +98,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		Global:   role.Global,
 	}, nil)
 	if err != nil {
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadCredentialCreateFail, metadata)
 		return nil, err
 	}
 
@@ -103,5 +112,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	resp.Secret.TTL = leaseConfig.TTL
 	resp.Secret.MaxTTL = leaseConfig.MaxTTL
 
+	metadata["accessor_id"] = token.AccessorID
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadCredentialCreateSuccess, metadata)
 	return resp, nil
 }

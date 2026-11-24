@@ -5,8 +5,10 @@ package transit
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -33,13 +35,12 @@ func (b *backend) pathWrappingKey() *framework.Path {
 }
 
 func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	p, err := b.getWrappingKey(ctx, req.Storage)
+	wrappingKey, err := b.getWrappingKey(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	wrappingKey := p.Keys[strconv.Itoa(p.LatestVersion)]
 
-	derBytes, err := x509.MarshalPKIXPublicKey(wrappingKey.RSAKey.Public())
+	derBytes, err := x509.MarshalPKIXPublicKey(wrappingKey.Public())
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
 	}
@@ -63,7 +64,7 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 	return resp, nil
 }
 
-func (b *backend) getWrappingKey(ctx context.Context, storage logical.Storage) (*keysutil.Policy, error) {
+func (b *backend) getWrappingKey(ctx context.Context, storage logical.Storage) (*rsa.PrivateKey, error) {
 	polReq := keysutil.PolicyRequest{
 		Upsert:               true,
 		Storage:              storage,
@@ -82,11 +83,18 @@ func (b *backend) getWrappingKey(ctx context.Context, storage logical.Storage) (
 	if p == nil {
 		return nil, fmt.Errorf("error retrieving wrapping key: returned policy was nil")
 	}
-	if b.System().CachingDisabled() {
-		p.Unlock()
+	defer p.Unlock()
+
+	keyEntry, ok := p.Keys[strconv.Itoa(p.LatestVersion)]
+	if !ok {
+		return nil, errors.New("error retrieving wrapping key: key not found")
 	}
 
-	return p, nil
+	if keyEntry.RSAKey == nil {
+		return nil, errors.New("error retrieving wrapping key: key not found")
+	}
+
+	return keyEntry.RSAKey, nil
 }
 
 const (

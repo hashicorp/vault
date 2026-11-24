@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -36,6 +35,9 @@ type BatchRequestItem struct {
 
 	// PaddingScheme for encryption/decryption
 	PaddingScheme string `json:"padding_scheme" structs:"padding_scheme" mapstructure:"padding_scheme"`
+
+	// HashAlgorithm for encryption/decryption (currently only applies to RSA managed keys)
+	HashAlgorithm string `json:"hash_algorithm" structs:"hash_algorithm" mapstructure:"hash_algorithm"`
 
 	// Nonce to be used when v1 convergent encryption is used
 	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
@@ -116,8 +118,14 @@ func (b *backend) pathEncrypt() *framework.Path {
 
 			"padding_scheme": {
 				Type: framework.TypeString,
-				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
-Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+				Description: `The padding scheme to use for encryption. Currently only applies to RSA key types.
+	Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
+			"hash_algorithm": {
+				Type: framework.TypeString,
+				Description: `The hash algorithm to use for encryption. Currently only applies to RSA key types.
+	Options are 'sha1', 'sha2-224', 'sha2-256', 'sha2-384', 'sha2-512', 'sha3-224', 'sha3-256', 'sha3-384', 'sha3-512'. Defaults to 'sha2-256'.`,
 			},
 
 			"context": {
@@ -288,6 +296,14 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 			}
 		}
 
+		if v, has := item["hash_algorithm"]; has {
+			if casted, ok := v.(string); ok {
+				(*dst)[i].HashAlgorithm = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].hash_algorithm' expected type 'string', got unconvertible type '%T'", i, item["hash_algorithm"]))
+			}
+		}
+
 		if v, has := item["nonce"]; has {
 			if !reflect.ValueOf(v).IsValid() {
 			} else if casted, ok := v.(string); ok {
@@ -357,7 +373,7 @@ func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Re
 	if err != nil {
 		return false, err
 	}
-	if p != nil && b.System().CachingDisabled() {
+	if p != nil {
 		p.Unlock()
 	}
 
@@ -401,6 +417,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 				batchInputItems[0].PaddingScheme = ps
 			} else {
 				return logical.ErrorResponse("padding_scheme was not a string"), logical.ErrInvalidRequest
+			}
+		}
+		if haRaw, ok := d.GetOk("hash_algorithm"); ok {
+			if ha, ok := haRaw.(string); ok {
+				batchInputItems[0].HashAlgorithm = ha
+			} else {
+				return logical.ErrorResponse("hash_algorithm was not a string"), logical.ErrInvalidRequest
 			}
 		}
 	}
@@ -521,9 +544,6 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	// Process batch request items. If encryption of any request
@@ -531,53 +551,64 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// collection and continue to process other items.
 	warnAboutNonceUsage := false
 	successesInBatch := false
+	successfulRequests := 0
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			userErrorInBatch = true
 			continue
 		}
 
-		if item.Nonce != "" && !nonceAllowed(p) {
+		if item.Nonce != "" && !nonceAllowed(p, item.KeyVersion) {
 			userErrorInBatch = true
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
-		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce, item.KeyVersion) {
 			warnAboutNonceUsage = true
 		}
 
+		verType := p.KeyVersionType(item.KeyVersion)
+
 		var factories []any
+		var parsedPaddingScheme keysutil.PaddingScheme
 		if item.PaddingScheme != "" {
-			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.PaddingScheme)
+			var err error
+			parsedPaddingScheme, err = parsePaddingSchemeArg(verType, item.PaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].padding_scheme' invalid: %s", i, err.Error())
 				continue
 			}
-			factories = append(factories, paddingScheme)
+			factories = append(factories, parsedPaddingScheme)
+		}
+
+		var parsedHashAlgorithm keysutil.HashType
+		if item.HashAlgorithm != "" {
+			var err error
+			parsedHashAlgorithm, err = parseHashAlgorithmArg(verType, item.HashAlgorithm)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].hash_algorithm' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, parsedHashAlgorithm)
 		}
 		if item.AssociatedData != "" {
-			if !p.Type.AssociatedDataSupported() {
-				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
+			if !verType.AssociatedDataSupported() {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, verType.String())
 				continue
 			}
 
 			factories = append(factories, AssocDataFactory{item.AssociatedData})
 		}
 
-		if p.Type == keysutil.KeyType_MANAGED_KEY {
-			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-			if !ok {
-				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
+		if verType == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
 			}
 
-			factories = append(factories, ManagedKeyFactory{
-				managedKeyParams: keysutil.ManagedKeyParameters{
-					ManagedKeySystemView: managedKeySystemView,
-					BackendUUID:          b.backendUUID,
-					Context:              ctx,
-				},
-			})
+			factories = append(factories, factory)
 		}
 
 		opts := keysutil.EncryptionOptions{
@@ -585,6 +616,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
 			IV:         item.DecodedIV,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, item.Plaintext, factories...)
@@ -613,6 +645,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		batchResponseItems[i].Ciphertext = ciphertext
 		batchResponseItems[i].KeyVersion = keyVersion
+		successfulRequests++
 	}
 
 	resp := &logical.Response{}
@@ -647,12 +680,17 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
 
+	// Increment the counter for successful operations
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
+		b.Logger().Error("failed to track transit encrypt request count", "error", err.Error())
+	}
+
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }
 
-func nonceAllowed(p *keysutil.Policy) bool {
+func nonceAllowed(p *keysutil.Policy, ver int) bool {
 	var supportedKeyType bool
-	switch p.Type {
+	switch p.KeyVersionType(ver) {
 	case keysutil.KeyType_MANAGED_KEY:
 		return true
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
@@ -699,13 +737,13 @@ func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *l
 // shouldWarnAboutNonceUsage attempts to determine if we will use a provided nonce or not. Ideally this
 // would be information returned through p.Encrypt but that would require an SDK api change and this is
 // transit specific
-func shouldWarnAboutNonceUsage(p *keysutil.Policy, userSuppliedNonce []byte) bool {
+func shouldWarnAboutNonceUsage(p *keysutil.Policy, userSuppliedNonce []byte, ver int) bool {
 	if len(userSuppliedNonce) == 0 {
 		return false
 	}
 
 	var supportedKeyType bool
-	switch p.Type {
+	switch p.KeyVersionType(ver) {
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		supportedKeyType = true
 	default:

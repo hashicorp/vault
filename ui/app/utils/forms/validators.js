@@ -1,10 +1,11 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { isPresent } from '@ember/utils';
 import { capitalize } from '@ember/string';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 /*
 * Model Validators
@@ -26,10 +27,12 @@ export const length = (value, { nullable = false, min, max } = {}) => {
   return nullable;
 };
 
-export const number = (value, { nullable = false } = {}) => {
+export const number = (value, { nullable = false, min, max } = {}) => {
   // since 0 is falsy, !value returns true even though 0 is a valid number
   if (!value && value !== 0) return nullable;
-  return !isNaN(value);
+  const underMin = isPresent(min) ? value < min : false;
+  const overMax = isPresent(max) ? value > max : false;
+  return !isNaN(value) && !underMin && !overMax;
 };
 
 export const containsWhiteSpace = (value) => {
@@ -40,6 +43,8 @@ export const endsInSlash = (value) => {
   const validation = new RegExp('/$');
   return !validation.test(value);
 };
+
+export const maxDuration = (value) => !isDurationOverMax(value);
 
 /*
 * General Validators
@@ -83,6 +88,7 @@ export default {
   isNonString,
   hasWhitespace,
   isNot,
+  maxDuration,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
 };

@@ -26,7 +26,6 @@
         <select
           aria-label={{or @label "Select a mount accessor"}}
           name={{@name}}
-          id={{@name}}
           {{on "change" this.change}}
           data-test-mount-accessor-select
         >
@@ -55,7 +54,7 @@
   {{else}}
     <input
       name={{@name}}
-      id={{@name}}
+      aria-label={{@name}}
       class="input"
       value={{@value}}
       placeholder="Mount accessor"

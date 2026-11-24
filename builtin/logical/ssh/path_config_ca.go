@@ -134,6 +134,8 @@ func (b *backend) pathConfigCARead(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("keys haven't been configured yet"), nil
 	}
 
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHConfigCARead, nil)
+
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"public_key": publicKey,
@@ -159,6 +161,9 @@ func (b *backend) pathConfigCADelete(ctx context.Context, req *logical.Request, 
 	if err := req.Storage.Delete(ctx, caManagedKeyStoragePath); err != nil {
 		return nil, err
 	}
+
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHConfigCADelete, nil)
+
 	return nil, nil
 }
 
@@ -247,12 +252,16 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 
 	generateSigningKey := data.Get("generate_signing_key").(bool)
 
+	metadata := make(map[string]interface{})
+
 	if useManagedKey {
 		generateSigningKey = false
 		err = b.createManagedKey(ctx, req.Storage, managedKeyName, managedKeyID)
 		if err != nil {
 			return nil, err
 		}
+		metadata["managed_key_name"] = managedKeyName
+		metadata["managed_key_id"] = managedKeyID
 	} else {
 		if publicKey != "" && privateKey != "" {
 			_, err := ssh.ParsePrivateKey([]byte(privateKey))
@@ -272,6 +281,8 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 			if err != nil {
 				return nil, err
 			}
+			metadata["key_type"] = keyType
+			metadata["key_bits"] = keyBits
 		} else {
 			return logical.ErrorResponse("if generate_signing_key is false, either both public_key and private_key or a managed key must be provided"), nil
 		}
@@ -281,6 +292,8 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 			return nil, err
 		}
 	}
+
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHConfigCAWrite, metadata)
 
 	if generateSigningKey {
 		response := &logical.Response{

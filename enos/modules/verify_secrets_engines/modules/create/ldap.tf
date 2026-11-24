@@ -15,6 +15,7 @@ module "create_ldap_secret_engine" {
   vault_addr             = var.vault_addr
   vault_root_token       = var.vault_root_token
   vault_install_dir      = var.vault_install_dir
+  vault_audit_log_path   = var.vault_audit_log_path
 }
 
 locals {

@@ -123,6 +123,7 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 		return nil, nil
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigAccessRead, nil)
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"address":               conf.Address,
@@ -166,8 +167,9 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	if conf.Token == "" {
 		client, err := clientFromConfig(conf)
 		if err != nil {
-			return logical.ErrorResponse("Token not provided and failed to constuct client"), err
+			return logical.ErrorResponse("Token not provided and failed to construct client"), err
 		}
+		defer client.Close()
 		token, _, err := client.ACLTokens().Bootstrap(nil)
 		if err != nil {
 			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs"), err
@@ -177,6 +179,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 
 	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigAccessWrite, nil)
 	entry, err := logical.StorageEntryJSON("config/access", conf)
 	if err != nil {
 		return nil, err
@@ -185,6 +188,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
+	b.resetClient()
 	return nil, nil
 }
 
@@ -192,6 +196,8 @@ func (b *backend) pathConfigAccessDelete(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Delete(ctx, configAccessKey); err != nil {
 		return nil, err
 	}
+	b.resetClient()
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigAccessDelete, nil)
 	return nil, nil
 }
 

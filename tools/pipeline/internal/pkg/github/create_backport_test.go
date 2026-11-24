@@ -1,15 +1,18 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
 	"testing"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/stretchr/testify/require"
 )
@@ -18,47 +21,135 @@ import (
 func TestCreateBackportReq_Validate(t *testing.T) {
 	t.Parallel()
 
+	changedCfg := func() *changed.Config {
+		return &changed.Config{
+			Groups: []*changed.GroupConfig{
+				{
+					Name: "go",
+					Match: changed.Matchers{
+						{Extension: []string{".go"}},
+					},
+				},
+				{
+					Name: "python",
+					Match: changed.Matchers{
+						{Extension: []string{".py"}},
+					},
+				},
+			},
+		}
+	}
+
+	versionsCfg := func() *releases.VersionsConfig {
+		return &releases.VersionsConfig{
+			Schema: 1,
+			ActiveVersion: &releases.ActiveVersion{
+				Versions: map[string]*releases.Version{
+					"1.19.x": {CEActive: true, LTS: true},
+					"1.18.x": {CEActive: true, LTS: false},
+					"1.17.x": {CEActive: false, LTS: false},
+					"1.16.x": {CEActive: false, LTS: true},
+				},
+			},
+		}
+	}
+	configDecodeRes := func() *config.DecodeRes {
+		return &config.DecodeRes{
+			Config: &config.Config{
+				ChangedFiles: changedCfg(),
+			},
+		}
+	}
+	versionsDecodeRes := func() *releases.DecodeRes {
+		return &releases.DecodeRes{
+			Config: versionsCfg(),
+		}
+	}
+
 	for name, test := range map[string]struct {
 		req   *CreateBackportReq
 		valid bool
 	}{
 		"empty": {nil, false},
-		"valid": {NewCreateBackportReq(WithCreateBrackportReqPullNumber(1234)), true},
+		"valid": {
+			NewCreateBackportReq(
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+			), true,
+		},
+		"valid - with backport failed label": {
+			NewCreateBackportReq(
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+				WithCreateBackportReqBackportFailedLabel("backport-failed"),
+			), true,
+		},
+		"no changed file config": {
+			NewCreateBackportReq(
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+			), false,
+		},
+		"no versions config": {
+			NewCreateBackportReq(
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+			), false,
+		},
 		"no owner": {
 			NewCreateBackportReq(
-				WithCreateBrackportReqPullNumber(1234),
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
 				WithCreateBackportReqOwner(""),
 			), false,
 		},
 		"no repo": {
 			NewCreateBackportReq(
-				WithCreateBrackportReqPullNumber(1234),
-				WithCreateBrackportReqRepo(""),
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+				WithCreateBackportReqRepo(""),
 			), false,
 		},
-		"no pull number": {NewCreateBackportReq(), false},
+		"no pull number": {
+			NewCreateBackportReq(
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+			), false,
+		},
 		"no ce branch prefix": {
 			NewCreateBackportReq(
-				WithCreateBrackportReqPullNumber(1234),
-				WithCreateBrackportReqCEBranchPrefix(""),
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+				WithCreateBackportReqCEBranchPrefix(""),
 			), false,
 		},
 		"no base origin": {
 			NewCreateBackportReq(
-				WithCreateBrackportReqPullNumber(1234),
-				WithCreateBrackportReqBaseOrigin(""),
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+				WithCreateBackportReqBaseOrigin(""),
 			), false,
 		},
 		"uninitialized exclude groups": {
 			NewCreateBackportReq(
-				WithCreateBrackportReqPullNumber(1234),
-				WithCreateBrackportReqCEExclude(nil),
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+				WithCreateBackportReqCEExclude(nil),
 			), false,
 		},
 		"uninitialized inactive groups": {
 			NewCreateBackportReq(
-				WithCreateBrackportReqPullNumber(1234),
-				WithCreateBrackportReqAllowInactiveGroups(nil),
+				WithCreateBackportReqConfigDecodeRes(configDecodeRes()),
+				WithCreateBackportReqVersionsDecodeRes(versionsDecodeRes()),
+				WithCreateBackportReqPullNumber(1234),
+				WithCreateBackportReqAllowInactiveGroups(nil),
 			), false,
 		},
 	} {
@@ -133,10 +224,10 @@ func TestCreateBackportReq_baseRefVersion(t *testing.T) {
 		// logic anyway
 		"main":               {req: NewCreateBackportReq(), expectedRef: "main"},
 		"ce/main":            {req: NewCreateBackportReq(), expectedRef: "main"},
-		"ent/main":           {req: NewCreateBackportReq(WithCreateBrackportReqEntBranchPrefix("ent")), expectedRef: "main"},
+		"ent/main":           {req: NewCreateBackportReq(WithCreateBackportReqEntBranchPrefix("ent")), expectedRef: "main"},
 		"release/1.19.x+ent": {req: NewCreateBackportReq(), expectedRef: "release/1.19.x"},
 		"ce/release/1.19.x":  {req: NewCreateBackportReq(), expectedRef: "release/1.19.x"},
-		"ent/release/1.19.x": {req: NewCreateBackportReq(WithCreateBrackportReqEntBranchPrefix("ent")), expectedRef: "release/1.19.x"},
+		"ent/release/1.19.x": {req: NewCreateBackportReq(WithCreateBackportReqEntBranchPrefix("ent")), expectedRef: "release/1.19.x"},
 	} {
 		t.Run(ref, func(t *testing.T) {
 			t.Parallel()
@@ -164,7 +255,7 @@ func TestCreateBackportReq_determineBackportRefs(t *testing.T) {
 			[]string{"ce/main"},
 		},
 		"ent main no labels with ent prefix": {
-			NewCreateBackportReq(WithCreateBrackportReqEntBranchPrefix("ent")),
+			NewCreateBackportReq(WithCreateBackportReqEntBranchPrefix("ent")),
 			"ent/main",
 			nil,
 			[]string{"ce/main"},
@@ -179,7 +270,7 @@ func TestCreateBackportReq_determineBackportRefs(t *testing.T) {
 			[]string{"ce/main", "release/1.19.x+ent", "release/1.18.x+ent"},
 		},
 		"ent main with labels with ent prefix": {
-			NewCreateBackportReq(WithCreateBrackportReqEntBranchPrefix("ent")),
+			NewCreateBackportReq(WithCreateBackportReqEntBranchPrefix("ent")),
 			"ent/main",
 			Labels{
 				&libgithub.Label{Name: libgithub.Ptr("backport/1.19.x")},
@@ -194,7 +285,7 @@ func TestCreateBackportReq_determineBackportRefs(t *testing.T) {
 			[]string{"ce/release/1.19.x"},
 		},
 		"ent release no labels with ent prefix": {
-			NewCreateBackportReq(WithCreateBrackportReqEntBranchPrefix("ent")),
+			NewCreateBackportReq(WithCreateBackportReqEntBranchPrefix("ent")),
 			"ent/release/1.19.x+ent",
 			nil,
 			[]string{"ce/release/1.19.x"},
@@ -215,7 +306,7 @@ func TestCreateBackportReq_determineBackportRefs(t *testing.T) {
 			},
 		},
 		"ent release with labels with ent prefix": {
-			NewCreateBackportReq(WithCreateBrackportReqEntBranchPrefix("ent")),
+			NewCreateBackportReq(WithCreateBackportReqEntBranchPrefix("ent")),
 			"ent/release/1.19.x+ent",
 			Labels{
 				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
@@ -290,7 +381,7 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	allowedInactiveCEChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("changelog/_2837.md"),
 				},
@@ -305,14 +396,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	onlyEnterpriseChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr(".github/workflows/build-artifacts-ent.yml"),
 				},
 				Groups: changed.FileGroups{"enterprise", "pipeline"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("vault/vault_ent/go.mod"),
 				},
@@ -327,14 +418,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	mixedCEAndEnterpriseChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("e1c10eae02e13f5a090b9c29b0b1a3003e8ca7f6"),
 					Filename: libgithub.Ptr("go.mod"),
 				},
 				Groups: changed.FileGroups{"app", "gotoolchain"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("a6397662ea1d5fdde744ff3e4246377cf369197a"),
 					Filename: libgithub.Ptr("vault_ent/go.mod"),
 				},
@@ -349,14 +440,14 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	allCEChangedFiles := &ListChangedFilesRes{
 		Files: changed.Files{
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr(".github/workflows/build.yml"),
 				},
 				Groups: changed.FileGroups{"pipeline"},
 			},
 			{
-				File: &libgithub.CommitFile{
+				GithubCommitFile: &libgithub.CommitFile{
 					SHA:      libgithub.Ptr("84e0b544965861a7c6373e639cb13755512f84f4"),
 					Filename: libgithub.Ptr("go.mod"),
 				},
@@ -566,7 +657,9 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := NewCreateBackportReq()
+			req := NewCreateBackportReq(
+				WithCreateBackportReqAllowInactiveGroups(changed.FileGroups{changed.FileGroup("changelog")}),
+			)
 			msg, skip := req.shouldSkipRef(
 				context.Background(),
 				test.baseRefVersion,
@@ -575,7 +668,8 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 				test.changedFiles,
 			)
 			require.Equalf(
-				t, test.skip, skip, "should have %t but got %t with %s", test.skip, skip, msg)
+				t, test.skip, skip, "should have %t but got %t with %s", test.skip, skip, msg,
+			)
 		})
 	}
 }
@@ -650,7 +744,7 @@ func TestCreateBackportRes_Err(t *testing.T) {
 					},
 				},
 			},
-			// When multiple attempts fail the errros should be stable
+			// When multiple attempts fail the errors should be stable
 			errors.New("top-failed\nchild-2-failed\nchild-3-failed"),
 		},
 	} {
@@ -660,6 +754,341 @@ func TestCreateBackportRes_Err(t *testing.T) {
 			} else {
 				require.Equal(t, test.failed.Error(), test.in.Err().Error())
 			}
+		})
+	}
+}
+
+// TestCreateBackportRes_ToTable verifies that an attempt without a pull
+// request, like one we skipped, gets an empty URL cell rather than <nil>. The
+// empty cell lets us hide the URL column when no attempt has a pull request,
+// and keeps <nil> out of the comment we leave on the pull request.
+func TestCreateBackportRes_ToTable(t *testing.T) {
+	t.Parallel()
+
+	const prURL = "https://github.com/hashicorp/vault-enterprise/pull/1"
+
+	for name, test := range map[string]struct {
+		res          *CreateBackportRes
+		wantContains []string
+		wantMissing  []string
+	}{
+		"skipped attempt": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main": {BaseRef: "main", TargetRef: "ce/main", Skipped: true, SkippedReason: "no changes"},
+			}},
+			wantContains: []string{"ce/main", "no changes"},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;", "URL"},
+		},
+		"attempt with a pull request": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main": {BaseRef: "main", TargetRef: "ce/main", PullRequest: &libgithub.PullRequest{HTMLURL: libgithub.Ptr(prURL)}},
+			}},
+			wantContains: []string{"ce/main", "URL", prURL},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;"},
+		},
+		"skipped attempt next to one with a pull request": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main":        {BaseRef: "main", TargetRef: "ce/main", PullRequest: &libgithub.PullRequest{HTMLURL: libgithub.Ptr(prURL)}},
+				"release/1.21.x": {BaseRef: "main", TargetRef: "release/1.21.x", Skipped: true, SkippedReason: "no changes"},
+			}},
+			wantContains: []string{"ce/main", "release/1.21.x", "URL", prURL, "no changes"},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, got := range []string{test.res.ToTable().Render(), test.res.CommentBody()} {
+				for _, want := range test.wantContains {
+					require.Contains(t, got, want)
+				}
+				for _, missing := range test.wantMissing {
+					require.NotContains(t, got, missing)
+				}
+			}
+		})
+	}
+}
+
+// Test_filterNonBackportLabels tests the label filtering functionality
+func Test_filterNonBackportLabels(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		backportPrefix string
+		sourceLabels   Labels
+		expectedLabels []string
+	}{
+		"no labels": {
+			backportPrefix: "backport",
+			sourceLabels:   Labels{},
+			expectedLabels: nil,
+		},
+		"only backport labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.19.x")},
+			},
+			expectedLabels: nil,
+		},
+		"mixed labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/ce/main")},
+				&libgithub.Label{Name: libgithub.Ptr("docs")},
+			},
+			expectedLabels: []string{"bug", "enhancement", "docs"},
+		},
+		"no backport labels": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+				&libgithub.Label{Name: libgithub.Ptr("docs")},
+				&libgithub.Label{Name: libgithub.Ptr("priority/high")},
+			},
+			expectedLabels: []string{"bug", "enhancement", "docs", "priority/high"},
+		},
+		"custom backport prefix": {
+			backportPrefix: "cherry-pick",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("bug")},
+				&libgithub.Label{Name: libgithub.Ptr("cherry-pick/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+			},
+			expectedLabels: []string{"bug", "enhancement"},
+		},
+		"backport-like but different prefix": {
+			backportPrefix: "backport",
+			sourceLabels: Labels{
+				&libgithub.Label{Name: libgithub.Ptr("backup/daily")},
+				&libgithub.Label{Name: libgithub.Ptr("backport/1.18.x")},
+				&libgithub.Label{Name: libgithub.Ptr("enhancement")},
+			},
+			expectedLabels: []string{"backup/daily", "enhancement"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			filteredLabels := filterNonBackportLabels(test.sourceLabels, test.backportPrefix)
+
+			require.Equal(t, test.expectedLabels, filteredLabels,
+				"filtered labels should match expected labels")
+		})
+	}
+}
+
+// Test_backportReviewers tests that we request the original author unless
+// they also opened the backport, in which case we request the assignees.
+func Test_backportReviewers(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		author         string
+		assignee       string
+		mergedBy       string
+		backportAuthor string
+		expected       []string
+	}{
+		"original author": {
+			author:         "author",
+			assignee:       "assignee",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"author"},
+		},
+		"unknown backport author": {
+			author:   "author",
+			assignee: "assignee",
+			mergedBy: "merger",
+			expected: []string{"author"},
+		},
+		"bot opened with assignee and merger": {
+			author:         "bot",
+			assignee:       "assignee",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"assignee", "merger"},
+		},
+		"bot opened with same assignee and merger": {
+			author:         "bot",
+			assignee:       "assignee",
+			mergedBy:       "assignee",
+			backportAuthor: "bot",
+			expected:       []string{"assignee"},
+		},
+		"bot opened without assignee": {
+			author:         "bot",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"merger"},
+		},
+		"bot opened and assigned": {
+			author:         "bot",
+			assignee:       "bot",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"merger"},
+		},
+		"bot opened without assignee or merger": {
+			author:         "bot",
+			backportAuthor: "bot",
+			expected:       []string{},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			pr := &libgithub.PullRequest{
+				User: &libgithub.User{Login: libgithub.Ptr(test.author)},
+			}
+			if test.assignee != "" {
+				pr.Assignee = &libgithub.User{Login: libgithub.Ptr(test.assignee)}
+			}
+			if test.mergedBy != "" {
+				pr.MergedBy = &libgithub.User{Login: libgithub.Ptr(test.mergedBy)}
+			}
+
+			require.Equal(t, test.expected, backportReviewers(pr, test.backportAuthor))
+		})
+	}
+}
+
+// Test_syncBackportFailedLabel tests that syncBackportFailedLabel applies the
+// label when runErr is non-nil, removes it when runErr is nil, and is a no-op
+// when label is empty.
+func Test_syncBackportFailedLabel(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		label        string
+		runErr       error
+		addStatus    int  // response status for POST .../labels (apply path)
+		removeStatus int  // response status for DELETE .../labels/backport-failed (remove path)
+		expectAdd    bool // expect POST .../labels to be called
+		expectRemove bool // expect DELETE .../labels/backport-failed to be called
+		expectError  bool
+	}{
+		"run failed - label applied": {
+			label:     "backport-failed",
+			runErr:    errors.New("something went wrong"),
+			addStatus: http.StatusOK,
+			expectAdd: true,
+		},
+		"run succeeded - label removed": {
+			label:        "backport-failed",
+			runErr:       nil,
+			removeStatus: http.StatusOK,
+			expectRemove: true,
+		},
+		"run succeeded - label not present 404 ignored": {
+			label:        "backport-failed",
+			runErr:       nil,
+			removeStatus: http.StatusNotFound,
+			expectRemove: true,
+		},
+		"run failed - api error applying label": {
+			label:       "backport-failed",
+			runErr:      errors.New("something went wrong"),
+			addStatus:   http.StatusInternalServerError,
+			expectAdd:   true,
+			expectError: true,
+		},
+		"empty label - no-op on failure": {
+			label:  "",
+			runErr: errors.New("something went wrong"),
+		},
+		"empty label - no-op on success": {
+			label:  "",
+			runErr: nil,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			addCalled := false
+			removeCalled := false
+			client, mux, teardown := setupTestClient(t)
+			defer teardown()
+
+			if test.expectAdd {
+				mux.HandleFunc("/repos/test-owner/test-repo/issues/42/labels", func(w http.ResponseWriter, r *http.Request) {
+					require.Equal(t, http.MethodPost, r.Method)
+					addCalled = true
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(test.addStatus)
+					w.Write([]byte(`[]`))
+				})
+			}
+
+			if test.expectRemove {
+				mux.HandleFunc("/repos/test-owner/test-repo/issues/42/labels/"+test.label, func(w http.ResponseWriter, r *http.Request) {
+					require.Equal(t, http.MethodDelete, r.Method)
+					removeCalled = true
+					w.WriteHeader(test.removeStatus)
+				})
+			}
+
+			req := &CreateBackportReq{
+				Owner:               "test-owner",
+				Repo:                "test-repo",
+				PullNumber:          42,
+				BackportFailedLabel: test.label,
+			}
+			err := req.syncBackportFailedLabel(context.Background(), client, test.runErr)
+
+			if test.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, test.expectAdd, addCalled, "add label API call expectation mismatch")
+			require.Equal(t, test.expectRemove, removeCalled, "remove label API call expectation mismatch")
+		})
+	}
+}
+
+// Test_createBackportPullRequest verifies that a backport pull request is
+// opened as a draft when requested, which we do for failed backports so that
+// the no-op commit is less likely to be approved by mistake, and is opened as
+// a regular pull request otherwise.
+func Test_createBackportPullRequest(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		draft bool
+	}{
+		"draft":     {draft: true},
+		"not draft": {draft: false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			client, mux, teardown := setupTestClient(t)
+			defer teardown()
+
+			var got libgithub.NewPullRequest
+			mux.HandleFunc("/repos/test-owner/test-repo/pulls", func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewDecoder(r.Body).Decode(&got)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 7}`))
+			})
+
+			req := &CreateBackportReq{Owner: "test-owner", Repo: "test-repo"}
+			pr, err := req.createBackportPullRequest(
+				context.Background(), client, "title", "backport/branch", "release/1.19.x", "body", test.draft,
+			)
+			require.NoError(t, err)
+			require.Equal(t, 7, pr.GetNumber())
+			require.Equal(t, test.draft, got.GetDraft())
+			require.Equal(t, "backport/branch", got.GetHead())
+			require.Equal(t, "release/1.19.x", got.GetBase())
 		})
 	}
 }

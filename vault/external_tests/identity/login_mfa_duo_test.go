@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -32,6 +33,9 @@ func TestInteg_PolicyMFADUO(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to enable userpass auth: %v", err)
 	}
+
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	err = mfaGeneratePolicyDUOTest(client)
 	if err != nil {

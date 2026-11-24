@@ -12,8 +12,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 func entHandleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler {
 	return nil
 }

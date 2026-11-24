@@ -143,8 +143,16 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	logicalReq.Storage = newGRPCStorageClient(brokeredClient)
 
-	reqCtx := pbMetadataCtxToLogicalCtx(ctx)
+	reqCtx, err := pbMetadataCtxToLogicalCtx(ctx)
+	if err != nil {
+		return &pb.HandleRequestReply{}, err
+	}
+
 	resp, respErr := backend.HandleRequest(reqCtx, logicalReq)
+	ws := logical.IndexStateFromContext(reqCtx)
+	if ws == nil {
+		ws = &logical.WALState{}
+	}
 
 	pbResp, err := pb.LogicalResponseToProtoResponse(resp)
 	if err != nil {
@@ -154,10 +162,14 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 	return &pb.HandleRequestReply{
 		Response: pbResp,
 		Err:      pb.ErrToProtoErr(respErr),
+		WalIndex: &pb.WALIndex{
+			LocalIndex:      ws.LocalIndex,
+			ReplicatedIndex: ws.ReplicatedIndex,
+		},
 	}, nil
 }
 
-func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.InitializeArgs) (*pb.InitializeReply, error) {
+func (b *backendGRPCPluginServer) Initialize(ctx context.Context, args *pb.InitializeArgs) (*pb.InitializeReply, error) {
 	backend, brokeredClient, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.InitializeReply{}, err
@@ -169,6 +181,13 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Initiali
 
 	req := &logical.InitializationRequest{
 		Storage: newGRPCStorageClient(brokeredClient),
+	}
+	if args != nil {
+		req.MountPoint = args.MountPoint
+		req.MountType = args.MountType
+		req.MountAccessor = args.MountAccessor
+		req.BackendUUID = args.BackendUuid
+		req.MountRunningVersion = args.MountRunningVersion
 	}
 
 	respErr := backend.Initialize(ctx, req)

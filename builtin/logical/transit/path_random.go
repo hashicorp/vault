@@ -6,7 +6,7 @@ package transit
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/internalshared/random"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -43,6 +43,12 @@ func (b *backend) pathRandom() *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "platform",
 				Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
+			},
+			"drbg": {
+				Type:    framework.TypeString,
+				Default: "",
+				Description: "If set, seed a secure DRBG from the source and use it to generate the bytes.  This can be more performant when using the seal source." +
+					" Possible values are unset (don't use a DRBG), \"auto\" and \"hmacdrbg\" which are equivalent.",
 			},
 		},
 

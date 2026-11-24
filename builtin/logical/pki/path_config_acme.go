@@ -29,14 +29,16 @@ const (
 )
 
 type acmeConfigEntry struct {
-	Enabled                bool          `json:"enabled"`
-	AllowedIssuers         []string      `json:"allowed_issuers="`
-	AllowedRoles           []string      `json:"allowed_roles"`
-	AllowRoleExtKeyUsage   bool          `json:"allow_role_ext_key_usage"`
-	DefaultDirectoryPolicy string        `json:"default_directory_policy"`
-	DNSResolver            string        `json:"dns_resolver"`
-	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
-	MaxTTL                 time.Duration `json:"max_ttl"`
+	Enabled                    bool          `json:"enabled"`
+	AllowedIssuers             []string      `json:"allowed_issuers="`
+	AllowedRoles               []string      `json:"allowed_roles"`
+	AllowRoleExtKeyUsage       bool          `json:"allow_role_ext_key_usage"`
+	DefaultDirectoryPolicy     string        `json:"default_directory_policy"`
+	DNSResolver                string        `json:"dns_resolver"`
+	EabPolicyName              EabPolicyName `json:"eab_policy_name"`
+	MaxTTL                     time.Duration `json:"max_ttl"`
+	ChallengePermittedIPRanges []string      `json:"challenge_permitted_ip_ranges"`
+	ChallengeExcludedIPRanges  []string      `json:"challenge_excluded_ip_ranges"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -125,9 +127,16 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Default:     false,
 			},
 			"default_directory_policy": {
-				Type:        framework.TypeString,
-				Description: `the policy to be used for non-role-qualified ACME requests; by default ACME issuance will be otherwise unrestricted, equivalent to the sign-verbatim endpoint; one may also specify a role to use as this policy, as "role:<role_name>", the specified role must be allowed by allowed_roles`,
-				Default:     "sign-verbatim",
+				Type: framework.TypeString,
+				Description: `the policy to be used for non-role-qualified ACME requests; ` +
+					`"sign-verbatim" (default) rejects finalization if the CSR contains URI SANs, email SANs, ` +
+					`or Other SANs — ACME challenges only verify DNS names and IP addresses so those SAN types ` +
+					`are never validated and must not appear in issued certificates; ` +
+					`"sign-verbatim-unsafe" issues the certificate with those SANs passed through from the CSR ` +
+					`without ACME verification — use only when a legacy workflow requires it and the risk is ` +
+					`explicitly accepted; ` +
+					`"forbid" disallows the default directory; "role:<role_name>" applies the named role`,
+				Default: "sign-verbatim",
 			},
 			"dns_resolver": {
 				Type:        framework.TypeString,
@@ -143,6 +152,16 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Type:        framework.TypeDurationSecond,
 				Description: `Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value`,
 				Default:     defaultAcmeMaxTTL.Seconds(),
+			},
+			"challenge_permitted_ip_ranges": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `List of CIDR blocks that are permitted for ACME challenge validation. If set, only IPs within these ranges will be allowed for validation. Can be individual IPs or CIDR notation.`,
+				Default:     []string{},
+			},
+			"challenge_excluded_ip_ranges": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `List of CIDR blocks that are excluded from ACME challenge validation. IPs within these ranges will be rejected for validation. Can be individual IPs or CIDR notation. This list takes precedence over challenge_permitted_ip_ranges.`,
+				Default:     []string{},
 			},
 		},
 
@@ -195,14 +214,16 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logical.Response {
 	response := &logical.Response{
 		Data: map[string]interface{}{
-			"allowed_roles":            config.AllowedRoles,
-			"allow_role_ext_key_usage": config.AllowRoleExtKeyUsage,
-			"allowed_issuers":          config.AllowedIssuers,
-			"default_directory_policy": config.DefaultDirectoryPolicy,
-			"enabled":                  config.Enabled,
-			"dns_resolver":             config.DNSResolver,
-			"eab_policy":               config.EabPolicyName,
-			"max_ttl":                  config.MaxTTL.Seconds(),
+			"allowed_roles":                 config.AllowedRoles,
+			"allow_role_ext_key_usage":      config.AllowRoleExtKeyUsage,
+			"allowed_issuers":               config.AllowedIssuers,
+			"default_directory_policy":      config.DefaultDirectoryPolicy,
+			"enabled":                       config.Enabled,
+			"dns_resolver":                  config.DNSResolver,
+			"eab_policy":                    config.EabPolicyName,
+			"max_ttl":                       config.MaxTTL.Seconds(),
+			"challenge_permitted_ip_ranges": config.ChallengePermittedIPRanges,
+			"challenge_excluded_ip_ranges":  config.ChallengeExcludedIPRanges,
 		},
 		Warnings: warnings,
 	}
@@ -279,6 +300,34 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		config.MaxTTL = maxTTL
 	}
 
+	if permittedIPRangesRaw, ok := d.GetOk("challenge_permitted_ip_ranges"); ok {
+		permittedIPRanges := permittedIPRangesRaw.([]string)
+		// Validate each CIDR entry
+		for _, cidr := range permittedIPRanges {
+			if _, _, err := net.ParseCIDR(cidr); err != nil {
+				// Try parsing as IP address
+				if net.ParseIP(cidr) == nil {
+					return nil, fmt.Errorf("invalid CIDR or IP address in challenge_permitted_ip_ranges: %s", cidr)
+				}
+			}
+		}
+		config.ChallengePermittedIPRanges = permittedIPRanges
+	}
+
+	if excludedIPRangesRaw, ok := d.GetOk("challenge_excluded_ip_ranges"); ok {
+		excludedIPRanges := excludedIPRangesRaw.([]string)
+		// Validate each CIDR entry
+		for _, cidr := range excludedIPRanges {
+			if _, _, err := net.ParseCIDR(cidr); err != nil {
+				// Try parsing as IP address
+				if net.ParseIP(cidr) == nil {
+					return nil, fmt.Errorf("invalid CIDR or IP address in challenge_excluded_ip_ranges: %s", cidr)
+				}
+			}
+		}
+		config.ChallengeExcludedIPRanges = excludedIPRanges
+	}
+
 	// Validate Default Directory Behavior:
 	defaultDirectoryPolicyType, extraInfo, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
 	if err != nil {
@@ -288,6 +337,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	switch defaultDirectoryPolicyType {
 	case Forbid:
 	case SignVerbatim:
+	case SignVerbatimUnsafe:
 	case ExternalPolicy:
 		if !constants.IsEnterprise {
 			return nil, fmt.Errorf("external-policy is only available in enterprise versions of Vault")
@@ -401,6 +451,8 @@ func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirect
 		return Forbid, "", nil
 	case defaultDirectoryPolicy == "sign-verbatim":
 		return SignVerbatim, "", nil
+	case defaultDirectoryPolicy == "sign-verbatim-unsafe":
+		return SignVerbatimUnsafe, "", nil
 	case strings.HasPrefix(defaultDirectoryPolicy, rolePrefix):
 		if len(defaultDirectoryPolicy) == rolePrefixLength {
 			return Forbid, "", fmt.Errorf("no role specified by policy %v", defaultDirectoryPolicy)
@@ -437,4 +489,9 @@ const (
 	SignVerbatim
 	Role
 	ExternalPolicy
+	// SignVerbatimUnsafe behaves like SignVerbatim but does not strip URI SANs,
+	// email SANs, or Other SANs from the CSR before issuance. These SAN types are
+	// never verified by ACME challenges; use this only when a legacy workflow
+	// requires them and the risk is explicitly accepted.
+	SignVerbatimUnsafe
 )

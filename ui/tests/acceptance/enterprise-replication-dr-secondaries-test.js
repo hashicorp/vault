@@ -140,10 +140,10 @@ module('Acceptance | Enterprise | replication-secondaries', function (hooks) {
     assert
       .dom('[data-test-promote-description]')
       .hasText(
-        'Promote this cluster to a Disaster Recovery primary',
+        'Promote this cluster to a disaster recovery primary',
         'shows the correct description for a DR secondary'
       );
-    assert.dom('[data-test-mode]').includesText('secondary', 'shows the DR secondary mode badge');
+    assert.dom(GENERAL.badge('secondary')).includesText('secondary', 'shows the DR secondary mode badge');
 
     await click(GENERAL.linkTo('Details'));
     assert

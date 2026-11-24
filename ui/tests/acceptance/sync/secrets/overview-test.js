@@ -66,9 +66,38 @@ module('Acceptance | sync | overview', function (hooks) {
       await visit('/vault/sync/secrets/overview');
     });
 
+    test('total_secrets from the associations response renders in the Total secrets card', async function (assert) {
+      // confirms total_secrets from /sys/sync/associations reaches the rendered Total secrets card
+      syncScenario(this.server);
+      this.server.get('/sys/sync/associations', () => ({
+        data: { key_info: {}, keys: [], total_associations: 3, total_secrets: 5 },
+      }));
+
+      await visit('/vault/sync/secrets/overview');
+
+      assert
+        .dom(GENERAL.overviewCard.content('Total secrets'))
+        .hasText('5', 'Total secrets card renders the value from total_secrets in the API response');
+    });
+
+    test('Total secrets card shows "None" when associations endpoint returns no data', async function (assert) {
+      // confirms the card falls back to "None" when total_secrets is 0 (falsy)
+      syncScenario(this.server);
+      this.server.get('/sys/sync/associations', () => ({
+        data: { key_info: {}, keys: [], total_associations: 0, total_secrets: 0 },
+      }));
+
+      await visit('/vault/sync/secrets/overview');
+
+      assert
+        .dom(GENERAL.overviewCard.content('Total secrets'))
+        .hasText('None', 'Total secrets card shows "None" when total_secrets is 0 (falsy)');
+    });
+
     test('it should transition to correct routes when performing actions', async function (assert) {
       syncScenario(this.server);
-      await click(ts.navLink('Secrets Sync'));
+      await click(GENERAL.navLink('Secrets'));
+      await click(GENERAL.navLink('Secrets sync'));
       await click(ts.destinations.list.create);
       await click(ts.createCancel);
       await click(ts.overviewCard.actionText('Create new'));
@@ -77,7 +106,7 @@ module('Acceptance | sync | overview', function (hooks) {
       await click(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.action('sync'));
       await click(GENERAL.cancelButton);
-      await click(ts.breadcrumbLink('Secrets Sync'));
+      await click(ts.breadcrumbLink('Secrets sync'));
       await waitFor(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.action('details'));
@@ -172,7 +201,12 @@ module('Acceptance | sync | overview', function (hooks) {
         assert.expect(3);
 
         this.server.get('/sys/activation-flags', (_, req) => {
-          assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+          const expectedHeaders = { 'x-vault-namespace': '', 'x-vault-token': '' };
+          assert.deepEqual(
+            req.requestHeaders,
+            expectedHeaders,
+            'Request is unauthenticated and in root namespace'
+          );
           return {
             data: {
               activated: [''],
@@ -191,7 +225,8 @@ module('Acceptance | sync | overview', function (hooks) {
 
         // confirm we're in admin/foo
         assert.dom('[data-test-badge-namespace]').hasText('foo');
-        await click(ts.navLink('Secrets Sync'));
+        await click(GENERAL.navLink('Secrets'));
+        await click(GENERAL.navLink('Secrets sync'));
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
@@ -217,7 +252,12 @@ module('Acceptance | sync | overview', function (hooks) {
         flagService.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
         this.server.get('/sys/activation-flags', (_, req) => {
-          assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+          const expectedHeaders = { 'x-vault-namespace': '', 'x-vault-token': '' };
+          assert.deepEqual(
+            req.requestHeaders,
+            expectedHeaders,
+            'Request is unauthenticated and in root namespace'
+          );
           return {
             data: {
               activated: [''],
@@ -237,7 +277,8 @@ module('Acceptance | sync | overview', function (hooks) {
         // confirm we're in admin/foo
         assert.dom('[data-test-badge-namespace]').hasText('foo');
 
-        await click(ts.navLink('Secrets Sync'));
+        await click(GENERAL.navLink('Secrets'));
+        await click(GENERAL.navLink('Secrets sync'));
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);

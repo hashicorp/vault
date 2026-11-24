@@ -1,0 +1,3 @@
+```release-note:bug
+client/ocsp: Adds a grace period to renew the cached entry for OCSP response.
+```

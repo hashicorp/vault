@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRenewer_Renew(t *testing.T) {
@@ -19,24 +20,20 @@ func TestRenewer_Renew(t *testing.T) {
 	t.Run("group", func(t *testing.T) {
 		t.Run("kv", func(t *testing.T) {
 			t.Parallel()
-
-			if _, err := client.Logical().Write("secret/value", map[string]interface{}{
+			err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+			require.NoError(t, err)
+			_, err = client.Logical().Write("secret/value", map[string]interface{}{
 				"foo": "bar",
-			}); err != nil {
-				t.Fatal(err)
-			}
+			})
+			require.NoError(t, err)
 
 			secret, err := client.Logical().Read("secret/value")
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			go v.Renew()
 			defer v.Stop()
 

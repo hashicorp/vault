@@ -17,9 +17,8 @@
     <p>
       Using your template's regex as a starting point, you can specify which parts of your input to encode and decode. For
       example, you may want to handle input formatting or only decode part of an input. For more information, see
-      <DocLink @path="/vault/tutorials/adp/transform#advanced-handling">
-        our documentation.
-      </DocLink>
+      <Hds::Link::Inline @href={{doc-link "/vault/tutorials/adp/transform#advanced-handling"}} @isHrefExternal={{true}}>our
+        documentation.</Hds::Link::Inline>
     </p>
     <div class="has-top-margin-l">
       <RegexValidator
@@ -33,16 +32,16 @@
     <AutocompleteInput
       @label="Encode format"
       @subText="Use the groups above to define how the input will be encoded. Refer to each group with $N. This is optional; if not specified, pattern will be used."
-      @value={{@model.encodeFormat}}
+      @value={{@model.encode_format}}
       @optionsTrigger="$"
       @options={{this.inputOptions}}
-      @onChange={{fn (mut @model.encodeFormat)}}
+      @onChange={{fn (mut @model.encode_format)}}
       class="has-top-margin-l"
       data-test-encode-format
     />
     <KvObjectEditor
-      @value={{@model.decodeFormats}}
-      @onChange={{fn (mut @model.decodeFormats)}}
+      @value={{@model.decode_formats}}
+      @onChange={{fn (mut @model.decode_formats)}}
       @label="Decode formats"
       @subText="Using the groups above, define how this data will be decoded. Multiple decode_formats can be used. Optional. If not specified, pattern will be used."
       @keyPlaceholder="name"

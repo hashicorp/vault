@@ -8,8 +8,16 @@
     "ember-cli-htmlbars": "*",
     "ember-cli-babel": "*",
     "@hashicorp/design-system-components": "*",
-    "ember-auto-import": "*"
-
+    "ember-auto-import": "*",
+    "ember-cli-typescript": "*",
+    "@types/ember": "latest",
+    "@types/ember__array": "latest",
+    "@types/ember__component": "latest",
+    "@types/ember__controller": "latest",
+    "@types/ember__engine": "latest",
+    "@types/ember__routing": "latest",
+    "@types/rsvp": "latest",
+    "ember-template-lint": "*"
   },
   "ember-addon": {
     "paths": [

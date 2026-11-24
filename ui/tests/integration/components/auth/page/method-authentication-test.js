@@ -12,7 +12,7 @@ import { module, test } from 'qunit';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { RESPONSE_STUBS, TOKEN_DATA } from 'vault/tests/helpers/auth/response-stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { triggerMessageEvent, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import setupTestContext from './setup-test-context';
 import sinon from 'sinon';
@@ -89,6 +89,21 @@ module('Integration | Component | auth | page | method authentication', function
 
   hooks.afterEach(function () {
     window.localStorage.clear();
+  });
+
+  module('cert', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.authType = 'cert';
+      this.loginData = { name: 'app-client' };
+      this.path = this.authType;
+      this.response = RESPONSE_STUBS.cert;
+      this.tokenName = 'vault-cert☃1';
+      this.stubRequests = () => {
+        this.server.post(`/auth/${this.path}/login`, () => this.response);
+      };
+    });
+
+    methodAuthenticationTests(test);
   });
 
   module('github', function (hooks) {
@@ -199,6 +214,10 @@ module('Integration | Component | auth | page | method authentication', function
       this.tokenName = 'vault-okta☃1';
       this.stubRequests = () => {
         this.server.post(`/auth/${this.path}/login/${this.loginData.username}`, () => this.response);
+        // pollForOktaNumberChallenge loops until /verify returns a correct_answer.
+        // Without this stub the polling task never exits, holding the test waiter open
+        // and causing the test to hang indefinitely.
+        this.server.get(`/auth/${this.path}/verify/:nonce`, () => ({ data: { correct_answer: 23 } }));
       };
     });
 

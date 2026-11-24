@@ -22,7 +22,6 @@
                 @type="text"
                 @value={{value}}
                 name={{field.key}}
-                id="{{field.key}}-{{index}}"
                 {{on "input" (fn this.handleInput index)}}
               />
               {{#if (and (not inputError.isValid) inputError.errors)}}
