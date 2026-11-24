@@ -301,6 +301,15 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 		}
 		fromEntityIDs := fromEntityIDsInterface.([]string)
 
+		if IsEphemeralEntityID(toEntityID) {
+			return logical.ErrorResponse(errEphemeralEntityID(toEntityID).Error()), nil
+		}
+		for _, fromEntityID := range fromEntityIDs {
+			if IsEphemeralEntityID(fromEntityID) {
+				return logical.ErrorResponse(errEphemeralEntityID(fromEntityID).Error()), nil
+			}
+		}
+
 		var conflictingAliasIDsToKeep []string
 		if conflictingAliasIDsToKeepInterface, ok := d.GetOk("conflicting_alias_ids_to_keep"); ok {
 			conflictingAliasIDsToKeep = conflictingAliasIDsToKeepInterface.([]string)
@@ -514,6 +523,9 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 		if entityID == "" {
 			return logical.ErrorResponse("missing entity id"), nil
 		}
+		if IsEphemeralEntityID(entityID) {
+			return logical.ErrorResponse(errEphemeralEntityID(entityID).Error()), nil
+		}
 
 		i.lock.Lock()
 		defer i.lock.Unlock()
@@ -592,6 +604,11 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 		entityIDs := d.Get("entity_ids").([]string)
 		if len(entityIDs) == 0 {
 			return logical.ErrorResponse("missing entity ids to delete"), nil
+		}
+		for _, id := range entityIDs {
+			if IsEphemeralEntityID(id) {
+				return logical.ErrorResponse(errEphemeralEntityID(id).Error()), nil
+			}
 		}
 
 		// Sort the ids by the bucket they will be deleted from
@@ -925,6 +942,10 @@ type aliasClashInformation struct {
 }
 
 func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs, conflictingAliasIDsToKeep []string, force, grabLock, mergePolicies, persist, forceMergeAliases bool) (error, error, []aliasClashInformation) {
+	if toEntity != nil && IsEphemeralEntityID(toEntity.ID) {
+		return errEphemeralEntityID(toEntity.ID), nil, nil
+	}
+
 	if grabLock {
 		i.lock.Lock()
 		defer i.lock.Unlock()
@@ -932,6 +953,11 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	if toEntity == nil {
 		return errors.New("entity id to merge to is invalid"), nil, nil
+	}
+	for _, fromEntityID := range fromEntityIDs {
+		if IsEphemeralEntityID(fromEntityID) {
+			return errEphemeralEntityID(fromEntityID), nil, nil
+		}
 	}
 
 	ns, err := namespace.FromContext(ctx)

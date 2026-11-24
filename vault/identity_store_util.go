@@ -922,6 +922,14 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		return false, errors.New("entity is nil")
 	}
 
+	if IsEphemeralEntityID(entity.ID) {
+		return false, errEphemeralEntityID(entity.ID)
+	}
+
+	if previousEntity != nil && IsEphemeralEntityID(previousEntity.ID) {
+		return false, errEphemeralEntityID(previousEntity.ID)
+	}
+
 	if entity.NamespaceID == "" {
 		entity.NamespaceID = namespace.RootNamespaceID
 	}
@@ -2263,6 +2271,9 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	if group.MemberEntityIDs != nil {
 		group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
 		for _, entityID := range group.MemberEntityIDs {
+			if IsEphemeralEntityID(entityID) {
+				return errEphemeralEntityID(entityID)
+			}
 			entity, err := i.MemDBEntityByID(entityID, false)
 			if err != nil {
 				return fmt.Errorf("failed to validate entity ID %q: %w", entityID, err)

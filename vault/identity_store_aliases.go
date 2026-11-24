@@ -314,6 +314,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			// For backwards compatibility
 			canonicalID = d.Get("entity_id").(string)
 		}
+		if IsEphemeralEntityID(canonicalID) {
+			return logical.ErrorResponse(errEphemeralEntityID(canonicalID).Error()), nil
+		}
 
 		// validate customMetadata if provided
 		if len(customMetadata) != 0 {
@@ -590,6 +593,9 @@ func (i *IdentityStore) doesAliasHaveExternalIdIssuerMountAccessor(alias *identi
 }
 
 func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name, mountAccessor, externalID, issuer string, local bool, customMetadata map[string]string, scimClientID string) (*logical.Response, error) {
+	if IsEphemeralEntityID(canonicalID) {
+		return nil, errEphemeralEntityID(canonicalID)
+	}
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -704,6 +710,9 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 // handleAliasUpdate updates an alias with the provided fields. Returns (nil, nil) when no changes
 // are needed, which is the correct idempotent behavior for this operation.
 func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name, mountAccessor, externalID, issuer string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
+	if IsEphemeralEntityID(canonicalID) {
+		return nil, errEphemeralEntityID(canonicalID)
+	}
 	// Fast return if nothing to be updated
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&

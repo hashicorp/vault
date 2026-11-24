@@ -284,6 +284,13 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		group = new(identity.Group)
 		newGroup = true
 	}
+	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok {
+		for _, entityID := range memberEntityIDs.([]string) {
+			if IsEphemeralEntityID(entityID) {
+				return logical.ErrorResponse(errEphemeralEntityID(entityID).Error()), nil
+			}
+		}
+	}
 	var modifiedFields []string
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
