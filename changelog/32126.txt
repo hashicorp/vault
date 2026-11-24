@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: roles with `enforce_hostnames=false` now accept underscores in dns sans, both in `alt_names` and when the common name is copied into the sans, matching the csr path and the api docs.
+```
