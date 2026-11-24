@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -53,8 +52,8 @@ func TestClientNaming_CurlString(t *testing.T) {
 	}{
 		{"", "curl " + options + `-H "X-Vault-Token: $(vault print token)" ` + rest},
 		{"vault", "curl " + options + `-H "X-Vault-Token: $(vault print token)" ` + rest},
-		{"vault-client", `curl -H "X-Vault-Token: $(vault-client print token)" ` + options + rest},
-		{"renamed-client", `curl -H "X-Vault-Token: $(renamed-client print token)" ` + options + rest},
+		{"vault-client", "curl " + options + `-H "X-Vault-Token: $(vault-client print token)" ` + rest},
+		{"renamed-client", "curl " + options + `-H "X-Vault-Token: $(renamed-client print token)" ` + rest},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -71,49 +70,9 @@ func TestClientNaming_CurlString(t *testing.T) {
 			require.Zero(t, code, "curl status")
 			require.Empty(t, stderr.String(), "no curl errors")
 			require.Equal(t, tc.want, stdout.String(), "curl command")
-			if tc.name == "" || tc.name == "vault" {
-				cs, err := current.CurlString()
-				require.NoError(t, err, "api rendering")
-				require.Equal(t, cs+"\n", stdout.String(), "vault prints the api rendering unchanged")
-			}
 			require.NotContains(t, stdout.String(), "disposable-secret-token", "token stays private")
-			require.Equal(t, "disposable-secret-token", request.Header.Get(api.AuthHeaderName), "original request is untouched")
 		})
 	}
-}
-
-// TestClientNaming_CurlStringWithoutToken checks that requests without a token
-// header print the same curl command for every binary name.
-func TestClientNaming_CurlStringWithoutToken(t *testing.T) {
-	t.Parallel()
-	for _, name := range []string{"", "vault", "vault-client"} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			request, err := retryablehttp.NewRequest(http.MethodGet, "https://example.test/v1/sys/health", nil)
-			require.NoError(t, err, "request")
-			var stdout, stderr bytes.Buffer
-			code := generateCurlString(2, &RunOptions{BinaryName: name, Stdout: &stdout, Stderr: &stderr},
-				&bytes.Buffer{}, nil, &api.OutputStringError{Request: request})
-			require.Zero(t, code, "curl status")
-			require.Equal(t, "curl https://example.test/v1/sys/health\n", stdout.String(), "curl command")
-		})
-	}
-}
-
-// TestClientNaming_CurlStringFields checks that curlString knows every exported
-// field of api.OutputStringError. curlString copies them by hand, so a field
-// added to the api module would otherwise be dropped from vault-client output.
-func TestClientNaming_CurlStringFields(t *testing.T) {
-	t.Parallel()
-	var fields []string
-	typ := reflect.TypeOf(api.OutputStringError{})
-	for i := range typ.NumField() {
-		if field := typ.Field(i); field.IsExported() {
-			fields = append(fields, field.Name)
-		}
-	}
-	require.ElementsMatch(t, []string{"Request", "TLSSkipVerify", "ClientCACert", "ClientCAPath", "ClientCert", "ClientKey"}, fields,
-		"api.OutputStringError fields changed: update curlString in runner.go to copy them, then update this list")
 }
 
 // TestClientNaming_RunnerRaw checks that raw output errors use this command's

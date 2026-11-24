@@ -130,6 +130,7 @@ func TestInitClientCommands(t *testing.T) {
 // TestInitClientBinaryCommands checks that commands we leave out get placeholders
 // without changing the shared commands or stdin wiring. It also checks that the
 // supported operator subcommands (AC-1.3) keep their real implementations.
+// Placeholders name vault-client when we don't know the binary name.
 func TestInitClientBinaryCommands(t *testing.T) {
 	t.Parallel()
 
@@ -161,6 +162,7 @@ func TestInitClientBinaryCommands(t *testing.T) {
 			require.NotSame(t, cmd, next, name)
 			require.Equal(t, "Not included in this binary", cmd.Synopsis(), name)
 			require.Contains(t, cmd.Help(), `"`+name+`"`, name)
+			require.Contains(t, cmd.Help(), " in vault-client v", "we should fall back to vault-client without a binary name")
 			require.Empty(t, ui.OutputWriter.String(), "help must not write to the UI")
 			require.Empty(t, ui.ErrorWriter.String(), "help must not write to the UI")
 			continue
