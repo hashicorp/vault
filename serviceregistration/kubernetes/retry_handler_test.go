@@ -433,3 +433,62 @@ func TestRetryHandlerAPIConnectivityProblemsNotifications(t *testing.T) {
 		t.Fatal("expected true")
 	}
 }
+
+// TestRetryHandlerNotifySuccessDropsOlderFailedPatch makes sure that a patch
+// which failed and is waiting to be retried does not overwrite a later patch
+// for the same label that went through.
+func TestRetryHandlerNotifySuccessDropsOlderFailedPatch(t *testing.T) {
+	testState, testConf, closeFunc := kubetest.Server(t)
+	defer closeFunc()
+	defer kubetest.ReturnGatewayTimeouts.Store(false)
+
+	client.Scheme = testConf.ClientScheme
+	client.TokenFile = testConf.PathToTokenFile
+	client.RootCAFile = testConf.PathToRootCAFile
+	client.RetryMax = 0
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
+
+	logger := hclog.NewNullLogger()
+	c, err := client.New(logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := &retryHandler{
+		logger:         logger,
+		namespace:      kubetest.ExpectedNamespace,
+		podName:        kubetest.ExpectedPodName,
+		patchesToRetry: make(map[string]*client.Patch),
+		client:         c,
+		initialState:   sr.State{},
+	}
+
+	// Set the initial state.
+	r.updateState()
+
+	// The node steps down, but the patch fails and is kept for a retry.
+	kubetest.ReturnGatewayTimeouts.Store(true)
+	r.Notify(&client.Patch{
+		Operation: client.Replace,
+		Path:      pathToLabels + labelActive,
+		Value:     "false",
+	})
+
+	// The node becomes active again and this patch succeeds.
+	kubetest.ReturnGatewayTimeouts.Store(false)
+	r.Notify(&client.Patch{
+		Operation: client.Replace,
+		Path:      pathToLabels + labelActive,
+		Value:     "true",
+	})
+	if val := testState.Get(pathToLabels + labelActive)["value"]; val != "true" {
+		t.Fatalf("expected active label to be true after the successful patch, got %v", val)
+	}
+
+	// The next retry must not send the older "false" again.
+	r.updateState()
+	if val := testState.Get(pathToLabels + labelActive)["value"]; val != "true" {
+		t.Fatalf("expected active label to stay true after a retry, got %v", val)
+	}
+}
