@@ -1469,3 +1469,109 @@ func DurationAdjustedTokenCount(tokenDurationSeconds float64) float64 {
 	}
 	return ret
 }
+
+// monthlyConsumption holds the raw stored billing values for one month. It is
+// the single source of the numbers behind both the sys/billing/overview
+// response and the totals used to evaluate consumption limits.
+type monthlyConsumption struct {
+	kv               int
+	roles            *RoleCounts
+	totpKeys         int
+	kmseKeys         int
+	transitCalls     uint64
+	transformCalls   uint64
+	gcpKmsCalls      uint64
+	kmipUsed         bool
+	externalPlugins  int
+	pkiUnits         float64
+	sshCertUnits     float64
+	sshOTPUnits      float64
+	oidcTokenUnits   float64
+	spiffeTokenUnits float64
+	externalCAUnits  float64
+}
+
+// getMonthlyConsumption reads every stored billing value for the given month.
+func (c *Core) getMonthlyConsumption(ctx context.Context, month time.Time) (*monthlyConsumption, error) {
+	m := &monthlyConsumption{}
+
+	roleCounts, managedKeyCounts, err := c.getRoleAndManagedKeyCounts(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+	m.roles = roleCounts
+	m.totpKeys = managedKeyCounts.TotpKeys
+	m.kmseKeys = managedKeyCounts.KmseKeys
+
+	m.kv, err = c.getKvCounts(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+
+	m.transitCalls, m.transformCalls, m.gcpKmsCalls, err = c.getDataProtectionCounts(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+
+	m.kmipUsed, err = c.getKmipStatus(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+
+	m.externalPlugins, err = c.getThirdPartyPluginCounts(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+
+	m.pkiUnits, err = c.GetStoredPkiDurationAdjustedCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving PKI duration-adjusted count for month: %w", err)
+	}
+
+	m.sshCertUnits, err = c.GetStoredSSHDurationAdjustedCertCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving SSH duration-adjuested cert counts for current month: %w", err)
+	}
+
+	m.sshOTPUnits, err = c.GetStoredSSHOTPCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving SSH OTP counts for current month: %w", err)
+	}
+
+	m.oidcTokenUnits, err = c.GetStoredOidcDurationAdjustedCount(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving OIDC duration-adjusted token count for month: %w", err)
+	}
+
+	m.spiffeTokenUnits, err = c.GetStoredSpiffeJwtTokenUnits(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)
+	}
+
+	m.externalCAUnits, err = c.GetStoredExternalCaCertUnits(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving external CA certificate units for month: %w", err)
+	}
+
+	return m, nil
+}
+
+// Totals returns the total of each usage-based billing metric, keyed by the
+// overview metric_name. Float totals are rounded to four decimals with
+// roundToFour, the same rounding roundUsageMetrics applies to the overview, so
+// each value equals the overview total. kmip is not included because it is an
+// enabled flag, not a usage total.
+func (m *monthlyConsumption) Totals() map[string]float64 {
+	return map[string]float64{
+		"static_secrets":        float64(m.kv),
+		"dynamic_roles":         float64(dynamicRolesTotal(m.roles)),
+		"auto_rotated_roles":    float64(autoRotatedRolesTotal(m.roles)),
+		"external_plugins":      float64(m.externalPlugins),
+		"managed_keys":          float64(m.totpKeys + m.kmseKeys),
+		"data_protection_calls": float64(m.transitCalls + m.transformCalls + m.gcpKmsCalls),
+		"pki_units":             roundToFour(m.pkiUnits),
+		"ssh_units":             roundToFour(m.sshCertUnits + m.sshOTPUnits),
+		"id_token_units":        roundToFour(m.oidcTokenUnits + m.spiffeTokenUnits),
+		"external_ca_pki_units": roundToFour(m.externalCAUnits),
+	}
+}

@@ -1977,3 +1977,359 @@ func TestSystemBackend_BillingConfig_AttributionRetention_InvalidValues(t *testi
 		})
 	}
 }
+
+// usageMetricData indexes the usage_metrics of a monthly billing response by
+// metric name, returning each metric's metric_data map.
+func usageMetricData(t *testing.T, monthData map[string]interface{}) map[string]map[string]interface{} {
+	t.Helper()
+
+	metrics, ok := monthData["usage_metrics"].([]map[string]interface{})
+	require.True(t, ok)
+
+	byName := make(map[string]map[string]interface{}, len(metrics))
+	for _, metric := range metrics {
+		name, ok := metric["metric_name"].(string)
+		require.True(t, ok)
+		data, ok := metric["metric_data"].(map[string]interface{})
+		require.True(t, ok)
+		byName[name] = data
+	}
+	return byName
+}
+
+// TestBuildMonthBillingData_StoredCounts pins the overview output for the
+// count-based metrics (KV, every role sub-type, managed keys, data protection,
+// KMIP and external plugins) when values are written straight to storage. KV,
+// roles and TOTP keys are written to both the replicated and the local
+// portion, so the test fails if either portion stops being summed.
+func TestBuildMonthBillingData_StoredCounts(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
+	core := cluster.Cores[0].Core
+	backend := core.systemBackend
+	ctx := t.Context()
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	// Each replicated value is odd and the matching local value is one higher,
+	// so every sub-type has a distinct sum of (2n+1).
+	replicatedRoles := &RoleCounts{
+		AWSDynamicRoles: 1, AWSStaticRoles: 1,
+		AzureDynamicRoles: 3, AzureStaticRoles: 3,
+		DatabaseDynamicRoles: 5, DatabaseStaticRoles: 5,
+		GCPRolesets: 7, GCPStaticAccounts: 7, GCPImpersonatedAccounts: 9,
+		LDAPDynamicRoles: 9, LDAPStaticRoles: 11, LDAPLibrarySets: 11,
+		OpenLDAPDynamicRoles: 13, OpenLDAPStaticRoles: 13, OpenLDAPLibrarySets: 15,
+		AlicloudDynamicRoles: 17, RabbitMQDynamicRoles: 19, ConsulDynamicRoles: 21,
+		NomadDynamicRoles: 23, KubernetesDynamicRoles: 25, MongoDBAtlasDynamicRoles: 27,
+		TerraformCloudDynamicRoles: 29, OSLocalAccountRoles: 15,
+	}
+	localRoles := &RoleCounts{
+		AWSDynamicRoles: 2, AWSStaticRoles: 2,
+		AzureDynamicRoles: 4, AzureStaticRoles: 4,
+		DatabaseDynamicRoles: 6, DatabaseStaticRoles: 6,
+		GCPRolesets: 8, GCPStaticAccounts: 8, GCPImpersonatedAccounts: 10,
+		LDAPDynamicRoles: 10, LDAPStaticRoles: 12, LDAPLibrarySets: 12,
+		OpenLDAPDynamicRoles: 14, OpenLDAPStaticRoles: 14, OpenLDAPLibrarySets: 16,
+		AlicloudDynamicRoles: 18, RabbitMQDynamicRoles: 20, ConsulDynamicRoles: 22,
+		NomadDynamicRoles: 24, KubernetesDynamicRoles: 26, MongoDBAtlasDynamicRoles: 28,
+		TerraformCloudDynamicRoles: 30, OSLocalAccountRoles: 16,
+	}
+
+	withMetricLock := func(metric string, write func() error) {
+		mu := core.consumptionBilling.MetricLocks.LockForMetric(metric)
+		mu.Lock()
+		defer mu.Unlock()
+		require.NoError(t, write())
+	}
+
+	for prefix, kv := range map[string]int{billing.ReplicatedPrefix: 7, billing.LocalPrefix: 5} {
+		withMetricLock(billing.KvHWMCountsHWM, func() error {
+			return core.storeMaxKvCountsLocked(ctx, kv, prefix, month)
+		})
+	}
+	withMetricLock(billing.RoleHWMCountsHWM, func() error {
+		return core.storeMaxRoleCountsLocked(ctx, replicatedRoles, billing.ReplicatedPrefix, month)
+	})
+	withMetricLock(billing.RoleHWMCountsHWM, func() error {
+		return core.storeMaxRoleCountsLocked(ctx, localRoles, billing.LocalPrefix, month)
+	})
+	for prefix, totp := range map[string]int{billing.ReplicatedPrefix: 2, billing.LocalPrefix: 3} {
+		withMetricLock(billing.TotpHWMCountsHWM, func() error {
+			return core.storeMaxTotpKeyCountsLocked(ctx, totp, prefix, month)
+		})
+	}
+	withMetricLock(billing.TransitDataProtectionCallCountsPrefix, func() error {
+		return core.storeTransitCallCountsLocked(ctx, 11, billing.LocalPrefix, month)
+	})
+	withMetricLock(billing.GcpKmsDataProtectionCallCountsPrefix, func() error {
+		return core.storeGcpKmsCallCountsLocked(ctx, 13, billing.LocalPrefix, month)
+	})
+	withMetricLock(billing.KmipEnabledPrefix, func() error {
+		return core.storeKmipEnabledLocked(ctx, billing.LocalPrefix, month, true)
+	})
+	withMetricLock(billing.ThirdPartyPluginsPrefix, func() error {
+		return core.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, month, 3)
+	})
+
+	warnings := []string{}
+	monthData, err := backend.buildMonthBillingData(ctx, month, false, &warnings)
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Equal(t, "2026-01", monthData["month"])
+
+	metrics := usageMetricData(t, monthData)
+
+	require.Equal(t, map[string]interface{}{
+		"total":          12,
+		"metric_details": []map[string]interface{}{{"type": "kv", "count": 12}},
+	}, metrics["static_secrets"])
+
+	require.Equal(t, map[string]interface{}{
+		"total": 465,
+		"metric_details": []map[string]interface{}{
+			{"type": "aws_dynamic", "count": 3},
+			{"type": "azure_dynamic", "count": 7},
+			{"type": "database_dynamic", "count": 11},
+			{"type": "gcp_dynamic", "count": 15},
+			{"type": "ldap_dynamic", "count": 19},
+			{"type": "ldap_library", "count": 23},
+			{"type": "openldap_dynamic", "count": 27},
+			{"type": "openldap_library", "count": 31},
+			{"type": "alicloud_dynamic", "count": 35},
+			{"type": "rabbitmq_dynamic", "count": 39},
+			{"type": "consul_dynamic", "count": 43},
+			{"type": "nomad_dynamic", "count": 47},
+			{"type": "kubernetes_dynamic", "count": 51},
+			{"type": "mongodbatlas_dynamic", "count": 55},
+			{"type": "terraform_dynamic", "count": 59},
+		},
+	}, metrics["dynamic_roles"])
+
+	require.Equal(t, map[string]interface{}{
+		"total": 136,
+		"metric_details": []map[string]interface{}{
+			{"type": "aws_static", "count": 3},
+			{"type": "azure_static", "count": 7},
+			{"type": "database_static", "count": 11},
+			{"type": "gcp_static", "count": 15},
+			{"type": "gcp_impersonated", "count": 19},
+			{"type": "ldap_static", "count": 23},
+			{"type": "openldap_static", "count": 27},
+			{"type": "os_local_account_static", "count": 31},
+		},
+	}, metrics["auto_rotated_roles"])
+
+	require.Equal(t, map[string]interface{}{"used_in_month": true}, metrics["kmip"])
+	require.Equal(t, map[string]interface{}{"total": 3}, metrics["external_plugins"])
+
+	require.Equal(t, map[string]interface{}{
+		"total": uint64(24),
+		"metric_details": []map[string]interface{}{
+			{"type": "transit", "count": uint64(11)},
+			{"type": "transform", "count": uint64(0)},
+			{"type": "gcpkms", "count": uint64(13)},
+		},
+	}, metrics["data_protection_calls"])
+
+	managedKeysDetails, ok := metrics["managed_keys"]["metric_details"].([]map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, []map[string]interface{}{
+		{"type": "totp", "count": 5},
+		{"type": "kmse", "count": 0},
+	}, managedKeysDetails)
+	require.Equal(t, 5, metrics["managed_keys"]["total"])
+}
+
+// requireOverviewTotalsEqualTotals asserts that, for the given month and stored
+// counts, every overview metric that has a numeric total equals the matching
+// entry in Totals(), and that Totals() has no entry for any other metric. This
+// is what lets consumption limits compare against the number the customer sees
+// in sys/billing/overview.
+func requireOverviewTotalsEqualTotals(t *testing.T, core *Core, month time.Time) map[string]float64 {
+	t.Helper()
+
+	ctx := context.Background()
+	warnings := []string{}
+	monthData, err := core.systemBackend.buildMonthBillingData(ctx, month, false, &warnings)
+	require.NoError(t, err)
+
+	consumption, err := core.getMonthlyConsumption(ctx, month)
+	require.NoError(t, err)
+	totals := consumption.Totals()
+
+	metrics, ok := monthData["usage_metrics"].([]map[string]interface{})
+	require.True(t, ok)
+
+	checked := 0
+	for _, metric := range metrics {
+		name, ok := metric["metric_name"].(string)
+		require.True(t, ok)
+		data, ok := metric["metric_data"].(map[string]interface{})
+		require.True(t, ok)
+
+		overviewTotal, hasTotal := data["total"]
+		if !hasTotal {
+			// kmip reports used_in_month instead of a total and must not be limitable.
+			require.Equal(t, "kmip", name)
+			require.NotContains(t, totals, name)
+			continue
+		}
+
+		require.Contains(t, totals, name, "Totals() is missing metric %s", name)
+		require.Equal(t, ToFloat64(overviewTotal), totals[name], "overview total and Totals() differ for %s", name)
+		checked++
+	}
+
+	require.Len(t, totals, checked, "Totals() must contain exactly the overview metrics that have a total")
+	require.NotContains(t, totals, "kmip")
+
+	return totals
+}
+
+// TestMonthlyConsumption_TotalsMatchOverview verifies that every metric total in
+// the overview equals Totals() for the same month and stored counts, for an
+// empty month and for a month with stored values in every metric, including
+// fractional unit values that need rounding to four decimals.
+func TestMonthlyConsumption_TotalsMatchOverview(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty month", func(t *testing.T) {
+		t.Parallel()
+
+		cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
+		core := cluster.Cores[0].Core
+		month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+		totals := requireOverviewTotalsEqualTotals(t, core, month)
+		for name, total := range totals {
+			require.Zero(t, total, "metric %s should be zero", name)
+		}
+	})
+
+	t.Run("stored counts and units", func(t *testing.T) {
+		t.Parallel()
+
+		cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
+		core := cluster.Cores[0].Core
+		ctx := context.Background()
+		month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+		withMetricLock := func(metric string, write func() error) {
+			mu := core.consumptionBilling.MetricLocks.LockForMetric(metric)
+			mu.Lock()
+			defer mu.Unlock()
+			require.NoError(t, write())
+		}
+
+		withMetricLock(billing.KvHWMCountsHWM, func() error {
+			return core.storeMaxKvCountsLocked(ctx, 5, billing.LocalPrefix, month)
+		})
+		withMetricLock(billing.RoleHWMCountsHWM, func() error {
+			return core.storeMaxRoleCountsLocked(ctx, &RoleCounts{
+				AWSDynamicRoles: 2, DatabaseDynamicRoles: 3, GCPRolesets: 1,
+				AWSStaticRoles: 4, OSLocalAccountRoles: 6,
+				// Role types that are not billable must not leak into either total.
+				TransformRoles: 9, SSHOTPRoles: 9, SSHCARoles: 9, SpiffeRoles: 9,
+			}, billing.LocalPrefix, month)
+		})
+		withMetricLock(billing.TotpHWMCountsHWM, func() error {
+			return core.storeMaxTotpKeyCountsLocked(ctx, 3, billing.LocalPrefix, month)
+		})
+		withMetricLock(billing.TransitDataProtectionCallCountsPrefix, func() error {
+			return core.storeTransitCallCountsLocked(ctx, 11, billing.LocalPrefix, month)
+		})
+		withMetricLock(billing.GcpKmsDataProtectionCallCountsPrefix, func() error {
+			return core.storeGcpKmsCallCountsLocked(ctx, 13, billing.LocalPrefix, month)
+		})
+		withMetricLock(billing.KmipEnabledPrefix, func() error {
+			return core.storeKmipEnabledLocked(ctx, billing.LocalPrefix, month, true)
+		})
+		withMetricLock(billing.ThirdPartyPluginsPrefix, func() error {
+			return core.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, month, 2)
+		})
+		withMetricLock(billing.PkiDurationAdjustedCountPrefix, func() error {
+			return core.storePkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, month, 12.3457)
+		})
+		// 0.1 + 0.2 is 0.30000000000000004 in float64, so this fails if either
+		// side stops rounding to four decimals.
+		withMetricLock(billing.SSHCertificateMetric, func() error {
+			return core.storeSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, month, 0.1)
+		})
+		withMetricLock(billing.SSHOTPMetric, func() error {
+			return core.storeSSHOTPCountLocked(ctx, billing.LocalPrefix, month, 0.2)
+		})
+		withMetricLock(billing.OidcDurationAdjustedCountPrefix, func() error {
+			return core.storeOidcDurationAdjustedCountLocked(ctx, month, 1.2345)
+		})
+
+		warnings := []string{}
+		monthData, err := core.systemBackend.buildMonthBillingData(ctx, month, false, &warnings)
+		require.NoError(t, err)
+		require.Empty(t, warnings)
+		metrics := usageMetricData(t, monthData)
+		require.Equal(t, []map[string]interface{}{
+			{"type": "otp_units", "count": 0.2},
+			{"type": "certificate_units", "count": 0.1},
+		}, metrics["ssh_units"]["metric_details"], "SSH overview details should preserve each stored unit type")
+
+		totals := requireOverviewTotalsEqualTotals(t, core, month)
+
+		require.Equal(t, 5.0, totals["static_secrets"])
+		require.Equal(t, 6.0, totals["dynamic_roles"])
+		require.Equal(t, 10.0, totals["auto_rotated_roles"])
+		require.Equal(t, 3.0, totals["managed_keys"])
+		require.Equal(t, 24.0, totals["data_protection_calls"])
+		require.Equal(t, 2.0, totals["external_plugins"])
+		require.Equal(t, 12.3457, totals["pki_units"])
+		require.Equal(t, 0.3, totals["ssh_units"])
+		require.Equal(t, 1.2345, totals["id_token_units"])
+	})
+}
+
+// TestMonthlyConsumption_Totals_Rounding verifies that Totals() rounds float
+// totals to four decimals the way the overview does, using values that are not
+// exactly representable, and leaves integer totals unchanged.
+func TestMonthlyConsumption_Totals_Rounding(t *testing.T) {
+	t.Parallel()
+
+	m := &monthlyConsumption{
+		kv:               7,
+		roles:            &RoleCounts{AWSDynamicRoles: 2, AWSStaticRoles: 1},
+		totpKeys:         1,
+		kmseKeys:         2,
+		transitCalls:     1,
+		transformCalls:   2,
+		gcpKmsCalls:      3,
+		externalPlugins:  4,
+		pkiUnits:         1.23456,
+		sshCertUnits:     0.1,
+		sshOTPUnits:      0.2,
+		oidcTokenUnits:   1.00004,
+		spiffeTokenUnits: 2.00004,
+		externalCAUnits:  3.99996,
+	}
+
+	require.Equal(t, map[string]float64{
+		"static_secrets":        7,
+		"dynamic_roles":         2,
+		"auto_rotated_roles":    1,
+		"external_plugins":      4,
+		"managed_keys":          3,
+		"data_protection_calls": 6,
+		"pki_units":             1.2346,
+		"ssh_units":             0.3,
+		"id_token_units":        3.0001,
+		"external_ca_pki_units": 4,
+	}, m.Totals())
+}
+
+// TestMonthlyConsumption_Totals_NilRoles verifies that a monthlyConsumption
+// without role counts yields zero role totals instead of panicking.
+func TestMonthlyConsumption_Totals_NilRoles(t *testing.T) {
+	t.Parallel()
+
+	totals := (&monthlyConsumption{}).Totals()
+	require.Zero(t, totals["dynamic_roles"])
+	require.Zero(t, totals["auto_rotated_roles"])
+}

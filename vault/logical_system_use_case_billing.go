@@ -364,113 +364,12 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		}
 	}
 
-	// Retrieve all billing metrics
-	combinedRoleCounts, combinedManagedKeyCounts, err := b.Core.getRoleAndManagedKeyCounts(ctx, month)
+	m, err := b.Core.getMonthlyConsumption(ctx, month)
 	if err != nil {
 		return nil, err
 	}
 
-	combinedKvCounts, err := b.Core.getKvCounts(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-
-	transitCounts, transformCounts, gcpKmsCounts, err := b.Core.getDataProtectionCounts(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-
-	kmipEnabled, err := b.Core.getKmipStatus(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-
-	thirdPartyPluginCounts, err := b.Core.getThirdPartyPluginCounts(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the usage metrics
-	usageMetrics := []map[string]interface{}{}
-
-	kvDetails := []map[string]interface{}{
-		{"type": "kv", "count": combinedKvCounts},
-	}
-	usageMetrics = append(usageMetrics, map[string]interface{}{
-		"metric_name": "static_secrets",
-		"metric_data": map[string]interface{}{
-			"total":          combinedKvCounts,
-			"metric_details": kvDetails,
-		},
-	})
-
-	usageMetrics = append(usageMetrics, buildDynamicRolesMetric(combinedRoleCounts))
-
-	usageMetrics = append(usageMetrics, buildAutoRotatedRolesMetric(combinedRoleCounts))
-
-	usageMetrics = append(usageMetrics, map[string]interface{}{
-		"metric_name": "kmip",
-		"metric_data": map[string]interface{}{
-			"used_in_month": kmipEnabled,
-		},
-	})
-
-	usageMetrics = append(usageMetrics, map[string]interface{}{
-		"metric_name": "external_plugins",
-		"metric_data": map[string]interface{}{
-			"total": thirdPartyPluginCounts,
-		},
-	})
-
-	dataProtectionDetails := []map[string]interface{}{
-		{"type": "transit", "count": transitCounts},
-		{"type": "transform", "count": transformCounts},
-		{"type": "gcpkms", "count": gcpKmsCounts},
-	}
-
-	usageMetrics = append(usageMetrics, map[string]interface{}{
-		"metric_name": "data_protection_calls",
-		"metric_data": map[string]interface{}{
-			"total":          transitCounts + transformCounts + gcpKmsCounts,
-			"metric_details": dataProtectionDetails,
-		},
-	})
-
-	pkiMetric, err := b.buildPkiBillingMetric(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-	usageMetrics = append(usageMetrics, pkiMetric)
-
-	managedKeysDetails := []map[string]interface{}{
-		{"type": "totp", "count": combinedManagedKeyCounts.TotpKeys},
-		{"type": "kmse", "count": combinedManagedKeyCounts.KmseKeys},
-	}
-	usageMetrics = append(usageMetrics, map[string]interface{}{
-		"metric_name": "managed_keys",
-		"metric_data": map[string]interface{}{
-			"total":          combinedManagedKeyCounts.TotpKeys + combinedManagedKeyCounts.KmseKeys,
-			"metric_details": managedKeysDetails,
-		},
-	})
-
-	sshCounts, err := b.buildSSHMetric(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-	usageMetrics = append(usageMetrics, sshCounts)
-
-	idTokenUnitsMetric, err := b.buildIdTokenUnitsBillingMetric(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-	usageMetrics = append(usageMetrics, idTokenUnitsMetric)
-
-	externalCaMetric, err := b.buildExternalCaBillingMetric(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-	usageMetrics = append(usageMetrics, externalCaMetric)
+	usageMetrics := formatUsageMetrics(m)
 
 	// Round all float64 values in usageMetrics to 4 decimal places.
 	// Rounding time for usage metrics is insignificant, so we can keep it centralized here.
@@ -486,6 +385,73 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		"updated_at":    dataUpdatedAt.Format(time.RFC3339),
 		"usage_metrics": usageMetrics,
 	}, nil
+}
+
+// formatUsageMetrics shapes the stored monthly consumption into the usage_metrics
+// list of the overview response. It performs no storage reads.
+func formatUsageMetrics(m *monthlyConsumption) []map[string]interface{} {
+	usageMetrics := []map[string]interface{}{}
+
+	usageMetrics = append(usageMetrics, map[string]interface{}{
+		"metric_name": "static_secrets",
+		"metric_data": map[string]interface{}{
+			"total": m.kv,
+			"metric_details": []map[string]interface{}{
+				{"type": "kv", "count": m.kv},
+			},
+		},
+	})
+
+	usageMetrics = append(usageMetrics, buildDynamicRolesMetric(m.roles))
+
+	usageMetrics = append(usageMetrics, buildAutoRotatedRolesMetric(m.roles))
+
+	usageMetrics = append(usageMetrics, map[string]interface{}{
+		"metric_name": "kmip",
+		"metric_data": map[string]interface{}{
+			"used_in_month": m.kmipUsed,
+		},
+	})
+
+	usageMetrics = append(usageMetrics, map[string]interface{}{
+		"metric_name": "external_plugins",
+		"metric_data": map[string]interface{}{
+			"total": m.externalPlugins,
+		},
+	})
+
+	usageMetrics = append(usageMetrics, map[string]interface{}{
+		"metric_name": "data_protection_calls",
+		"metric_data": map[string]interface{}{
+			"total": m.transitCalls + m.transformCalls + m.gcpKmsCalls,
+			"metric_details": []map[string]interface{}{
+				{"type": "transit", "count": m.transitCalls},
+				{"type": "transform", "count": m.transformCalls},
+				{"type": "gcpkms", "count": m.gcpKmsCalls},
+			},
+		},
+	})
+
+	usageMetrics = append(usageMetrics, formatPkiMetric(m.pkiUnits))
+
+	usageMetrics = append(usageMetrics, map[string]interface{}{
+		"metric_name": "managed_keys",
+		"metric_data": map[string]interface{}{
+			"total": m.totpKeys + m.kmseKeys,
+			"metric_details": []map[string]interface{}{
+				{"type": "totp", "count": m.totpKeys},
+				{"type": "kmse", "count": m.kmseKeys},
+			},
+		},
+	})
+
+	usageMetrics = append(usageMetrics, buildSSHMetric(m.sshCertUnits, m.sshOTPUnits))
+
+	usageMetrics = append(usageMetrics, buildIdTokenUnitsMetric(m.oidcTokenUnits, m.spiffeTokenUnits))
+
+	usageMetrics = append(usageMetrics, buildExternalCaMetric(m.externalCAUnits))
+
+	return usageMetrics
 }
 
 // roundUsageMetrics rounds all float64 values in the usage metrics to 4 decimal places
@@ -549,9 +515,21 @@ func (c *Core) computeUpdatedAt(ctx context.Context, month, currentMonth time.Ti
 	return dataUpdatedAt
 }
 
+// dynamicRolesTotal returns the total number of dynamic roles, rolesets and library sets.
+func dynamicRolesTotal(counts *RoleCounts) int {
+	if counts == nil {
+		return 0
+	}
+	return counts.AWSDynamicRoles + counts.AzureDynamicRoles + counts.DatabaseDynamicRoles +
+		counts.GCPRolesets + counts.LDAPDynamicRoles + counts.LDAPLibrarySets +
+		counts.OpenLDAPDynamicRoles + counts.OpenLDAPLibrarySets + counts.AlicloudDynamicRoles +
+		counts.RabbitMQDynamicRoles + counts.ConsulDynamicRoles + counts.NomadDynamicRoles +
+		counts.KubernetesDynamicRoles + counts.MongoDBAtlasDynamicRoles + counts.TerraformCloudDynamicRoles
+}
+
 // buildDynamicRolesMetric creates the dynamic_roles metric from role counts.
 func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
-	total := 0
+	total := dynamicRolesTotal(counts)
 	awsCount := 0
 	azureCount := 0
 	databaseCount := 0
@@ -584,10 +562,6 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 		kubernetesCount = counts.KubernetesDynamicRoles
 		mongodbatlasCount = counts.MongoDBAtlasDynamicRoles
 		terraformCount = counts.TerraformCloudDynamicRoles
-
-		total = awsCount + azureCount + databaseCount + gcpCount + ldapCount + ldapLibraryCount +
-			openldapCount + openldapLibraryCount + alicloudCount + rabbitmqCount + consulCount +
-			nomadCount + kubernetesCount + mongodbatlasCount + terraformCount
 	}
 
 	details := []map[string]interface{}{
@@ -617,9 +591,19 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 	}
 }
 
+// autoRotatedRolesTotal returns the total number of auto-rotated (static) roles.
+func autoRotatedRolesTotal(counts *RoleCounts) int {
+	if counts == nil {
+		return 0
+	}
+	return counts.AWSStaticRoles + counts.AzureStaticRoles + counts.DatabaseStaticRoles +
+		counts.GCPStaticAccounts + counts.GCPImpersonatedAccounts + counts.LDAPStaticRoles +
+		counts.OpenLDAPStaticRoles + counts.OSLocalAccountRoles
+}
+
 // buildAutoRotatedRolesMetric creates the auto_rotated_roles metric from role counts.
 func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
-	total := 0
+	total := autoRotatedRolesTotal(counts)
 	awsCount := 0
 	azureCount := 0
 	databaseCount := 0
@@ -638,9 +622,6 @@ func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
 		ldapCount = counts.LDAPStaticRoles
 		openldapCount = counts.OpenLDAPStaticRoles
 		osLocalAccountCount = counts.OSLocalAccountRoles
-
-		total = awsCount + azureCount + databaseCount + gcpStaticCount +
-			gcpImpersonatedCount + ldapCount + openldapCount + osLocalAccountCount
 	}
 
 	details := []map[string]interface{}{
@@ -663,66 +644,48 @@ func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
 	}
 }
 
-// buildPkiBillingMetric creates the billing metric for PKI duration-adjusted certificate counts.
+// formatPkiMetric creates the pki_units metric from the stored PKI duration-adjusted certificate count.
+func formatPkiMetric(count float64) map[string]interface{} {
+	return map[string]interface{}{
+		"metric_name": "pki_units",
+		"metric_data": map[string]interface{}{
+			"total": count,
+		},
+	}
+}
+
+// buildPkiBillingMetric reads the stored PKI count for the month and formats it as the pki_units metric.
 func (b *SystemBackend) buildPkiBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
 	count, err := b.Core.GetStoredPkiDurationAdjustedCount(ctx, month)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving PKI duration-adjusted count for month: %w", err)
 	}
 
-	return map[string]interface{}{
-		"metric_name": "pki_units",
-		"metric_data": map[string]interface{}{
-			"total": count,
-		},
-	}, nil
+	return formatPkiMetric(count), nil
 }
 
-// buildIdTokenUnitsBillingMetric creates the billing metric for id token counts.
-func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
-	var totalTokens float64
-
-	oidcTokenCount, err := b.Core.GetStoredOidcDurationAdjustedCount(ctx, month)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving OIDC duration-adjusted token count for month: %w", err)
-	}
-
-	totalTokens += oidcTokenCount
-
-	spiffeJwtUnits, err := b.Core.GetStoredSpiffeJwtTokenUnits(ctx, month)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)
-	}
-
-	totalTokens += spiffeJwtUnits
-
-	idTokenDetails := []map[string]interface{}{
-		{"type": "oidc", "count": oidcTokenCount},
-		{"type": "spiffe", "count": spiffeJwtUnits},
-	}
-
+// buildIdTokenUnitsMetric creates the id_token_units metric from the stored OIDC and SPIFFE JWT units.
+func buildIdTokenUnitsMetric(oidcTokenCount, spiffeJwtUnits float64) map[string]interface{} {
 	return map[string]interface{}{
 		"metric_name": "id_token_units",
 		"metric_data": map[string]interface{}{
-			"total":          totalTokens,
-			"metric_details": idTokenDetails,
+			"total": oidcTokenCount + spiffeJwtUnits,
+			"metric_details": []map[string]interface{}{
+				{"type": "oidc", "count": oidcTokenCount},
+				{"type": "spiffe", "count": spiffeJwtUnits},
+			},
 		},
-	}, nil
+	}
 }
 
-// buildExternalCaBillingMetric creates the billing metric for external CA certificate counts.
-func (b *SystemBackend) buildExternalCaBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
-	count, err := b.Core.GetStoredExternalCaCertUnits(ctx, month)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving external CA certificate units for month: %w", err)
-	}
-
+// buildExternalCaMetric creates the external_ca_pki_units metric from the stored external CA certificate units.
+func buildExternalCaMetric(count float64) map[string]interface{} {
 	return map[string]interface{}{
 		"metric_name": "external_ca_pki_units",
 		"metric_data": map[string]interface{}{
 			"total": count,
 		},
-	}, nil
+	}
 }
 
 // getRoleCounts retrieves and combines role and managed key counts from replicated and local storage
@@ -828,21 +791,12 @@ func (c *Core) getThirdPartyPluginCounts(ctx context.Context, month time.Time) (
 	return thirdPartyPluginCounts, nil
 }
 
-func (b *SystemBackend) buildSSHMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
-	certCounts, err := b.Core.GetStoredSSHDurationAdjustedCertCount(ctx, month)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving SSH duration-adjuested cert counts for current month: %w", err)
-	}
-
-	otpCounts, err := b.Core.GetStoredSSHOTPCount(ctx, month)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving SSH OTP counts for current month: %w", err)
-	}
-
+// buildSSHMetric creates the ssh_units metric from the stored SSH certificate and OTP units.
+func buildSSHMetric(certCounts, otpCounts float64) map[string]interface{} {
 	return map[string]interface{}{
 		"metric_name": "ssh_units",
 		"metric_data": map[string]interface{}{
-			"total": certCounts + float64(otpCounts),
+			"total": certCounts + otpCounts,
 			"metric_details": []map[string]interface{}{
 				{
 					"type":  "otp_units",
@@ -854,5 +808,5 @@ func (b *SystemBackend) buildSSHMetric(ctx context.Context, month time.Time) (ma
 				},
 			},
 		},
-	}, nil
+	}
 }
