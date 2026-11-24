@@ -36,10 +36,7 @@ func TestServerNaming_CommandHelp(t *testing.T) {
 				cmd, err := factory()
 				require.NoError(t, err, command)
 				help := cmd.Help()
-				// go-licensing's usage line names the subcommand but no binary.
-				if command != "license inspect" {
-					require.Contains(t, help, "Usage: "+name+" "+command, "command %s", command)
-				}
+				require.Contains(t, help, "Usage: "+name+" "+command, "command %s", command)
 				if name != "vault" {
 					require.False(t, bareInvocation.MatchString(help), "bare executable in %s help: %s", command, bareInvocation.FindString(help))
 					require.False(t, bareServerInvocation.MatchString(help), "bare executable in %s help: %s", command, bareServerInvocation.FindString(help))

@@ -9,9 +9,7 @@
   </:breadcrumbs>
   <:description>
     Call Vault and plugin API endpoints directly from the browser to accelerate development and debugging.
-    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/api-docs"}}>
-      Learn more
-    </Hds::Link::Inline>
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/api-docs"}}>Learn more</Hds::Link::Inline>
   </:description>
 </Page::Header>
 
@@ -21,7 +19,7 @@
     <code>X-Vault-Namespace: {{R.namespace.path}}</code>. You can also use
     <code>{{R.namespace.path}}</code>
     as an API prefix. See
-    <DocLink @path="/vault/api-docs#namespaces">docs</DocLink>
+    <Hds::Link::Inline @href={{doc-link "/vault/api-docs#namespaces"}} @isHrefExternal={{true}}>docs</Hds::Link::Inline>
     for examples.
   </NamespaceReminder>
 

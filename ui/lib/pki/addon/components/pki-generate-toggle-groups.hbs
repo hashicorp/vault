@@ -22,7 +22,8 @@
           {{else if (eq @form.type "kms")}}
             This certificate type is kms, meaning managed keys will be used. Below, you will name the key and tell Vault
             where to find it in your KMS or HSM.
-            <DocLink @path="/vault/docs/enterprise/managed-keys">Learn more about managed keys.</DocLink>
+            <Hds::Link::Inline @href={{doc-link "/vault/docs/enterprise/managed-keys"}} @isHrefExternal={{true}}>Learn more
+              about managed keys.</Hds::Link::Inline>
           {{else if (eq @form.type "exported")}}
             This certificate type is exported. This means the private key will be returned in the response. Below, you will
             name the key and define its type and key bits.

@@ -25,9 +25,11 @@
             <G.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
-                  See our documentation
-                </DocLink>
+                <Hds::Link::Inline
+                  @href={{doc-link @attr.options.docLink}}
+                  @isHrefExternal={{true}}
+                  data-test-doc-link={{@attr.options.docLink}}
+                >See our documentation</Hds::Link::Inline>
                 for help.
               {{/if}}
             </G.HelperText>
@@ -67,7 +69,11 @@
             <G.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                <Hds::Link::Inline
+                  @href={{doc-link @attr.options.docLink}}
+                  @isHrefExternal={{true}}
+                  data-test-doc-link={{@attr.options.docLink}}
+                >See our documentation</Hds::Link::Inline>
                 for help.
               {{/if}}
             </G.HelperText>
@@ -106,7 +112,11 @@
             <F.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                <Hds::Link::Inline
+                  @href={{doc-link @attr.options.docLink}}
+                  @isHrefExternal={{true}}
+                  data-test-doc-link={{@attr.options.docLink}}
+                >See our documentation</Hds::Link::Inline>
                 for help.
               {{/if}}
             </F.HelperText>
@@ -163,7 +173,11 @@
             <F.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                <Hds::Link::Inline
+                  @href={{doc-link @attr.options.docLink}}
+                  @isHrefExternal={{true}}
+                  data-test-doc-link={{@attr.options.docLink}}
+                >See our documentation</Hds::Link::Inline>
                 for help.
               {{/if}}
             </F.HelperText>
@@ -190,7 +204,11 @@
               <H.HelperText data-test-help-text={{@attr.options.subText}}>
                 {{@attr.options.subText}}
                 {{#if @attr.options.docLink}}
-                  <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                  <Hds::Link::Inline
+                    @href={{doc-link @attr.options.docLink}}
+                    @isHrefExternal={{true}}
+                    data-test-doc-link={{@attr.options.docLink}}
+                  >See our documentation</Hds::Link::Inline>
                   for help.
                 {{/if}}
               </H.HelperText>
@@ -320,7 +338,11 @@
               <F.HelperText data-test-help-text={{@attr.options.subText}}>
                 {{@attr.options.subText}}
                 {{#if @attr.options.docLink}}
-                  <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                  <Hds::Link::Inline
+                    @href={{doc-link @attr.options.docLink}}
+                    @isHrefExternal={{true}}
+                    data-test-doc-link={{@attr.options.docLink}}
+                  >See our documentation</Hds::Link::Inline>
                   for help.
                 {{/if}}
               </F.HelperText>
@@ -348,7 +370,11 @@
               <F.HelperText data-test-help-text={{@attr.options.subText}}>
                 {{@attr.options.subText}}
                 {{#if @attr.options.docLink}}
-                  <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                  <Hds::Link::Inline
+                    @href={{doc-link @attr.options.docLink}}
+                    @isHrefExternal={{true}}
+                    data-test-doc-link={{@attr.options.docLink}}
+                  >See our documentation</Hds::Link::Inline>
                   for help.
                 {{/if}}
               </F.HelperText>
@@ -387,7 +413,11 @@
               <F.HelperText data-test-help-text={{@attr.options.subText}}>
                 {{@attr.options.subText}}
                 {{#if @attr.options.docLink}}
-                  <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                  <Hds::Link::Inline
+                    @href={{doc-link @attr.options.docLink}}
+                    @isHrefExternal={{true}}
+                    data-test-doc-link={{@attr.options.docLink}}
+                  >See our documentation</Hds::Link::Inline>
                   for help.
                 {{/if}}
               </F.HelperText>
@@ -420,7 +450,11 @@
                 <span data-test-help-text={{@attr.options.subText}}>
                   {{@attr.options.subText}}
                   {{#if @attr.options.docLink}}
-                    <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>Learn more here.</DocLink>
+                    <Hds::Link::Inline
+                      @href={{doc-link @attr.options.docLink}}
+                      @isHrefExternal={{true}}
+                      data-test-doc-link={{@attr.options.docLink}}
+                    >Learn more here.</Hds::Link::Inline>
                   {{/if}}
                 </span>
               {{/if}}
@@ -567,9 +601,11 @@
             (or @attr.options.defaultSubText "Vault will use the engine default.")
           }}
           {{#if @attr.options.docLink}}
-            <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
-              See our documentation
-            </DocLink>
+            <Hds::Link::Inline
+              @href={{doc-link @attr.options.docLink}}
+              @isHrefExternal={{true}}
+              data-test-doc-link={{@attr.options.docLink}}
+            >See our documentation</Hds::Link::Inline>
             for help.
           {{/if}}
         </F.HelperText>
@@ -641,9 +677,11 @@
             <p class="sub-text">
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
-                  See our documentation
-                </DocLink>
+                <Hds::Link::Inline
+                  @href={{doc-link @attr.options.docLink}}
+                  @isHrefExternal={{true}}
+                  data-test-doc-link={{@attr.options.docLink}}
+                >See our documentation</Hds::Link::Inline>
                 for help.
               {{/if}}
             </p>

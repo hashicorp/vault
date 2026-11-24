@@ -19,9 +19,7 @@
   <p class="sub-text" data-test-label-subtext>
     {{@subText}}
     {{#if @docLink}}
-      <DocLink @path={{@docLink}}>
-        See our documentation
-      </DocLink>
+      <Hds::Link::Inline @href={{doc-link @docLink}} @isHrefExternal={{true}}>See our documentation</Hds::Link::Inline>
       for help.
     {{/if}}
   </p>

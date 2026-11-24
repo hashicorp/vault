@@ -32,8 +32,9 @@ const serverInstallURL = "https://developer.hashicorp.com/vault/install"
 // UnavailableCommand points users to the full Vault binary for commands we
 // don't include in vault-client.
 type UnavailableCommand struct {
-	ui   cli.Ui
-	name string
+	ui         cli.Ui
+	name       string
+	binaryName string
 }
 
 var _ cli.Command = (*UnavailableCommand)(nil)
@@ -52,10 +53,10 @@ func (c *UnavailableCommand) Run(_ []string) int {
 }
 
 func (c *UnavailableCommand) message() string {
-	return fmt.Sprintf("%q is not available in vault-client v%s.\n"+
+	return fmt.Sprintf("%q is not available in %s v%s.\n"+
 		"This command requires the full Vault Server image.\n"+
 		"Obtain the full Vault binary: %s",
-		c.name, version.GetVersion().VersionNumber(), serverInstallURL)
+		c.name, c.binaryName, version.GetVersion().VersionNumber(), serverInstallURL)
 }
 
 // Hide these commands from help and completion. Keep them out of
@@ -172,10 +173,15 @@ func initClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) 
 	}
 
 	// Add unavailable command shims for commands that exist in server but
-	// do not exist in client.
+	// do not exist in client. We name the binary the user ran, or vault-client
+	// if we don't know it.
+	binaryName := "vault-client"
+	if runOpts != nil && runOpts.BinaryName != "" {
+		binaryName = runOpts.BinaryName
+	}
 	for _, name := range unavailableClientCommands {
 		commands[name] = func() (cli.Command, error) {
-			return &UnavailableCommand{ui: ui, name: name}, nil
+			return &UnavailableCommand{ui: ui, name: name, binaryName: binaryName}, nil
 		}
 	}
 

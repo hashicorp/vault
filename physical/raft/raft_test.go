@@ -22,9 +22,11 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/require"
@@ -224,6 +226,112 @@ func TestRaft_Backend(t *testing.T) {
 		require.Equal(t, useRaftWal == "raft_wal", b.UsesRaftWAL(), "WAL detection must match the opened backend")
 		physical.ExerciseBackend(t, b)
 	})
+}
+
+// TestRaft_CollectMetrics_LogStorePerNode verifies that each node reports its
+// actual opened Raft log store, including the default and BoltDB fallback.
+func TestRaft_CollectMetrics_LogStorePerNode(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		nodeID         string
+		logStore       string
+		legacyRaftWal  string
+		existingBoltDB bool
+		wantLogStore   string
+	}{
+		{
+			nodeID:       "default-node",
+			wantLogStore: "raft_wal",
+		},
+		{
+			nodeID:       "wal-node",
+			logStore:     "raft_wal",
+			wantLogStore: "raft_wal",
+		},
+		{
+			nodeID:       "boltdb-node",
+			logStore:     "raft_boltdb",
+			wantLogStore: "raft_boltdb",
+		},
+		{
+			nodeID:        "precedence-node",
+			logStore:      "raft_wal",
+			legacyRaftWal: "false",
+			wantLogStore:  "raft_wal",
+		},
+		{
+			nodeID:         "fallback-node",
+			logStore:       "raft_wal",
+			existingBoltDB: true,
+			wantLogStore:   "raft_boltdb",
+		},
+	}
+
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	sink := metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+	wantByNode := make(map[string]string, len(testCases))
+	for _, tc := range testCases {
+		conf := map[string]string{
+			"path":    t.TempDir(),
+			"node_id": tc.nodeID,
+		}
+		if tc.logStore != "" {
+			conf["log_store"] = tc.logStore
+		}
+		if tc.legacyRaftWal != "" {
+			conf["raft_wal"] = tc.legacyRaftWal
+		}
+		if tc.existingBoltDB {
+			raftBasePath := filepath.Join(conf["path"], raftState)
+			require.NoError(t, os.MkdirAll(raftBasePath, 0o777))
+			db, err := bolt.Open(filepath.Join(raftBasePath, "raft.db"), 0o777, nil)
+			require.NoError(t, err)
+			require.NoError(t, db.Close())
+		}
+
+		backendRaw, err := NewRaftBackend(conf, hclog.NewNullLogger())
+		require.NoError(t, err)
+		backend := backendRaw.(*RaftBackend)
+		t.Cleanup(func() {
+			require.NoError(t, backend.Close())
+		})
+		backend.CollectMetrics(sink)
+		wantByNode[tc.nodeID] = tc.wantLogStore
+	}
+
+	type observedLogStore struct {
+		name  string
+		value float32
+	}
+	observedByNode := make(map[string]observedLogStore, len(testCases))
+	for _, interval := range inmemSink.Data() {
+		interval.RLock()
+		for _, gauge := range interval.Gauges {
+			if gauge.Name != "raft_storage.log_store" {
+				continue
+			}
+
+			labels := make(map[string]string, len(gauge.Labels))
+			for _, label := range gauge.Labels {
+				labels[label.Name] = label.Value
+			}
+			if labels["cluster"] == "test-cluster" {
+				observedByNode[labels["peer_id"]] = observedLogStore{
+					name:  labels["log_store"],
+					value: gauge.Value,
+				}
+			}
+		}
+		interval.RUnlock()
+	}
+
+	require.Len(t, observedByNode, len(wantByNode))
+	for nodeID, wantLogStore := range wantByNode {
+		observed := observedByNode[nodeID]
+		require.Equal(t, wantLogStore, observed.name, "unexpected log_store for peer_id %q", nodeID)
+		require.Equal(t, float32(1), observed.value, "log_store gauge should be set for peer_id %q", nodeID)
+	}
 }
 
 // TestRaft_SwitchFromBoltDBToRaftWal is testing that we don't use raft-wal, even if configured to do so,

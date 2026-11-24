@@ -13,9 +13,13 @@
     <h2 data-test-cross-sign-status-count class="title is-5">Cross-signing complete ({{this.statusCount}})</h2>
     <p class="has-bottom-margin-xl">
       The next step is to
-      <DocLink class="has-font-weight-normal" @path="/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain">
-        update the manual_chain<Icon @name="docs-link" />
-      </DocLink>
+      <Hds::Link::Inline
+        class="has-font-weight-normal"
+        @href={{doc-link "/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain"}}
+        @isHrefExternal={{true}}
+        @icon="docs-link"
+        @iconPosition="trailing"
+      >update the manual_chain</Hds::Link::Inline>
       for each of your new certificates listed below, and the existing issuer.
     </p>
     <Hds::Layout::Flex as |LF|>
