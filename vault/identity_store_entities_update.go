@@ -48,6 +48,10 @@ func (b *EntityBuilder) WithID(id string) *EntityBuilder {
 	if b.err != nil || id == "" {
 		return b
 	}
+	if IsEphemeralEntityID(id) {
+		b.err = errEphemeralEntityID(id)
+		return b
+	}
 
 	entity, err := b.store.MemDBEntityByID(id, true)
 	if err != nil {
