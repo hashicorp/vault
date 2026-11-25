@@ -478,7 +478,8 @@ type Core struct {
 	activityLogLock sync.RWMutex
 
 	// consumptionBilling is used to track use case consumption-based billing metrics
-	consumptionBilling *billing.ConsumptionBilling
+	consumptionBilling       *billing.ConsumptionBilling
+	consumptionBillingCancel context.CancelFunc
 
 	// consumptionBillingLock protects the consumptionBilling struct
 	consumptionBillingLock sync.RWMutex
@@ -503,8 +504,10 @@ type Core struct {
 	// pending MFA login request. It is nil after teardownLoginMFA, so access it
 	// under mfaResponseAuthQueueLock via PopMFAResponseAuthByID and
 	// SaveMFAResponseAuth, which handle the nil case.
-	mfaResponseAuthQueue     *LoginMFAPriorityQueue
-	mfaResponseAuthQueueLock sync.Mutex
+	mfaResponseAuthQueue       *LoginMFAPriorityQueue
+	mfaResponseAuthQueueLock   sync.Mutex
+	mfaResponseAuthQueueCancel context.CancelFunc
+	mfaResponseAuthQueueDone   chan struct{}
 
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
@@ -693,6 +696,9 @@ type Core struct {
 	raftFollowerStates *raft.FollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
+	// raftActiveNodeCancel stops workers started by setupRaftActiveNode. The
+	// active context survives snapshot restores, so these need their own lifecycle.
+	raftActiveNodeCancel context.CancelFunc
 	// Stores the pending peers we are waiting to give answers
 	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
 	// holds the lock for modifying pendingRaftPeers
@@ -3285,6 +3291,11 @@ func (c *Core) preSeal() error {
 		c.metricsCh = nil
 	}
 
+	if c.consumptionBillingCancel != nil {
+		c.consumptionBillingCancel()
+		c.consumptionBillingCancel = nil
+	}
+
 	var result error
 
 	c.stopForwarding()
@@ -4351,22 +4362,31 @@ type selfEnrollmentPendingMFASecret struct {
 
 // setupCachedMFAResponseAuth initializes the MFA auth response queue and
 // starts a goroutine that, every 5 seconds, removes expired entries in
-// bounded batches until the active context is cancelled.
+// bounded batches until the queue is torn down or the active context is cancelled.
 func (c *Core) setupCachedMFAResponseAuth() {
 	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+
+	if c.mfaResponseAuthQueueCancel != nil {
+		c.mfaResponseAuthQueueCancel()
+		<-c.mfaResponseAuthQueueDone
+	}
+	ctx, cancel := context.WithCancel(c.activeContext)
+	done := make(chan struct{})
+	c.mfaResponseAuthQueueCancel = cancel
+	c.mfaResponseAuthQueueDone = done
 	c.mfaResponseAuthQueue = NewLoginMFAPriorityQueue()
 	mfaQueue := c.mfaResponseAuthQueue
-	c.mfaResponseAuthQueueLock.Unlock()
-
-	ctx := c.activeContext
 
 	go func() {
-		ticker := time.Tick(5 * time.Second)
+		defer close(done)
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-ticker:
+			case <-ticker.C:
 				err := mfaQueue.RemoveExpiredMfaAuthResponse(defaultMFAAuthResponseTTL, time.Now())
 				if err != nil {
 					c.Logger().Error("failed to remove stale MFA auth response", "error", err)

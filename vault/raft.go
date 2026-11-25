@@ -204,10 +204,9 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	return nil
 }
 
-func (c *Core) monitorUndoLogs() error {
+func (c *Core) monitorUndoLogs(ctx context.Context) error {
 	logger := c.logger.Named("undo-log-watcher")
 	logger.Debug("starting undo log watcher")
-	ctx := c.activeContext
 	raftBackend := c.getRaftBackend()
 
 	// First check storage and bail early if we already know undo logs are safe
@@ -329,6 +328,12 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	c.logger.Info("starting raft active node")
 
+	if c.raftActiveNodeCancel != nil {
+		c.raftActiveNodeCancel()
+	}
+	workerCtx, cancel := context.WithCancel(c.activeContext)
+	c.raftActiveNodeCancel = cancel
+
 	var err error
 	c.pendingRaftPeers, err = lru.New[string, *raftBootstrapChallenge](RaftInitialChallengeLimit)
 	if err != nil {
@@ -342,12 +347,12 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	// We always want to start this watcher - if undo logs are safe to be enabled, it will exit quickly. If not, it
 	// will monitor for safety until they are enabled.
-	if err := c.monitorUndoLogs(); err != nil {
+	if err := c.monitorUndoLogs(workerCtx); err != nil {
 		return err
 	}
 
 	// Run the verifier if we're configured to do so
-	raftBackend.StartRaftWalVerifier(ctx)
+	raftBackend.StartRaftWalVerifier(workerCtx)
 
 	// Starting this here will prepopulate the raft follower states with our current raft configuration, but that
 	// doesn't include information like upgrade versions or redundancy zones.
@@ -403,6 +408,11 @@ func (c *Core) stopRaftActiveNode() {
 	}
 
 	c.logger.Info("stopping raft active node")
+
+	if c.raftActiveNodeCancel != nil {
+		c.raftActiveNodeCancel()
+		c.raftActiveNodeCancel = nil
+	}
 
 	if !raftBackend.AutopilotDisabled() {
 		raftBackend.StopAutopilot()

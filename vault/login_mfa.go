@@ -814,6 +814,12 @@ func (c *Core) teardownLoginMFA() error {
 	if !c.IsDRSecondary() {
 		// Clear any cached auth response
 		c.mfaResponseAuthQueueLock.Lock()
+		if c.mfaResponseAuthQueueCancel != nil {
+			c.mfaResponseAuthQueueCancel()
+			<-c.mfaResponseAuthQueueDone
+			c.mfaResponseAuthQueueCancel = nil
+			c.mfaResponseAuthQueueDone = nil
+		}
 		c.mfaResponseAuthQueue = nil
 		c.mfaResponseAuthQueueLock.Unlock()
 

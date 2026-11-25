@@ -25,6 +25,11 @@ var (
 )
 
 func (c *Core) setupConsumptionBilling(ctx context.Context) error {
+	if c.consumptionBillingCancel != nil {
+		c.consumptionBillingCancel()
+	}
+	ctx, c.consumptionBillingCancel = context.WithCancel(ctx)
+
 	// We need replication (post unseal) to start before we run the consumption billing metrics worker
 	// This is because there is primary/secondary cluster specific logic
 	c.consumptionBillingLock.Lock()
@@ -107,11 +112,10 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 			clock = timeutil.DefaultClock{}
 		}
 
-		ticker := clock.NewTicker(billing.BillingWriteInterval)
-		if metricsCadence > 0 {
-			// For testing purposes
-			ticker = clock.NewTicker(metricsCadence)
+		if metricsCadence <= 0 {
+			metricsCadence = billing.BillingWriteInterval
 		}
+		ticker := clock.NewTicker(metricsCadence)
 		defer ticker.Stop()
 
 		untilNextMonth := func(now time.Time) time.Duration {
@@ -124,6 +128,7 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 			return d
 		}
 		endOfMonth := clock.NewTimer(untilNextMonth(clock.Now().UTC()))
+		defer endOfMonth.Stop()
 		for {
 			select {
 			case <-ticker.C:

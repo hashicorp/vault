@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix goroutine leak on Raft snapshot restore where the MFA cleanup, consumption billing, undo log monitor and Raft WAL verifier workers were restarted without stopping the previous instances.
+```

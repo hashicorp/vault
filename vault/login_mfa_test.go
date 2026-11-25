@@ -7,7 +7,10 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"testing/synctest"
+	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -15,6 +18,76 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCachedMFAResponseAuthLifecycle(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		c := &Core{
+			activeContext:    ctx,
+			logger:           hclog.NewNullLogger(),
+			replicationState: new(uint32),
+		}
+		c.loginMFABackend = NewLoginMFABackend(c, c.logger)
+
+		require.NoError(t, c.teardownLoginMFA())
+		for range 3 {
+			c.setupCachedMFAResponseAuth()
+			done := c.mfaResponseAuthQueueDone
+			require.NoError(t, c.SaveMFAResponseAuth(&MFACachedAuthResponse{
+				RequestID:     "expired",
+				TimeOfStorage: time.Now().Add(-defaultMFAAuthResponseTTL - time.Second),
+			}))
+			require.NoError(t, c.SaveMFAResponseAuth(&MFACachedAuthResponse{
+				RequestID:     "live",
+				TimeOfStorage: time.Now(),
+			}))
+
+			synctest.Wait()
+			time.Sleep(5 * time.Second)
+			synctest.Wait()
+			resp, err := c.PopMFAResponseAuthByID("expired")
+			require.NoError(t, err)
+			require.Nil(t, resp)
+			resp, err = c.PopMFAResponseAuthByID("live")
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			require.NoError(t, c.teardownLoginMFA())
+			select {
+			case <-done:
+			default:
+				t.Fatal("MFA cleanup worker survived teardown")
+			}
+			require.Nil(t, c.mfaResponseAuthQueue)
+			require.Nil(t, c.mfaResponseAuthQueueCancel)
+			require.Nil(t, c.mfaResponseAuthQueueDone)
+			require.NoError(t, ctx.Err())
+			require.NoError(t, c.teardownLoginMFA())
+		}
+
+		c.setupCachedMFAResponseAuth()
+		oldDone := c.mfaResponseAuthQueueDone
+		c.setupCachedMFAResponseAuth()
+		select {
+		case <-oldDone:
+		default:
+			t.Fatal("MFA cleanup worker survived replacement")
+		}
+
+		done := c.mfaResponseAuthQueueDone
+		cancel()
+		synctest.Wait()
+		select {
+		case <-done:
+		default:
+			t.Fatal("MFA cleanup worker survived active context cancellation")
+		}
+		require.NoError(t, c.teardownLoginMFA())
+	})
+}
 
 func TestParseFactors(t *testing.T) {
 	testcases := []struct {
