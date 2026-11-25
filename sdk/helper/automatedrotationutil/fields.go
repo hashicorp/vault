@@ -169,30 +169,89 @@ func ParseRotationConfigFromFieldData(d *framework.FieldData) (*ParsedRotationCo
 	return result, nil
 }
 
+// RotationJobOperationResponse contains the result and metadata from executing a rotation job operation.
 type RotationJobOperationResponse struct {
+	// OperationPerformed is the rotation operation executed (e.g. rotation.PerformedRegistration or rotation.PerformedDeregistration).
 	OperationPerformed string
-	Logger             hclog.Logger
-	RotationInfo       *rotation.RotationInfo
+
+	// Logger is the backend logger used during the operation.
+	Logger hclog.Logger
+
+	// RotationInfo contains scheduling metadata returned by Rotation Manager on successful registration.
+	RotationInfo *rotation.RotationInfo
 }
 
 type (
-	RegisterErrorHandler   func(error) error
+	// RegisterErrorHandler transforms or wraps errors returned from registering a rotation job.
+	RegisterErrorHandler func(error) error
+
+	// DeregisterErrorHandler transforms or wraps errors returned from deregistering a rotation job.
 	DeregisterErrorHandler func(error) error
 )
 
+// ErrorHandlers provides optional custom error transformation callbacks for registration and deregistration operations.
 type ErrorHandlers struct {
-	RegisterErrorHandler   RegisterErrorHandler
+	// RegisterErrorHandler is invoked when registering a rotation job fails.
+	RegisterErrorHandler RegisterErrorHandler
+
+	// DeregisterErrorHandler is invoked when deregistering a rotation job fails.
 	DeregisterErrorHandler DeregisterErrorHandler
 }
 
 // HandleRotationJob is a helper method for registering or deregistering rotation jobs.
-// This wraps the two individual reegister and deregister methods and determines which to call based
+// This wraps the two individual register and deregister methods and determines which to call based
 // on the request parameters provided.
 // Returns a formatted error based on the operation that failed.
 // Use this method unless there is a specific need to handle the individual operations independently
 // or in a nonstandard way.
 func (p *AutomatedRotationParams) HandleRotationJob(ctx context.Context, b *framework.Backend, fieldData *framework.FieldData, req *logical.Request) (RotationJobOperationResponse, error) {
 	return p.HandleRotationJobWithErrorHandlers(ctx, b, fieldData, req, &ErrorHandlers{})
+}
+
+// RotationJobOperationRequest contains the parameters needed to register or
+// deregister a rotation job from a plugin backend.
+type RotationJobOperationRequest struct {
+	// FieldData contains the parsed user input fields (e.g. rotation_period, rotation_schedule).
+	FieldData *framework.FieldData
+
+	// LogicalRequest is the original logical request from the framework.
+	LogicalRequest *logical.Request
+
+	// ErrorHandlers specifies optional custom error handlers for register and deregister operations.
+	ErrorHandlers *ErrorHandlers
+
+	// RegistrationPath is the explicit mount-relative path under which the rotation job
+	// should be registered or deregistered with the Rotation Manager (e.g. "static-role/alice").
+	// This decouples the Rotation Manager job identifier from any unnormalized casing or
+	// sub-endpoint path in LogicalRequest.Path.
+	RegistrationPath string
+}
+
+// HandleRotationJobOperationRequest registers or deregisters rotation jobs using an explicit RegistrationPath
+// rather than relying directly on the raw request path from LogicalRequest.
+func (p *AutomatedRotationParams) HandleRotationJobOperationRequest(ctx context.Context, b *framework.Backend, req *RotationJobOperationRequest) (RotationJobOperationResponse, error) {
+	resp := RotationJobOperationResponse{
+		Logger: b.Logger(),
+	}
+
+	if req == nil {
+		return resp, errors.New("rotation job operation request is required")
+	}
+	if req.RegistrationPath == "" {
+		return resp, fmt.Errorf("expected explicit path to be provided as the registration path")
+	}
+	if req.LogicalRequest == nil {
+		return resp, errors.New("logical request is required")
+	}
+
+	// Registration / Deregistration requests are built from the logical request.
+	// Ensure the request to the RM is built using the explicit RegistrationPath and
+	// not the raw request path, as there may be mismatches with plugin storage.
+	// We shallow-copy the LogicalRequest so the caller's request path is not mutated.
+	// See https://hashicorp.atlassian.net/browse/VAULT-52074 for details.
+	logicalReqCopy := *req.LogicalRequest
+	logicalReqCopy.Path = req.RegistrationPath
+	return p.HandleRotationJobWithErrorHandlers(ctx, b, req.FieldData, &logicalReqCopy, req.ErrorHandlers)
 }
 
 // HandleRotationJobWithErrorHandlers is the same as HandleRotationJob but allows callers to provide custom error handlers for errors returned from either the register or deregister operations.
@@ -208,7 +267,7 @@ func (p *AutomatedRotationParams) HandleRotationJobWithErrorHandlers(ctx context
 	if p.ShouldDeregisterRotationJob() {
 		resp.OperationPerformed = rotation.PerformedDeregistration
 		if err := p.HandleDeregisterRotationJob(ctx, b, req); err != nil {
-			if errorHandlers.DeregisterErrorHandler != nil {
+			if errorHandlers != nil && errorHandlers.DeregisterErrorHandler != nil {
 				err = errorHandlers.DeregisterErrorHandler(err)
 			}
 			return resp, fmt.Errorf("failed to deregister rotation job: %w", err)
@@ -217,7 +276,7 @@ func (p *AutomatedRotationParams) HandleRotationJobWithErrorHandlers(ctx context
 		resp.OperationPerformed = rotation.PerformedRegistration
 		registerResp, err := p.HandleRegisterRotationJob(ctx, b, req)
 		if err != nil {
-			if errorHandlers.RegisterErrorHandler != nil {
+			if errorHandlers != nil && errorHandlers.RegisterErrorHandler != nil {
 				err = errorHandlers.RegisterErrorHandler(err)
 			}
 			return resp, fmt.Errorf("failed to register rotation job: %w", err)
