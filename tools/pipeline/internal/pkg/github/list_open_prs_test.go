@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	libgithub "github.com/google/go-github/v83/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github/githubtest"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/stretchr/testify/require"
 )
@@ -155,7 +156,7 @@ func Test_ListOpenPRsReq_validate(t *testing.T) {
 func Test_ListOpenPRsReq_Run_happyPath(t *testing.T) {
 	t.Parallel()
 
-	client, mux, teardown := setupTestClient(t)
+	client, mux, teardown := githubtest.SetupTestClient(t)
 	defer teardown()
 
 	mux.HandleFunc("/repos/hashicorp/vault-enterprise/pulls", func(w http.ResponseWriter, r *http.Request) {
@@ -209,7 +210,7 @@ func Test_ListOpenPRsReq_Run_draftFiltering(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			client, mux, teardown := setupTestClient(t)
+			client, mux, teardown := githubtest.SetupTestClient(t)
 			defer teardown()
 
 			mux.HandleFunc("/repos/hashicorp/vault-enterprise/pulls", func(w http.ResponseWriter, r *http.Request) {
@@ -241,7 +242,7 @@ func Test_ListOpenPRsReq_Run_draftFiltering(t *testing.T) {
 func Test_ListOpenPRsReq_Run_pagination(t *testing.T) {
 	t.Parallel()
 
-	client, mux, teardown := setupTestClient(t)
+	client, mux, teardown := githubtest.SetupTestClient(t)
 	defer teardown()
 
 	mux.HandleFunc("/repos/hashicorp/vault-enterprise/pulls", func(w http.ResponseWriter, r *http.Request) {

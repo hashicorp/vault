@@ -11,6 +11,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -853,6 +854,17 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 		}
 	case "ed25519":
 		_, priv, err = ed25519.GenerateKey(rand.Reader)
+	case "mldsa":
+		switch keyBits {
+		case 44:
+			priv, err = mldsa.GenerateKey(mldsa.MLDSA44())
+		case 65:
+			priv, err = mldsa.GenerateKey(mldsa.MLDSA65())
+		case 87:
+			priv, err = mldsa.GenerateKey(mldsa.MLDSA87())
+		default:
+			t.Fatalf("Got unknown mldsa key bits: %v", keyBits)
+		}
 	}
 
 	if err != nil {

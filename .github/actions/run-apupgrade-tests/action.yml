@@ -39,7 +39,6 @@ runs:
         caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
         token: ${{ steps.vault-auth.outputs.token }}
         secrets: |
-          kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
           kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
           kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
           kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;

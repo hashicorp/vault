@@ -270,6 +270,47 @@ func getWorkflowJobsForRun(
 	return allJobs, nil
 }
 
+// getWorkflowJobsForRunAttempt gets all jobs for an attempt of a workflow run with pagination.
+func getWorkflowJobsForRunAttempt(
+	ctx context.Context,
+	client *gh.Client,
+	owner string,
+	repo string,
+	runID int64,
+	attempt int64,
+) ([]*gh.WorkflowJob, error) {
+	ctx = slogctx.Append(
+		ctx,
+		slog.String("owner", owner),
+		slog.String("repo", repo),
+		slog.Int64("run_id", runID),
+		slog.Int64("run_attempt", attempt),
+	)
+	slog.Default().DebugContext(ctx, "fetching workflow run attempt jobs")
+
+	opts := &gh.ListOptions{PerPage: PerPageMax}
+	var allJobs []*gh.WorkflowJob
+
+	for {
+		jobs, res, err := client.Actions.ListWorkflowJobsAttempt(ctx, owner, repo, runID, attempt, opts)
+		if err != nil {
+			return nil, fmt.Errorf("listing workflow jobs for attempt %d: %w", attempt, err)
+		}
+
+		allJobs = append(allJobs, jobs.Jobs...)
+
+		if res.NextPage == 0 {
+			break
+		}
+
+		opts.Page = res.NextPage
+	}
+
+	slog.Default().DebugContext(ctx, "fetched workflow run attempt jobs", slog.Int("count", len(allJobs)))
+
+	return allJobs, nil
+}
+
 // retryWithBackoff executes a function with exponential backoff retry logic.
 // It retries on transient errors (5xx, 429) but fails fast on client errors (4xx).
 func retryWithBackoff(
