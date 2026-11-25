@@ -2113,8 +2113,9 @@ func ParseCsrToFields(csr x509.CertificateRequest) (map[string]interface{}, erro
 		// permitted_dns_domains is a CA thing, it generally does not appear on a CSR
 		"use_pss": IsPSS(csr.SignatureAlgorithm),
 		// skid could be calculated, but does not directly exist on a csr, so punting for now
-		"key_type": GetKeyType(csr.PublicKeyAlgorithm.String()),
-		"key_bits": FindBitLength(csr.PublicKey),
+		"key_type":      GetKeyType(csr.PublicKeyAlgorithm.String()),
+		"key_bits":      FindBitLength(csr.PublicKey),
+		"parameter_set": string(GetMLDSAParameterSet(csr.PublicKey)),
 	}
 
 	// isCA is not a field in our data call - that is represented inside vault by using a different endpoint
@@ -2163,6 +2164,7 @@ func ParseCertificateToFields(certificate x509.Certificate) (map[string]interfac
 		"skid":                      hex.EncodeToString(certificate.SubjectKeyId),
 		"key_type":                  GetKeyType(certificate.PublicKeyAlgorithm.String()),
 		"key_bits":                  FindBitLength(certificate.PublicKey),
+		"parameter_set":             string(GetMLDSAParameterSet(certificate.PublicKey)),
 	}
 
 	return templateData, nil
@@ -2308,15 +2310,51 @@ func FindSignatureBits(algo x509.SignatureAlgorithm) int {
 	}
 }
 
+// GetMLDSAParameterSet returns the ML-DSA parameter set (ml-dsa-44, ml-dsa-65
+// or ml-dsa-87) of the given key. It accepts both *mldsa.PublicKey and
+// *mldsa.PrivateKey values. It returns an empty ParameterSet if the key is nil,
+// is not an ML-DSA key, or has an unrecognized parameter set.
+func GetMLDSAParameterSet(key any) ParameterSet {
+	var publicKey *mldsa.PublicKey
+	switch k := key.(type) {
+	case *mldsa.PublicKey:
+		publicKey = k
+	case *mldsa.PrivateKey:
+		if k != nil {
+			publicKey = k.PublicKey()
+		}
+	}
+	if publicKey == nil {
+		return ""
+	}
+
+	switch publicKey.Parameters() {
+	case mldsa.MLDSA44():
+		return MLDSA44
+	case mldsa.MLDSA65():
+		return MLDSA65
+	case mldsa.MLDSA87():
+		return MLDSA87
+	default:
+		return ""
+	}
+}
+
+// GetKeyType maps the name of a Go public key algorithm, as returned by
+// x509.PublicKeyAlgorithm.String(), to the Vault key_type value (rsa, ec,
+// ed25519 or ml-dsa). The match is case-insensitive and ignores leading and
+// trailing whitespace. Go reports every ML-DSA parameter set as "ML-DSA"; the
+// parameter set itself is available from GetMLDSAParameterSet. An empty string
+// is returned for unrecognized algorithms.
 func GetKeyType(goKeyType string) string {
-	switch goKeyType {
+	switch strings.ToUpper(strings.TrimSpace(goKeyType)) {
 	case "RSA":
 		return "rsa"
 	case "ECDSA":
 		return "ec"
-	case "Ed25519":
+	case "ED25519":
 		return "ed25519"
-	case "ML-DSA-44", "ML-DSA-65", "ML-DSA-87":
+	case "ML-DSA", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87":
 		return "ml-dsa"
 	default:
 		return ""
