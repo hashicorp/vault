@@ -54,10 +54,10 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
+            kv/data/github/hashicorp/vault-enterprise/github-token token | ELEVATED_GITHUB_TOKEN;
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ inputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}
+          github-token: ${{ inputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           cache: fetch-only
       - uses: ./.github/actions/install-tools
         with:
@@ -65,7 +65,7 @@ jobs:
       - name: build-go-dev
         env:
           GIT_CONFIG_COUNT: ${{ inputs.is-ent-repo == 'true' && '1' || '0' }}
-          GIT_CONFIG_KEY_0: url.https://user:${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com.insteadOf
+          GIT_CONFIG_KEY_0: url.https://user:${{ steps.secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com.insteadOf
           GIT_CONFIG_VALUE_0: https://github.com
           # Skip go generate. Generated code should be checked in.
           SKIP_GEN: "1"
@@ -139,7 +139,6 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
       - name: Install Chrome
         uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0

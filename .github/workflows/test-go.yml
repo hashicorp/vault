@@ -142,7 +142,6 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
@@ -150,7 +149,7 @@ jobs:
             kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ steps.global-metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.github-token }}
+          github-token: ${{ steps.global-metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           cache: fetch-only # setup is responsible for managing the module cache
       - uses: ./.github/actions/install-tools # for gotestsum
         with:
@@ -304,14 +303,14 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
             kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
             kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ needs.test-matrix.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.github-token }}
+          github-token: ${{ needs.test-matrix.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           cache: fetch-only
       - id: metadata
         name: Set up metadata
