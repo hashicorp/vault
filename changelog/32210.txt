@@ -1,0 +1,3 @@
+```release-note:security
+core: Update github.com/apache/thrift to v0.25.0 to fix CVE-2026-66055 (GHSA-rgwx-5vq6-2g43).
+```
