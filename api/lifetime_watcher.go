@@ -246,6 +246,11 @@ func (r *LifetimeWatcher) Renew() {
 
 type renewFunc func(string, int) (*Secret, error)
 
+// minFinalRenewalRetryWait is the shortest wait before the final renewal retry
+// that the lifetime watcher makes just before a lease's grace period begins.
+// If there is less time than this left, the watcher gives up instead.
+const minFinalRenewalRetryWait = time.Second
+
 // doRenew is a helper for renewing authentication.
 func (r *LifetimeWatcher) doRenew() error {
 	defaultInitialRetryInterval := 10 * time.Second
@@ -317,15 +322,16 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 				// Calculate remaining duration until initial token lease expires
 				remainingLeaseDuration = initialTime.Add(time.Duration(initLeaseDuration) * time.Second).Sub(time.Now())
 				if errorBackoff == nil {
-					errorBackoff = &backoff.ExponentialBackOff{
-						MaxElapsedTime:      remainingLeaseDuration,
-						RandomizationFactor: backoff.DefaultRandomizationFactor,
-						InitialInterval:     initialRetryInterval,
-						MaxInterval:         5 * time.Minute,
-						Multiplier:          2,
-						Clock:               backoff.SystemClock,
-					}
-					errorBackoff.Reset()
+					// We are using the constructor rather than a struct literal: it sets Stop,
+					// without which NextBackOff returns 0 once MaxElapsedTime is
+					// exceeded and renewals are retried in a tight loop.
+					errorBackoff = backoff.NewExponentialBackOff(
+						backoff.WithInitialInterval(initialRetryInterval),
+						backoff.WithRandomizationFactor(backoff.DefaultRandomizationFactor),
+						backoff.WithMultiplier(2),
+						backoff.WithMaxInterval(5*time.Minute),
+						backoff.WithMaxElapsedTime(remainingLeaseDuration),
+					)
 				}
 				break
 			}
@@ -356,13 +362,26 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		}
 
 		var sleepDuration time.Duration
+		finalRetry := false
 
 		if errorBackoff == nil {
 			sleepDuration = r.calculateSleepDuration(remainingLeaseDuration, priorDuration)
 		} else {
 			sleepDuration = errorBackoff.NextBackOff()
-			if sleepDuration == backoff.Stop {
-				return err
+			// If the next retry would come too late, after the lease expires or
+			// inside the grace period, retry once more just before the grace
+			// period begins rather than giving up after a single failure.
+			if sleepDuration == backoff.Stop || remainingLeaseDuration-sleepDuration <= r.grace {
+				finalRetryWait := remainingLeaseDuration - r.grace
+				if finalRetryWait < minFinalRenewalRetryWait {
+					// The lease can't be renewed before it expires. Exit without
+					// an error, the same as the grace period check below, so
+					// callers such as Vault Agent re-authenticate rather than
+					// treat this as a fatal renewal failure.
+					return nil
+				}
+				sleepDuration = finalRetryWait
+				finalRetry = true
 			}
 		}
 
@@ -375,7 +394,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		// seconds, a grace period of 3 seconds, and end up sleeping for more
 		// than three of those seconds and having a very small budget of time
 		// to renew.
-		if remainingLeaseDuration <= r.grace || remainingLeaseDuration-sleepDuration <= r.grace {
+		if !finalRetry && (remainingLeaseDuration <= r.grace || remainingLeaseDuration-sleepDuration <= r.grace) {
 			return nil
 		}
 
