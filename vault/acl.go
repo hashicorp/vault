@@ -911,27 +911,28 @@ func (a *ACL) tryMatchWildcardPath(fullWCPath string, pathParts []string, bareMo
 	}
 	pd.wcPath = currWCPath
 
-	splitCurrWCPath := strings.Split(currWCPath, "/")
+	// This runs for every segment wildcard rule on every check, so walk the
+	// rule's segments in place instead of splitting it.
+	numWCParts := strings.Count(currWCPath, "/") + 1
 
-	if !bareMount && len(pathParts) < len(splitCurrWCPath) {
+	if !bareMount && len(pathParts) < numWCParts {
 		return wcPathDescr{}, false
 	}
-	if !bareMount && !pd.isPrefix && len(splitCurrWCPath) != len(pathParts) {
+	if !bareMount && !pd.isPrefix && numWCParts != len(pathParts) {
 		return wcPathDescr{}, false
 	}
 
-	segments := make([]string, 0, len(splitCurrWCPath))
-	for i, aclPart := range splitCurrWCPath {
+	rest := currWCPath
+	for i := 0; i < numWCParts; i++ {
+		var aclPart string
+		aclPart, rest, _ = strings.Cut(rest, "/")
 		switch {
 		case aclPart == "+":
 			pd.wildcards++ // each '+' consumed reduces specificity
-			segments = append(segments, pathParts[i])
 
 		case aclPart == pathParts[i]:
-			segments = append(segments, pathParts[i])
 
-		case pd.isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], aclPart):
-			segments = append(segments, pathParts[i:]...)
+		case pd.isPrefix && i == numWCParts-1 && strings.HasPrefix(pathParts[i], aclPart):
 
 		default:
 			// Found a mismatch; this rule does not apply.
@@ -1072,7 +1073,7 @@ func (a *ACL) CheckAllowedFromNonExactPaths(path string, bareMount bool) *ACLPer
 		return descrs[len(descrs)-1].perms
 	}
 
-	// bareMount=true: preserved byte-for-byte — we need the early-return
+	// bareMount=true: keeps its own loop — we need the early-return
 	// logic that checks non-deny access under a mount prefix.
 	pathParts := strings.Split(path, "/")
 
@@ -1089,13 +1090,18 @@ SWCPATH:
 			currWCPath = currWCPath[0 : len(currWCPath)-1]
 		}
 
-		splitCurrWCPath := strings.Split(currWCPath, "/")
+		numWCParts := strings.Count(currWCPath, "/") + 1
 
-		// In bareMount mode len(pathParts) < len(splitCurrWCPath) is allowed
+		// In bareMount mode len(pathParts) < numWCParts is allowed
 		// (we're checking a prefix of the mount).
 
-		segments := make([]string, 0, len(splitCurrWCPath))
-		for i, aclPart := range splitCurrWCPath {
+		// Rules that already differ in their first segment never allocate
+		// segments: it is allocated by the first append.
+		var segments []string
+		rest := currWCPath
+		for i := 0; i < numWCParts; i++ {
+			var aclPart string
+			aclPart, rest, _ = strings.Cut(rest, "/")
 			switch {
 			case aclPart == "+":
 				segments = append(segments, pathParts[i])
@@ -1103,7 +1109,7 @@ SWCPATH:
 			case aclPart == pathParts[i]:
 				segments = append(segments, pathParts[i])
 
-			case isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], aclPart):
+			case isPrefix && i == numWCParts-1 && strings.HasPrefix(pathParts[i], aclPart):
 				segments = append(segments, pathParts[i:]...)
 
 			default:
