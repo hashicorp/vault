@@ -1,0 +1,59 @@
+name: Rerun CI after runner disconnects
+run-name: Rerun CI run ${{ github.event.client_payload.run_id }} on ${{ github.event.client_payload.ref }}
+
+# Our runners sometimes disconnect and leave behind failed jobs that never got to finish. When CI
+# spots one in the tests-completed job it dispatches this workflow, as a run can't rerun itself
+# while it's still in progress. We'll wait for the run to complete and then rerun its failed jobs.
+
+on:
+  repository_dispatch:
+    types:
+      - rerun-disconnected-ci
+
+# Only ever have one rerun request per run. We don't want to cancel one that is already waiting.
+concurrency:
+  group: rerun-disconnected-ci-${{ github.event.client_payload.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  rerun:
+    name: Wait for CI to finish and rerun failed jobs
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64","small"]') }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/metadata
+        id: metadata
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          exportEnv: false
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - name: Wait for the run to finish and rerun failed jobs
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+        run: |
+          pipeline github rerun-if-disconnected ${{ runner.debug && '--log debug' || '' }} '${{ github.event.client_payload.run_id }}' \
+            --owner '${{ github.repository_owner }}' \
+            --repo '${{ github.event.repository.name }}' \
+            --wait \
+            --timeout 30m \
+            --attempt '${{ github.event.client_payload.run_attempt }}' \
+            --format markdown | tee -a "$GITHUB_STEP_SUMMARY"

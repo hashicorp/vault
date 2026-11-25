@@ -9,47 +9,39 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
+	"time"
 
 	gh "github.com/google/go-github/v83/github"
-	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-// RerunIfDisconnectedReq is a request to check a workflow run for runner disconnects.
+// RerunIfDisconnectedReq is a request to rerun the failed jobs of a workflow run
+// if any of them look like their runner disconnected.
 type RerunIfDisconnectedReq struct {
 	Owner string
 	Repo  string
 	RunID int64
+	// Wait for the run to complete by polling it every PollInterval. Github will
+	// only rerun completed runs. Use the context to limit how long we'll wait.
+	Wait         bool
+	PollInterval time.Duration
+	// Attempt is the attempt of the run that we expect to rerun. If it's set and
+	// the run has moved on to another attempt we'll assume someone else has
+	// already rerun it and do nothing.
+	Attempt int
 }
 
-// RerunIfDisconnectedRes contains the failed jobs we checked and whether Github
-// accepted our rerun request.
+// RerunIfDisconnectedRes is a response to a RerunIfDisconnectedReq.
 type RerunIfDisconnectedRes struct {
-	Owner          string                   `json:"owner"`
-	Repo           string                   `json:"repo"`
-	RunID          int64                    `json:"run_id"`
-	JobsInspected  int                      `json:"jobs_inspected"`
-	RerunRequested bool                     `json:"rerun_requested"`
-	FailedJobs     []*DisconnectedJobResult `json:"failed_jobs"`
+	*ListDisconnectedJobsRes
+	RerunRequested bool `json:"rerun_requested"`
+	// SkipReason is why we didn't request a rerun of a run that might have needed one
+	SkipReason string `json:"skip_reason,omitempty"`
 }
 
-// DisconnectedJobResult includes each failed job, even if we don't suspect a disconnect.
-type DisconnectedJobResult struct {
-	ID                  int64                     `json:"id"`
-	Name                string                    `json:"name"`
-	URL                 string                    `json:"url"`
-	SuspectedDisconnect bool                      `json:"suspected_disconnect"`
-	UnfinishedSteps     []*DisconnectedStepResult `json:"unfinished_steps"`
-}
-
-// DisconnectedStepResult contains an unfinished step with its original number and status.
-type DisconnectedStepResult struct {
-	Number int64  `json:"number"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-}
-
-// Run checks every job before requesting one rerun if we suspect a disconnect.
+// Run waits for the run if necessary and requests a single rerun of all of its
+// failed jobs if we suspect any of them were disconnected. We only rerun failed
+// runs that are on the expected attempt and haven't been superseded by a newer
+// run.
 func (r *RerunIfDisconnectedReq) Run(ctx context.Context, client *gh.Client) (*RerunIfDisconnectedRes, error) {
 	if err := r.validate(client); err != nil {
 		return nil, err
@@ -60,69 +52,46 @@ func (r *RerunIfDisconnectedReq) Run(ctx context.Context, client *gh.Client) (*R
 		slog.String("repo", r.Repo),
 		slog.Int64("run_id", r.RunID),
 	)
-	logger.DebugContext(ctx, "checking workflow jobs for runner disconnects")
 
-	jobs, err := getWorkflowJobsForRun(ctx, client, r.Owner, r.Repo, r.RunID)
+	run, err := r.waitForRun(ctx, client, logger)
 	if err != nil {
-		return nil, fmt.Errorf("inspecting %s/%s run %d: %w", r.Owner, r.Repo, r.RunID, err)
+		return nil, err
 	}
 
 	res := &RerunIfDisconnectedRes{
-		Owner:         r.Owner,
-		Repo:          r.Repo,
-		RunID:         r.RunID,
-		JobsInspected: len(jobs),
-		FailedJobs:    []*DisconnectedJobResult{},
+		ListDisconnectedJobsRes: &ListDisconnectedJobsRes{
+			Owner:      r.Owner,
+			Repo:       r.Repo,
+			RunID:      r.RunID,
+			RunAttempt: run.GetRunAttempt(),
+			FailedJobs: []*DisconnectedJobResult{},
+		},
 	}
-	suspected := false
-	suspectedCount := 0
-
-	for _, job := range jobs {
-		if job.GetStatus() != "completed" || job.GetConclusion() != "failure" {
-			continue
-		}
-
-		result := &DisconnectedJobResult{
-			ID:              job.GetID(),
-			Name:            job.GetName(),
-			URL:             job.GetHTMLURL(),
-			UnfinishedSteps: []*DisconnectedStepResult{},
-		}
-		for _, step := range job.Steps {
-			switch step.GetStatus() {
-			case "queued", "pending", "in_progress":
-				logger.DebugContext(ctx, "found unfinished step in a completed, failed job",
-					slog.Int64("job_id", job.GetID()),
-					slog.String("job_name", job.GetName()),
-					slog.Int64("step_number", step.GetNumber()),
-					slog.String("step_name", step.GetName()),
-					slog.String("step_status", step.GetStatus()),
-				)
-				result.UnfinishedSteps = append(result.UnfinishedSteps, &DisconnectedStepResult{
-					Number: step.GetNumber(), Name: step.GetName(), Status: step.GetStatus(),
-				})
-			}
-		}
-		result.SuspectedDisconnect = len(result.UnfinishedSteps) > 0
-		if result.SuspectedDisconnect {
-			suspectedCount++
-		}
-		logger.DebugContext(ctx, "checked failed job for a runner disconnect",
-			slog.Int64("job_id", result.ID),
-			slog.String("job_name", result.Name),
-			slog.Bool("suspected_disconnect", result.SuspectedDisconnect),
-			slog.Int("unfinished_steps", len(result.UnfinishedSteps)),
-		)
-		suspected = suspected || result.SuspectedDisconnect
-		res.FailedJobs = append(res.FailedJobs, result)
+	res.SkipReason = r.skipReason(run)
+	if res.SkipReason != "" {
+		logger.DebugContext(ctx, "not inspecting the run", slog.String("reason", res.SkipReason))
+		return res, nil
 	}
-	logger.DebugContext(ctx, "finished checking workflow jobs",
-		slog.Int("jobs_inspected", res.JobsInspected),
-		slog.Int("failed_jobs", len(res.FailedJobs)),
-		slog.Int("suspected_disconnects", suspectedCount),
-	)
-	if !suspected {
+
+	// Inspect the attempt that we checked. If someone reruns it in the meantime we
+	// don't want to look at the jobs of the new attempt.
+	listReq := &ListDisconnectedJobsReq{Owner: r.Owner, Repo: r.Repo, RunID: r.RunID, Attempt: run.GetRunAttempt()}
+	res.ListDisconnectedJobsRes, err = listReq.Run(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+	if !res.SuspectedDisconnect {
 		logger.DebugContext(ctx, "no suspected runner disconnects found")
+		return res, nil
+	}
+
+	newer, err := r.findNewerWorkflowRun(ctx, client, run)
+	if err != nil {
+		return nil, fmt.Errorf("checking for runs newer than %s/%s run %d: %w", r.Owner, r.Repo, r.RunID, err)
+	}
+	if newer != nil {
+		res.SkipReason = fmt.Sprintf("newer run %d has superseded it", newer.GetID())
+		logger.DebugContext(ctx, "not rerunning a superseded run", slog.Int64("newer_run_id", newer.GetID()))
 		return res, nil
 	}
 
@@ -136,95 +105,167 @@ func (r *RerunIfDisconnectedReq) Run(ctx context.Context, client *gh.Client) (*R
 	return res, nil
 }
 
-// ToTable formats the results as plain-text tables.
-func (r *RerunIfDisconnectedRes) ToTable() string {
-	return r.render(false)
+// skipReason returns why we won't inspect the run, or nothing if we will.
+func (r *RerunIfDisconnectedReq) skipReason(run *gh.WorkflowRun) string {
+	switch {
+	case r.Attempt > 0 && run.GetRunAttempt() != r.Attempt:
+		return fmt.Sprintf("we expected attempt %d but the run is on attempt %d", r.Attempt, run.GetRunAttempt())
+	case run.GetConclusion() != "failure":
+		return fmt.Sprintf("the run didn't fail, it concluded with %s", run.GetConclusion())
+	default:
+		return ""
+	}
 }
 
-// ToMarkdown formats the results as Markdown tables.
-func (r *RerunIfDisconnectedRes) ToMarkdown() string {
-	return r.render(true)
+// waitForRun gets the run. If we're waiting we'll keep polling until the run
+// has completed or moved on to an attempt that we don't expect.
+func (r *RerunIfDisconnectedReq) waitForRun(
+	ctx context.Context,
+	client *gh.Client,
+	logger *slog.Logger,
+) (*gh.WorkflowRun, error) {
+	for {
+		logger.DebugContext(ctx, "getting workflow run")
+		var run *gh.WorkflowRun
+		err := retryWithBackoff(ctx, 3, func() error {
+			var err error
+			run, _, err = client.Actions.GetWorkflowRunByID(ctx, r.Owner, r.Repo, r.RunID)
+			return err
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				err = context.Cause(ctx)
+			}
+			return nil, fmt.Errorf("getting %s/%s run %d: %w", r.Owner, r.Repo, r.RunID, err)
+		}
+		logger.DebugContext(ctx, "got workflow run",
+			slog.String("status", run.GetStatus()),
+			slog.String("conclusion", run.GetConclusion()),
+			slog.Int("run_attempt", run.GetRunAttempt()),
+		)
+
+		if run.GetStatus() == "completed" || (r.Attempt > 0 && run.GetRunAttempt() != r.Attempt) {
+			return run, nil
+		}
+		if !r.Wait {
+			return nil, fmt.Errorf(
+				"%s/%s run %d is %s and Github will only rerun completed runs",
+				r.Owner, r.Repo, r.RunID, run.GetStatus(),
+			)
+		}
+
+		logger.DebugContext(ctx, "waiting for workflow run to complete", slog.Duration("poll_interval", r.PollInterval))
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf(
+				"waiting for %s/%s run %d to complete: %w", r.Owner, r.Repo, r.RunID, context.Cause(ctx),
+			)
+		case <-time.After(r.PollInterval):
+		}
+	}
 }
 
-// ToJSON formats the results as JSON.
+// findNewerWorkflowRun returns the latest run of the same workflow for the same
+// branch and event if it's newer than our run. There's no point in rerunning a
+// superseded run, and if the workflow cancels in-progress runs for a branch it
+// might even cancel the newer run.
+func (r *RerunIfDisconnectedReq) findNewerWorkflowRun(
+	ctx context.Context,
+	client *gh.Client,
+	run *gh.WorkflowRun,
+) (*gh.WorkflowRun, error) {
+	opts := &gh.ListWorkflowRunsOptions{
+		Branch:      run.GetHeadBranch(),
+		Event:       run.GetEvent(),
+		ListOptions: gh.ListOptions{PerPage: 1},
+	}
+	slog.Default().DebugContext(ctx, "getting latest workflow run",
+		slog.String("owner", r.Owner),
+		slog.String("repo", r.Repo),
+		slog.Int64("workflow_id", run.GetWorkflowID()),
+		slog.String("branch", opts.Branch),
+		slog.String("event", opts.Event),
+	)
+
+	var runs *gh.WorkflowRuns
+	err := retryWithBackoff(ctx, 3, func() error {
+		var err error
+		runs, _, err = client.Actions.ListWorkflowRunsByID(ctx, r.Owner, r.Repo, run.GetWorkflowID(), opts)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return r.newerWorkflowRun(run, runs.WorkflowRuns), nil
+}
+
+// newerWorkflowRun returns the first of the runs that isn't our run and was
+// created after it, if there is one.
+func (r *RerunIfDisconnectedReq) newerWorkflowRun(run *gh.WorkflowRun, runs []*gh.WorkflowRun) *gh.WorkflowRun {
+	for _, other := range runs {
+		if other.GetID() != run.GetID() && other.GetCreatedAt().After(run.GetCreatedAt().Time) {
+			return other
+		}
+	}
+
+	return nil
+}
+
+// validate ensures that we've been given everything we need to rerun the jobs.
+func (r *RerunIfDisconnectedReq) validate(client *gh.Client) error {
+	if r == nil {
+		return errors.New("uninitialized request")
+	}
+
+	listReq := &ListDisconnectedJobsReq{Owner: r.Owner, Repo: r.Repo, RunID: r.RunID}
+	if err := listReq.validate(client); err != nil {
+		return err
+	}
+
+	switch {
+	case r.Attempt < 0:
+		return errors.New("attempt can't be negative")
+	case r.Wait && r.PollInterval <= 0:
+		return errors.New("poll interval must be positive when waiting")
+	}
+
+	return nil
+}
+
+// ToJSON marshals the response to JSON.
 func (r *RerunIfDisconnectedRes) ToJSON() ([]byte, error) {
 	if r == nil {
 		return nil, errors.New("uninitialized response")
 	}
+
 	return json.Marshal(r)
 }
 
-func (r *RerunIfDisconnectedReq) validate(client *gh.Client) error {
-	switch {
-	case r == nil:
-		return errors.New("uninitialized request")
-	case client == nil:
-		return errors.New("GitHub client is required")
-	case strings.TrimSpace(r.Owner) == "":
-		return errors.New("owner is required")
-	case strings.TrimSpace(r.Repo) == "":
-		return errors.New("repo is required")
-	case r.RunID <= 0:
-		return errors.New("run ID must be positive")
-	}
+// ToTable marshals the response to plain text tables.
+func (r *RerunIfDisconnectedRes) ToTable() string {
+	return r.render(false)
+}
 
-	return nil
+// ToMarkdown marshals the response to Markdown tables.
+func (r *RerunIfDisconnectedRes) ToMarkdown() string {
+	return r.render(true)
 }
 
 func (r *RerunIfDisconnectedRes) render(markdown bool) string {
 	if r == nil {
 		return ""
 	}
-	cell := func(s string) string {
-		if !markdown {
-			return s
-		}
-		return escapeMarkdownTableCell(s)
+
+	output := r.ListDisconnectedJobsRes.render(markdown)
+	switch {
+	case r.RerunRequested:
+		output += "\n\nRerun of failed jobs requested"
+	case r.SkipReason != "":
+		output += "\n\nNo rerun requested: " + r.SkipReason
+	default:
+		output += "\n\nNo suspected disconnects found. No rerun requested."
 	}
-	newTable := func(header table.Row) table.Writer {
-		t := table.NewWriter()
-		t.Style().Options = table.Options{}
-		t.AppendHeader(header)
-		t.SuppressTrailingSpaces()
-		return t
-	}
-	summary := newTable(table.Row{"Repository", "Run ID", "Jobs inspected", "Failed jobs", "Suspected disconnects", "Rerun requested"})
-	failed := newTable(table.Row{"Job ID", "Name", "Suspected disconnect", "URL"})
-	steps := newTable(table.Row{"Job ID", "Step", "Name", "Status"})
-	suspected, unfinished := 0, 0
-	for _, job := range r.FailedJobs {
-		if job.SuspectedDisconnect {
-			suspected++
-		}
-		failed.AppendRow(table.Row{job.ID, cell(job.Name), job.SuspectedDisconnect, cell(job.URL)})
-		for _, step := range job.UnfinishedSteps {
-			steps.AppendRow(table.Row{job.ID, step.Number, cell(step.Name), cell(step.Status)})
-			unfinished++
-		}
-	}
-	summary.AppendRow(table.Row{cell(r.Owner + "/" + r.Repo), r.RunID, r.JobsInspected, len(r.FailedJobs), suspected, r.RerunRequested})
-	var output strings.Builder
-	section := func(name string, t table.Writer) {
-		if output.Len() > 0 {
-			output.WriteString("\n\n")
-		}
-		if markdown {
-			output.WriteString("## " + name + "\n\n" + t.RenderMarkdown())
-		} else {
-			output.WriteString(name + ":\n" + t.Render())
-		}
-	}
-	section("Summary", summary)
-	if len(r.FailedJobs) > 0 {
-		section("Failed Jobs", failed)
-	}
-	if unfinished > 0 {
-		section("Unfinished Steps", steps)
-	}
-	if r.RerunRequested {
-		output.WriteString("\n\nRerun of failed jobs requested")
-	} else {
-		output.WriteString("\n\nNo suspected disconnects found. No rerun requested.")
-	}
-	return output.String()
+
+	return output
 }
