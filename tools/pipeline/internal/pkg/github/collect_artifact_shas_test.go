@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github/githubtest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -356,7 +357,7 @@ func TestCollectArtifactShasReq_Run_MergeCommitRetry(t *testing.T) {
 			t.Parallel()
 
 			callCount := 0
-			client, mux, teardown := setupTestClient(t)
+			client, mux, teardown := githubtest.SetupTestClient(t)
 			defer teardown()
 
 			mux.HandleFunc("/repos/hashicorp/vault-enterprise/pulls/100", func(w http.ResponseWriter, r *http.Request) {

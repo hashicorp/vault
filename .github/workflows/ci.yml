@@ -676,59 +676,10 @@ jobs:
           echo "::error title=Generated Go code is out of date::${what_to_do//$'\n'/%0A}"
           exit 1
 
-  rerun-disconnected-jobs:
-    name: Rerun failed jobs after suspected runner disconnects
-    needs:
-      - setup
-      - test-autopilot-upgrade
-      - test-go
-      - test-go-testonly
-      - test-go-race
-      - test-go-fips
-      - test-ui
-      - check-go
-    if: failure() && fromJSON(github.run_attempt) < 2
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.setup.outputs.checkout-ref }}
-      - if: needs.setup.outputs.is-ent-repo == 'true'
-        id: vault-auth
-        name: Vault Authenticate
-        run: vault-auth
-      - if: needs.setup.outputs.is-ent-repo == 'true'
-        id: vault-secrets
-        name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
-        with:
-          url: ${{ steps.vault-auth.outputs.addr }}
-          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
-          token: ${{ steps.vault-auth.outputs.token }}
-          exportEnv: false
-          secrets: |
-            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - uses: ./.github/actions/set-up-pipeline
-        with:
-          github-token: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-      - name: Check for runner disconnects and rerun failed jobs
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-        run: |
-          pipeline github rerun-if-disconnected ${{ runner.debug && '--log debug' || '' }} '${{ github.run_id }}' \
-            --owner '${{ github.repository_owner }}' \
-            --repo '${{ github.event.repository.name }}' \
-            --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
-
   tests-completed:
     needs:
       - setup
       - check-go
-      - rerun-disconnected-jobs
       - test-autopilot-upgrade
       - test-go
       - test-go-testonly
@@ -754,7 +705,7 @@ jobs:
           # Encode the needs context into JSON, filter out unrequired workflows, shape the result
           # into a more useful schema. Determine the overall status by comparing the total number of
           # successful results with the number of required jobs.
-          if results=$(jq -rec 'del(.["test-go-fips"], .["test-go-race"], .["rerun-disconnected-jobs"]) as $required
+          if results=$(jq -rec 'del(.["test-go-fips"], .["test-go-race"]) as $required
               | $required | keys as $jobs
               | reduce $jobs[] as $job ([]; . + [{job: $job}+$required[$job]])' <<< '${{ toJSON(needs) }}'
           ); then
@@ -790,8 +741,10 @@ jobs:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
+          exportEnv: false
           secrets: |
             kv/data/github/${{ github.repository }}/slack feed-vault-ci-official-webhook-url | slackbot-webhook-url;
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
       - id: slackbot-webhook-url
         run: echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
       - if: |
@@ -895,6 +848,49 @@ jobs:
           RESULT: ${{ steps.status.outputs.result }}
           TABLE_DATA: ${{ steps.prepare-failure-summary.outputs.table-test-results }}
         run: ./.github/scripts/report-ci-status.sh
+      # Our runners sometimes disconnect and leave behind failed jobs that never got to finish. If
+      # that happens we want to rerun the failed jobs, but Github won't rerun a run that's still in
+      # progress. Instead we'll ask rerun-disconnected-ci.yml to wait for us to finish and rerun them
+      # for us. We only do this on the first attempt so we don't keep rerunning jobs forever, and
+      # we never let it fail the workflow.
+      - if: |
+          !cancelled() &&
+          needs.setup.outputs.is-fork == 'false' &&
+          fromJSON(github.run_attempt) < 2 &&
+          contains(needs.*.result, 'failure')
+        id: set-up-pipeline
+        name: Set up the pipeline tool
+        uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+        continue-on-error: true
+      - if: |
+          !cancelled() &&
+          steps.set-up-pipeline.outcome == 'success'
+        id: disconnected-jobs
+        name: Check for runner disconnects
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          pipeline github list disconnected-jobs ${{ runner.debug && '--log debug' || '' }} '${{ github.run_id }}' \
+            --owner '${{ github.repository_owner }}' \
+            --repo '${{ github.event.repository.name }}' \
+            --attempt '${{ github.run_attempt }}' \
+            --github-output \
+            --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
+        continue-on-error: true
+      - if: |
+          !cancelled() &&
+          steps.disconnected-jobs.outcome == 'success' &&
+          fromJSON(steps.disconnected-jobs.outputs.disconnected-jobs).suspected_disconnect
+        name: Rerun failed jobs after we finish
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
+        with:
+          token: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          event-type: rerun-disconnected-ci
+          client-payload: '{"run_id": "${{ github.run_id }}", "run_attempt": "${{ github.run_attempt }}", "ref": ${{ toJSON(github.head_ref || github.ref_name) }}}'
+        continue-on-error: true
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status
         run: |

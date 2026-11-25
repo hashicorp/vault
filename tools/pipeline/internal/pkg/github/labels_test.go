@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github/githubtest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +44,7 @@ func Test_addLabelsToIssue(t *testing.T) {
 
 			called := false
 			var receivedLabels []string
-			client, mux, teardown := setupTestClient(t)
+			client, mux, teardown := githubtest.SetupTestClient(t)
 			defer teardown()
 
 			if test.shouldCall {
@@ -116,7 +117,7 @@ func Test_removeLabelFromIssue(t *testing.T) {
 			t.Parallel()
 
 			called := false
-			client, mux, teardown := setupTestClient(t)
+			client, mux, teardown := githubtest.SetupTestClient(t)
 			defer teardown()
 
 			if test.shouldCall {

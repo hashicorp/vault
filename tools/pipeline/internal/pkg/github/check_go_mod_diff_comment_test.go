@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github/githubtest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,7 +46,7 @@ func Test_CheckGoModDiffRes_CommentOnPullRequest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			client, mux, teardown := setupTestClient(t)
+			client, mux, teardown := githubtest.SetupTestClient(t)
 			defer teardown()
 
 			var created, updated string
@@ -104,7 +105,7 @@ func Test_CheckGoModDiffRes_CommentOnPullRequest(t *testing.T) {
 func Test_CheckGoModDiffRes_CommentOnPullRequest_APIError(t *testing.T) {
 	t.Parallel()
 
-	client, mux, teardown := setupTestClient(t)
+	client, mux, teardown := githubtest.SetupTestClient(t)
 	defer teardown()
 	mux.HandleFunc("/repos/hashicorp/vault-enterprise/issues/42/comments", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
