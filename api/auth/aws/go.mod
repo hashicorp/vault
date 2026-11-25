@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.37
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.6
 	github.com/hashicorp/go-hclog v1.6.3
-	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.3
+	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.4
 	github.com/hashicorp/go-uuid v1.0.4
 	github.com/hashicorp/vault/api v1.23.0
 )
