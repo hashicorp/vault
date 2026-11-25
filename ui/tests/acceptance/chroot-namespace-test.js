@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, waitFor } from '@ember/test-helpers';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import chrootNamespaceHandlers from 'vault/mirage/handlers/chroot-namespace';
@@ -124,6 +124,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     });
 
     await loginNs(`${namespace}/child`, childReader);
+    await waitFor(navLink('Access control'));
 
     ['Dashboard', 'Secrets', 'Access control', 'Operational tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item within child namespace`);

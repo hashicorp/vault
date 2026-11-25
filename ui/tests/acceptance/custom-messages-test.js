@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -46,42 +46,44 @@ function generateMessages(authenticated, count = 12) {
   return messages;
 }
 
-const authenticatedMessageResponse = {
-  request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
-  lease_id: '',
-  renewable: false,
-  lease_duration: 0,
-  data: {
-    key_info: {
-      'some-awesome-id-2': {
-        authenticated: true,
-        end_time: null,
-        link: {
-          'some link title': 'www.link.com',
+function authenticatedMessageResponse() {
+  return {
+    request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
+    lease_id: '',
+    renewable: false,
+    lease_duration: 0,
+    data: {
+      key_info: {
+        'some-awesome-id-2': {
+          authenticated: true,
+          end_time: null,
+          link: {
+            'some link title': 'www.link.com',
+          },
+          message: 'aGVsbG8gd29ybGQgaGVsbG8gd29scmQ=',
+          options: null,
+          start_time: '2024-01-04T08:00:00Z',
+          title: 'Banner title',
+          type: 'banner',
         },
-        message: 'aGVsbG8gd29ybGQgaGVsbG8gd29scmQ=',
-        options: null,
-        start_time: '2024-01-04T08:00:00Z',
-        title: 'Banner title',
-        type: 'banner',
+        'some-awesome-id-1': {
+          authenticated: true,
+          end_time: null,
+          message: 'aGVyZSBpcyBhIGNvb2wgbWVzc2FnZQ==',
+          options: null,
+          start_time: '2024-01-01T08:00:00Z',
+          title: 'Modal title',
+          type: 'modal',
+        },
       },
-      'some-awesome-id-1': {
-        authenticated: true,
-        end_time: null,
-        message: 'aGVyZSBpcyBhIGNvb2wgbWVzc2FnZQ==',
-        options: null,
-        start_time: '2024-01-01T08:00:00Z',
-        title: 'Modal title',
-        type: 'modal',
-      },
+      keys: ['some-awesome-id-2', 'some-awesome-id-1'],
     },
-    keys: ['some-awesome-id-2', 'some-awesome-id-1'],
-  },
-  wrap_info: null,
-  warnings: null,
-  auth: null,
-  mount_type: '',
-};
+    wrap_info: null,
+    warnings: null,
+    auth: null,
+    mount_type: '',
+  };
+}
 
 module('Acceptance | custom messages', function (hooks) {
   setupApplicationTest(hooks);
@@ -89,7 +91,7 @@ module('Acceptance | custom messages', function (hooks) {
 
   test('it shows the alert banner and modal message', async function (assert) {
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
-      return authenticatedMessageResponse;
+      return authenticatedMessageResponse();
     });
     await visit('/vault/dashboard');
 
@@ -107,13 +109,14 @@ module('Acceptance | custom messages', function (hooks) {
   test('it shows the multiple modal messages', async function (assert) {
     const modalIdOne = 'some-awesome-id-2';
     const modalIdTwo = 'some-awesome-id-1';
+    const response = authenticatedMessageResponse();
 
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
-      authenticatedMessageResponse.data.key_info[modalIdOne].type = 'modal';
-      authenticatedMessageResponse.data.key_info[modalIdOne].title = 'Modal title 1';
-      authenticatedMessageResponse.data.key_info[modalIdTwo].type = 'modal';
-      authenticatedMessageResponse.data.key_info[modalIdTwo].title = 'Modal title 2';
-      return authenticatedMessageResponse;
+      response.data.key_info[modalIdOne].type = 'modal';
+      response.data.key_info[modalIdOne].title = 'Modal title 1';
+      response.data.key_info[modalIdTwo].type = 'modal';
+      response.data.key_info[modalIdTwo].title = 'Modal title 2';
+      return response;
     });
     await visit('/vault/dashboard');
 
@@ -130,13 +133,14 @@ module('Acceptance | custom messages', function (hooks) {
   test('it shows the multiple banner messages', async function (assert) {
     const bannerIdOne = 'some-awesome-id-2';
     const bannerIdTwo = 'some-awesome-id-1';
+    const response = authenticatedMessageResponse();
 
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
-      authenticatedMessageResponse.data.key_info[bannerIdOne].type = 'banner';
-      authenticatedMessageResponse.data.key_info[bannerIdOne].title = 'Banner title 1';
-      authenticatedMessageResponse.data.key_info[bannerIdTwo].type = 'banner';
-      authenticatedMessageResponse.data.key_info[bannerIdTwo].title = 'Banner title 2';
-      return authenticatedMessageResponse;
+      response.data.key_info[bannerIdOne].type = 'banner';
+      response.data.key_info[bannerIdOne].title = 'Banner title 1';
+      response.data.key_info[bannerIdTwo].type = 'banner';
+      response.data.key_info[bannerIdTwo].title = 'Banner title 2';
+      return response;
     });
     await visit('/vault/dashboard');
 
