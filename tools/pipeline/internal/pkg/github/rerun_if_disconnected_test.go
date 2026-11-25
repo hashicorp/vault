@@ -1,304 +1,294 @@
 // Copyright IBM Corp. 2026
 // SPDX-License-Identifier: BUSL-1.1
 
-package github_test
+package github
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	gh "github.com/google/go-github/v83/github"
-	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github/githubtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestRerunIfDisconnected_ObservedJob checks a sanitized example of a disconnected
-// job. Multiple matching jobs should still result in just one rerun request.
-func TestRerunIfDisconnected_ObservedJob(t *testing.T) {
+// TestRerunIfDisconnected_SkipReason checks that we only inspect a run that failed
+// on the attempt we expected. Someone else might have already rerun it.
+func TestRerunIfDisconnected_SkipReason(t *testing.T) {
 	t.Parallel()
 
-	disconnectedExample, err := os.ReadFile("testfixtures/disconnected_job.json")
-	require.NoError(t, err)
-	var job gh.WorkflowJob
-	require.NoError(t, json.Unmarshal(disconnectedExample, &job))
-
-	var posts atomic.Int32
-	var gets atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method + " " + r.URL.Path {
-		case "GET /repos/example/project/actions/runs/2001/jobs":
-			gets.Add(1)
-			assert.Equal(t, "latest", r.URL.Query().Get("filter"))
-			assert.Equal(t, "100", r.URL.Query().Get("per_page"))
-			assert.NoError(t, json.NewEncoder(w).Encode(
-				gh.Jobs{
-					Jobs: []*gh.WorkflowJob{
-						&job,
-						&job,
-						{
-							ID:         gh.Ptr(int64(2)),
-							Name:       gh.Ptr("lint"),
-							Status:     gh.Ptr("completed"),
-							Conclusion: gh.Ptr("failure"),
-						},
-						{
-							Status: gh.Ptr("in_progress"),
-							Steps:  []*gh.TaskStep{{Status: gh.Ptr("pending")}},
-						},
-					},
-				}))
-		case "POST /repos/example/project/actions/runs/2001/rerun-failed-jobs":
-			posts.Add(1)
-			w.WriteHeader(http.StatusCreated)
-		default:
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
-			http.Error(w, "unexpected request", http.StatusNotFound)
-		}
-	}))
-
-	t.Cleanup(srv.Close)
-
-	client := gh.NewClient(srv.Client())
-	client.BaseURL, err = url.Parse(srv.URL + "/")
-	require.NoError(t, err)
-
-	req := &github.RerunIfDisconnectedReq{Owner: "example", Repo: "project", RunID: 2001}
-	res, err := req.Run(context.Background(), client)
-	require.NoError(t, err)
-	require.True(t, res.RerunRequested)
-	require.EqualValues(t, 1, posts.Load())
-	require.EqualValues(t, 1, gets.Load())
-	require.Equal(t, 4, res.JobsInspected)
-	require.Len(t, res.FailedJobs, 3)
-	result := res.FailedJobs[0]
-	require.EqualValues(t, 1001, result.ID)
-	require.Equal(t, job.GetName(), result.Name)
-	require.Equal(t, job.GetHTMLURL(), result.URL)
-	require.True(t, result.SuspectedDisconnect)
-	require.Len(t, result.UnfinishedSteps, 15)
-	for i, step := range result.UnfinishedSteps {
-		require.Equal(t, job.Steps[i+13].GetNumber(), step.Number)
-		require.Equal(t, job.Steps[i+13].GetName(), step.Name)
-		require.Equal(t, job.Steps[i+13].GetStatus(), step.Status)
-	}
-	require.False(t, res.FailedJobs[2].SuspectedDisconnect)
-
-	b, err := res.ToJSON()
-	require.NoError(t, err)
-	require.Contains(t, string(b), `"suspected_disconnect":false,"unfinished_steps":[]`)
-}
-
-// TestRerunIfDisconnected_Classification checks that we only suspect a disconnect
-// when a completed, failed job still has unfinished steps.
-func TestRerunIfDisconnected_Classification(t *testing.T) {
-	t.Parallel()
 	for name, test := range map[string]struct {
-		status     string
+		attempt    int
+		runAttempt int
 		conclusion string
-		steps      string
-		failed     bool
-		suspected  bool
+		expect     string
 	}{
-		"queued":           {"completed", "failure", `[{"status":"queued"}]`, true, true},
-		"pending":          {"completed", "failure", `[{"status":"pending"}]`, true, true},
-		"in progress":      {"completed", "failure", `[{"status":"in_progress"}]`, true, true},
-		"ordinary failure": {"completed", "failure", `[{"status":"completed","conclusion":"failure"}]`, true, false},
-		"missing evidence": {"completed", "failure", `[null,{}, {"status":"unknown"}]`, true, false},
-		"no steps":         {"completed", "failure", `null`, true, false},
-		"empty steps":      {"completed", "failure", `[]`, true, false},
-		"success":          {"completed", "success", `[{"status":"pending"}]`, false, false},
-		"cancelled":        {"completed", "cancelled", `[{"status":"pending"}]`, false, false},
-		"timed out":        {"completed", "timed_out", `[{"status":"pending"}]`, false, false},
-		"skipped":          {"completed", "skipped", `[{"status":"pending"}]`, false, false},
-		"running":          {"in_progress", "failure", `[{"status":"pending"}]`, false, false},
-		"queued job":       {"queued", "failure", `[{"status":"pending"}]`, false, false},
+		"failed":        {attempt: 1, runAttempt: 1, conclusion: "failure"},
+		"any attempt":   {runAttempt: 2, conclusion: "failure"},
+		"cancelled":     {runAttempt: 1, conclusion: "cancelled", expect: "the run didn't fail, it concluded with cancelled"},
+		"succeeded":     {runAttempt: 1, conclusion: "success", expect: "the run didn't fail, it concluded with success"},
+		"already rerun": {attempt: 1, runAttempt: 2, expect: "we expected attempt 1 but the run is on attempt 2"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			req := &RerunIfDisconnectedReq{Attempt: test.attempt}
+			run := &gh.WorkflowRun{RunAttempt: gh.Ptr(test.runAttempt), Conclusion: gh.Ptr(test.conclusion)}
+			require.Equal(t, test.expect, req.skipReason(run))
+		})
+	}
+}
+
+// TestRerunIfDisconnected_NewerRun checks that we only treat a run as superseded
+// by a different run that was created after it. Rerunning a superseded run might
+// cancel the newer one.
+func TestRerunIfDisconnected_NewerRun(t *testing.T) {
+	t.Parallel()
+
+	created := time.Date(2026, 11, 10, 18, 0, 0, 0, time.UTC)
+	run := &gh.WorkflowRun{ID: gh.Ptr(int64(1)), CreatedAt: &gh.Timestamp{Time: created}}
+	older := &gh.WorkflowRun{ID: gh.Ptr(int64(2)), CreatedAt: &gh.Timestamp{Time: created.Add(-time.Hour)}}
+	newer := &gh.WorkflowRun{ID: gh.Ptr(int64(3)), CreatedAt: &gh.Timestamp{Time: created.Add(time.Hour)}}
+
+	req := &RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: 1}
+	require.Nil(t, req.newerWorkflowRun(run, nil))
+	require.Nil(t, req.newerWorkflowRun(run, []*gh.WorkflowRun{run}))
+	require.Nil(t, req.newerWorkflowRun(run, []*gh.WorkflowRun{older}))
+	require.Equal(t, newer, req.newerWorkflowRun(run, []*gh.WorkflowRun{older, newer}))
+}
+
+// TestRerunIfDisconnected_APIFailures checks that we return Github's errors to the
+// caller. If we can't tell whether a newer run exists we ought not rerun. If Github
+// rejects the rerun, e.g. because the run is already running again, the caller
+// needs to know. It also checks that we inspect the jobs of the attempt that we
+// checked, since only that route is mocked.
+func TestRerunIfDisconnected_APIFailures(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		latestStatus int
+		expectPosts  int32
+		expectErr    string
+	}{
+		"latest run lookup failure": {latestStatus: http.StatusForbidden, expectErr: "checking for runs newer than o/r run 1"},
+		"rerun rejected":            {expectPosts: 1, expectErr: "rerunning failed jobs for o/r run 1"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			client, mux, teardown := githubtest.SetupTestClient(t)
+			defer teardown()
+
 			var posts atomic.Int32
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == http.MethodPost {
-					posts.Add(1)
-					w.WriteHeader(http.StatusCreated)
+			mux.HandleFunc("GET /repos/o/r/actions/runs/1", func(w http.ResponseWriter, r *http.Request) {
+				_, err := io.WriteString(w, `{"id":1,"workflow_id":7,"status":"completed","conclusion":"failure","run_attempt":1}`)
+				assert.NoError(t, err)
+			})
+			mux.HandleFunc("GET /repos/o/r/actions/runs/1/attempts/1/jobs", func(w http.ResponseWriter, r *http.Request) {
+				_, err := io.WriteString(w, `{"jobs":[{"status":"completed","conclusion":"failure","steps":[{"status":"pending"}]}]}`)
+				assert.NoError(t, err)
+			})
+			mux.HandleFunc("GET /repos/o/r/actions/workflows/7/runs", func(w http.ResponseWriter, r *http.Request) {
+				if test.latestStatus != 0 {
+					w.WriteHeader(test.latestStatus)
 					return
 				}
-				_, err := fmt.Fprintf(w, `{"jobs":[null,{"status":%q,"conclusion":%q,"html_url":"https://ghe.example/job/1","steps":%s}]}`, test.status, test.conclusion, test.steps)
+				_, err := io.WriteString(w, `{"workflow_runs":[{"id":1}]}`)
 				assert.NoError(t, err)
-			}))
+			})
+			mux.HandleFunc("POST /repos/o/r/actions/runs/1/rerun-failed-jobs", func(w http.ResponseWriter, r *http.Request) {
+				posts.Add(1)
+				w.WriteHeader(http.StatusForbidden)
+				_, err := io.WriteString(w, `{"message":"This workflow is already running"}`)
+				assert.NoError(t, err)
+			})
 
-			t.Cleanup(srv.Close)
+			res, err := (&RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: 1}).Run(t.Context(), client)
+			require.ErrorContains(t, err, test.expectErr)
+			require.Nil(t, res)
+			require.Equal(t, test.expectPosts, posts.Load())
+		})
+	}
+}
 
-			client := gh.NewClient(srv.Client())
-			var err error
-			client.BaseURL, err = url.Parse(srv.URL + "/")
+// TestRerunIfDisconnected_Wait checks that we poll a run until it has completed
+// before we inspect it, and that we stop waiting if someone else reruns it.
+func TestRerunIfDisconnected_Wait(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		polls []string
+		rerun bool
+		skip  string
+	}{
+		"completes": {
+			polls: []string{
+				`"status":"queued","run_attempt":1`,
+				`"status":"in_progress","run_attempt":1`,
+				`"status":"completed","conclusion":"failure","run_attempt":1`,
+			},
+			rerun: true,
+		},
+		"rerun by someone else": {
+			polls: []string{
+				`"status":"in_progress","run_attempt":1`,
+				`"status":"queued","run_attempt":2`,
+			},
+			skip: "we expected attempt 1 but the run is on attempt 2",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			client, mux, teardown := githubtest.SetupTestClient(t)
+			defer teardown()
+
+			var runGets, posts atomic.Int32
+			mux.HandleFunc("GET /repos/o/r/actions/runs/1", func(w http.ResponseWriter, r *http.Request) {
+				poll := test.polls[min(int(runGets.Add(1)), len(test.polls))-1]
+				_, err := fmt.Fprintf(w, `{"id":1,"workflow_id":7,%s}`, poll)
+				assert.NoError(t, err)
+			})
+			mux.HandleFunc("GET /repos/o/r/actions/runs/1/attempts/1/jobs", func(w http.ResponseWriter, r *http.Request) {
+				_, err := io.WriteString(w, `{"jobs":[{"status":"completed","conclusion":"failure","steps":[{"status":"pending"}]}]}`)
+				assert.NoError(t, err)
+			})
+			mux.HandleFunc("GET /repos/o/r/actions/workflows/7/runs", func(w http.ResponseWriter, r *http.Request) {
+				_, err := io.WriteString(w, `{"workflow_runs":[{"id":1}]}`)
+				assert.NoError(t, err)
+			})
+			mux.HandleFunc("POST /repos/o/r/actions/runs/1/rerun-failed-jobs", func(w http.ResponseWriter, r *http.Request) {
+				posts.Add(1)
+				w.WriteHeader(http.StatusCreated)
+			})
+
+			req := &RerunIfDisconnectedReq{
+				Owner: "o", Repo: "r", RunID: 1, Attempt: 1, Wait: true, PollInterval: time.Millisecond,
+			}
+			res, err := req.Run(t.Context(), client)
 			require.NoError(t, err)
-
-			res, err := (&github.RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: 1}).Run(context.Background(), client)
-			require.NoError(t, err)
-			require.Equal(t, test.suspected, res.RerunRequested)
-			if test.suspected {
+			require.Equal(t, test.rerun, res.RerunRequested)
+			require.Equal(t, test.skip, res.SkipReason)
+			require.EqualValues(t, len(test.polls), runGets.Load())
+			if test.rerun {
 				require.EqualValues(t, 1, posts.Load())
 			} else {
 				require.Zero(t, posts.Load())
 			}
-			if test.failed {
-				require.Len(t, res.FailedJobs, 1)
-				require.Equal(t, test.suspected, res.FailedJobs[0].SuspectedDisconnect)
-				require.Equal(t, "https://ghe.example/job/1", res.FailedJobs[0].URL)
-			} else {
-				require.Empty(t, res.FailedJobs)
-			}
 		})
 	}
 }
 
-// TestRerunIfDisconnected_PaginationAndErrors checks that we fetch every page
-// before requesting a rerun and return API errors without retrying.
-func TestRerunIfDisconnected_PaginationAndErrors(t *testing.T) {
+// TestRerunIfDisconnected_WaitTimeout checks that we give up on a run that never
+// completes and that we tell the caller why we stopped waiting.
+func TestRerunIfDisconnected_WaitTimeout(t *testing.T) {
 	t.Parallel()
-	for name, test := range map[string]struct {
-		firstStatus   int
-		secondStatus  int
-		postStatus    int
-		matchFirst    bool
-		matchSecond   bool
-		shouldBeEmpty bool
-		expectGetCnt  int32
-		expectWantCnt int32
-		shouldFail    string
-	}{
-		"match on later page": {200, 200, 201, false, true, false, 2, 1, ""},
-		"later page failure":  {200, 500, 201, true, false, false, 2, 0, "inspecting o/r run 1"},
-		"first page failure":  {403, 200, 201, false, false, false, 1, 0, "inspecting o/r run 1"},
-		"rerun rejected":      {200, 200, 403, true, false, false, 2, 1, "rerunning failed jobs for o/r run 1"},
-		"empty run":           {200, 200, 201, false, false, true, 1, 0, ""},
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 
-			var gets, posts atomic.Int32
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == http.MethodPost {
-					assert.Equal(t, test.expectGetCnt, gets.Load())
-					posts.Add(1)
-					w.WriteHeader(test.postStatus)
-					return
-				}
-				gets.Add(1)
-				status, match := test.firstStatus, test.matchFirst
-				if r.URL.Query().Get("page") == "2" {
-					status, match = test.secondStatus, test.matchSecond
-				} else if !test.shouldBeEmpty {
-					w.Header().Set("Link", fmt.Sprintf(`<http://%s%s?page=2>; rel="next"`, r.Host, r.URL.Path))
-				}
-				w.WriteHeader(status)
-				body := `{"jobs":[]}`
-				if match {
-					body = `{"jobs":[{"status":"completed","conclusion":"failure","steps":[{"status":"pending"}]}]}`
-				}
-				_, err := w.Write([]byte(body))
-				assert.NoError(t, err)
-			}))
+	client, mux, teardown := githubtest.SetupTestClient(t)
+	defer teardown()
 
-			t.Cleanup(srv.Close)
+	mux.HandleFunc("GET /repos/o/r/actions/runs/1", func(w http.ResponseWriter, r *http.Request) {
+		_, err := io.WriteString(w, `{"id":1,"status":"in_progress"}`)
+		assert.NoError(t, err)
+	})
 
-			client := gh.NewClient(srv.Client())
-			var err error
-			client.BaseURL, err = url.Parse(srv.URL + "/")
-			require.NoError(t, err)
+	timedOut := errors.New("timed out")
+	ctx, cancel := context.WithTimeoutCause(t.Context(), 50*time.Millisecond, timedOut)
+	defer cancel()
 
-			res, err := (&github.RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: 1}).Run(t.Context(), client)
-			if test.shouldFail != "" {
-				require.ErrorContains(t, err, test.shouldFail)
-				require.Nil(t, res)
-				var apiErr *gh.ErrorResponse
-				require.ErrorAs(t, err, &apiErr)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, test.expectWantCnt > 0, res.RerunRequested)
-				if test.shouldBeEmpty {
-					b, err := res.ToJSON()
-					require.NoError(t, err)
-					require.Contains(t, string(b), `"rerun_requested":false,"failed_jobs":[]`)
-				}
-			}
-			require.Equal(t, test.expectGetCnt, gets.Load())
-			require.Equal(t, test.expectWantCnt, posts.Load())
-		})
-	}
+	req := &RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: 1, Wait: true, PollInterval: 5 * time.Millisecond}
+	res, err := req.Run(ctx, client)
+	require.ErrorIs(t, err, timedOut)
+	require.Nil(t, res)
 }
 
-// TestRerunIfDisconnected_Validation checks that invalid requests fail before we call the API.
+// TestRerunIfDisconnected_Validation checks that invalid requests fail before we
+// call the API.
 func TestRerunIfDisconnected_Validation(t *testing.T) {
 	t.Parallel()
 
 	for name, test := range map[string]struct {
-		req    *github.RerunIfDisconnectedReq
+		req    *RerunIfDisconnectedReq
 		client *gh.Client
 		expect string
 	}{
 		"nil request": {nil, gh.NewClient(nil), "uninitialized request"},
-		"nil client":  {&github.RerunIfDisconnectedReq{}, nil, "client is required"},
-		"owner":       {&github.RerunIfDisconnectedReq{Repo: "r", RunID: 1}, gh.NewClient(nil), "owner is required"},
-		"repo":        {&github.RerunIfDisconnectedReq{Owner: "o", RunID: 1}, gh.NewClient(nil), "repo is required"},
-		"zero ID":     {&github.RerunIfDisconnectedReq{Owner: "o", Repo: "r"}, gh.NewClient(nil), "run ID must be positive"},
-		"negative ID": {&github.RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: -1}, gh.NewClient(nil), "run ID must be positive"},
+		"nil client":  {&RerunIfDisconnectedReq{}, nil, "client is required"},
+		"owner":       {&RerunIfDisconnectedReq{Repo: "r", RunID: 1}, gh.NewClient(nil), "owner is required"},
+		"repo":        {&RerunIfDisconnectedReq{Owner: "o", RunID: 1}, gh.NewClient(nil), "repo is required"},
+		"zero ID":     {&RerunIfDisconnectedReq{Owner: "o", Repo: "r"}, gh.NewClient(nil), "run ID must be positive"},
+		"negative attempt": {
+			&RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: 1, Attempt: -1},
+			gh.NewClient(nil), "attempt can't be negative",
+		},
+		"no poll interval": {
+			&RerunIfDisconnectedReq{Owner: "o", Repo: "r", RunID: 1, Wait: true},
+			gh.NewClient(nil), "poll interval must be positive",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			res, err := test.req.Run(context.Background(), test.client)
+
+			res, err := test.req.Run(t.Context(), test.client)
 			require.ErrorContains(t, err, test.expect)
 			require.Nil(t, res)
 		})
 	}
 }
 
-// TestRerunIfDisconnected_Formatting checks that we escape Markdown cell text
-// without changing the values returned as JSON.
+// TestRerunIfDisconnected_Formatting checks that we tell the reader whether or
+// not we requested a rerun, and why not if we skipped one.
 func TestRerunIfDisconnected_Formatting(t *testing.T) {
 	t.Parallel()
 
-	res := &github.RerunIfDisconnectedRes{
-		Owner: "o", Repo: "r", RunID: 1, JobsInspected: 2, RerunRequested: true,
-		FailedJobs: []*github.DisconnectedJobResult{{
-			ID: 2, Name: "build|test\n<script>", URL: "https://ghe.example/job/2", SuspectedDisconnect: true,
-			UnfinishedSteps: []*github.DisconnectedStepResult{{Number: 51, Name: "test_*`[x]", Status: "pending"}},
-		}},
+	res := &RerunIfDisconnectedRes{
+		ListDisconnectedJobsRes: &ListDisconnectedJobsRes{
+			Owner: "o", Repo: "r", RunID: 1, JobsInspected: 1, SuspectedDisconnect: true,
+			FailedJobs: []*DisconnectedJobResult{{
+				ID: 2, Name: "build", SuspectedDisconnect: true,
+				UnfinishedSteps: []*DisconnectedStepResult{{Number: 51, Name: "test", Status: "pending"}},
+			}},
+		},
+		RerunRequested: true,
 	}
-
-	text := res.ToTable()
-	for _, want := range []string{"Summary:", "Failed Jobs:", "Unfinished Steps:", "build|test", "pending", "51", "Rerun of failed jobs requested"} {
-		require.Contains(t, text, want)
+	for _, output := range []string{res.ToTable(), res.ToMarkdown()} {
+		require.Contains(t, output, "Summary")
+		require.Contains(t, output, "Unfinished Steps")
+		require.Contains(t, output, "Rerun of failed jobs requested")
 	}
-
-	md := res.ToMarkdown()
-	for _, want := range []string{"## Summary", "## Failed Jobs", "## Unfinished Steps", `build\|test<br/>&lt;script&gt;`, "test&#95;&#42;&#96;&#91;x&#93;", "https://ghe.example/job/2"} {
-		require.Contains(t, md, want)
-	}
-
 	b, err := res.ToJSON()
 	require.NoError(t, err)
-	var decoded github.RerunIfDisconnectedRes
+	require.Contains(t, string(b), `"run_id":1,`)
+	require.Contains(t, string(b), `"rerun_requested":true}`)
+	var decoded RerunIfDisconnectedRes
 	require.NoError(t, json.Unmarshal(b, &decoded))
 	require.Equal(t, *res, decoded)
 
-	noop := &github.RerunIfDisconnectedRes{FailedJobs: []*github.DisconnectedJobResult{}}
-	for _, output := range []string{noop.ToTable(), noop.ToMarkdown()} {
+	skipped := &RerunIfDisconnectedRes{
+		ListDisconnectedJobsRes: &ListDisconnectedJobsRes{FailedJobs: []*DisconnectedJobResult{}},
+		SkipReason:              "newer run 2 has superseded it",
+	}
+	for _, output := range []string{skipped.ToTable(), skipped.ToMarkdown()} {
+		require.Contains(t, output, "No rerun requested: newer run 2 has superseded it")
+	}
+	b, err = skipped.ToJSON()
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"rerun_requested":false,"skip_reason":"newer run 2 has superseded it"`)
+
+	none := &RerunIfDisconnectedRes{ListDisconnectedJobsRes: &ListDisconnectedJobsRes{FailedJobs: []*DisconnectedJobResult{}}}
+	for _, output := range []string{none.ToTable(), none.ToMarkdown()} {
 		require.Contains(t, output, "No suspected disconnects found. No rerun requested.")
-		require.NotContains(t, output, "Failed Jobs")
-		require.NotContains(t, output, "Unfinished Steps")
 	}
 
-	var absent *github.RerunIfDisconnectedRes
+	var absent *RerunIfDisconnectedRes
 	require.Empty(t, absent.ToTable())
 	require.Empty(t, absent.ToMarkdown())
 	_, err = absent.ToJSON()

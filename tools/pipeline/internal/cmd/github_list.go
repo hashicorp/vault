@@ -17,6 +17,7 @@ func newGithubListCmd() *cobra.Command {
 	listCmd.AddCommand(newGithubListChangedFilesCmd())
 	listCmd.AddCommand(newGithubListCommitStatusesCmd())
 	listCmd.AddCommand(newGithubListLatestGoVersionsCmd())
+	listCmd.AddCommand(newGithubListDisconnectedJobsCmd(githubCmdState))
 	listCmd.AddCommand(newGithubListOpenPRsCmd())
 	listCmd.AddCommand(newGithubListWorkflowRunsCmd())
 

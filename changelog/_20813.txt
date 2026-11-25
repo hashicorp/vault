@@ -1,0 +1,6 @@
+```release-note:bug
+core/seal (enterprise): fix error where Vault side IV generation is disallowed in FIPS mode HSMs.
+```
+```release-note:bug
+core/seal (enterprise): attempt to reinitialize when receiving a CKR_CRYPTOKI_NOT_INITIALIZED error.
+```

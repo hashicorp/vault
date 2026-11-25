@@ -20,6 +20,7 @@ import (
 
 	libgithub "github.com/google/go-github/v83/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github/githubtest"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/golang"
 	"github.com/stretchr/testify/require"
 )
@@ -1086,7 +1087,7 @@ func TestGithubSyncGoModReq_Run_commit(t *testing.T) {
 			req.DiffOpts.Go = true
 			var github *libgithub.Client
 			if test.malformedWorkspace {
-				client, mux, teardown := setupTestClient(t)
+				client, mux, teardown := githubtest.SetupTestClient(t)
 				t.Cleanup(teardown)
 				github = client
 				mux.HandleFunc("POST /repos/hashicorp/vault-enterprise/pulls", func(w http.ResponseWriter, r *http.Request) {
