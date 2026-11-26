@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix URL-encoded forward slashes in KV secret paths causing compatibility issues with reverse proxies
+```
