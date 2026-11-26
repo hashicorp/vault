@@ -12,7 +12,7 @@ import (
 // BackendType is the type of backend that is being implemented
 type BackendType uint32
 
-// The these are the types of backends that can be derived from
+// These are the types of backends that can be derived from
 // logical.Backend
 const (
 	TypeUnknown    BackendType = 0 // This is also the zero-value for BackendType

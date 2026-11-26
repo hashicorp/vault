@@ -30,7 +30,7 @@ globals {
     EOF
 
     create_vault_cluster = <<-EOF
-      Create the the Vault cluster. In this module we'll install, configure, start, initialize and
+      Create the Vault cluster. In this module we'll install, configure, start, initialize and
       unseal all the nodes in the Vault. After initialization it also enables various audit engines.
     EOF
 

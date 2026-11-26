@@ -362,7 +362,7 @@ quality "vault_api_sys_storage_raft_autopilot_upgrade_info_read_status_matches" 
 quality "vault_api_sys_storage_raft_autopilot_upgrade_info_target_version_read_matches_candidate" {
   description = <<-EOF
     The v1/sys/storage/raft/autopilot/state Vault API returns the raft autopilot state and the
-    'upgrade_info.target_version' matches the the candidate version
+    'upgrade_info.target_version' matches the candidate version
   EOF
 }
 
@@ -534,7 +534,7 @@ quality "vault_multiseal_enable" {
 
 quality "vault_proxy_auto_auth_approle" {
   description = <<-EOF
-    Vault Proxy utilizes the approle auth method to to auto auth via a roles and secrets from file.
+    Vault Proxy utilizes the approle auth method to auto auth via a roles and secrets from file.
   EOF
 }
 

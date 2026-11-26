@@ -18,7 +18,7 @@ import { action } from '@ember/object';
  *
  * @param {string} label=null - The display name for the value.
  * @param {string} helperText=null - Text to describe the value displayed beneath the label.
- * @param {any} value=null  - The the data to be displayed - by default the content of the component will only show if there is a value. Also note that special handling is given to boolean values - they will render `Yes` for true and `No` for false. Overridden by block if exists
+ * @param {any} value=null  - The data to be displayed - by default the content of the component will only show if there is a value. Also note that special handling is given to boolean values - they will render `Yes` for true and `No` for false. Overridden by block if exists
  * @param {boolean} [alwaysRender=false] - Indicates if the component content should be always be rendered.  When false, the value of `value` will be used to determine if the component should render.
  * @param {boolean} [truncateValue=false] - Indicates if the value should be truncated.
  * @param {string} [defaultShown] - Text that renders as value if alwaysRender=true. Eg. "Vault default"
