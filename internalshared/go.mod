@@ -46,7 +46,7 @@ require (
 	github.com/hashicorp/go-metrics v0.6.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.3
+	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.4
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1

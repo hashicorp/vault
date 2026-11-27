@@ -6,11 +6,9 @@ package github
 import (
 	"context"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"testing"
 
-	libgithub "github.com/google/go-github/v83/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github/githubtest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,7 +56,7 @@ func Test_addAssignees(t *testing.T) {
 			t.Parallel()
 
 			called := false
-			client, mux, teardown := setupTestClient(t)
+			client, mux, teardown := githubtest.SetupTestClient(t)
 			defer teardown()
 
 			if test.shouldCall {
@@ -134,7 +132,7 @@ func Test_addReviewers(t *testing.T) {
 			t.Parallel()
 
 			called := false
-			client, mux, teardown := setupTestClient(t)
+			client, mux, teardown := githubtest.SetupTestClient(t)
 			defer teardown()
 
 			if test.shouldCall {
@@ -164,25 +162,4 @@ func Test_addReviewers(t *testing.T) {
 			require.Equal(t, test.shouldCall, called, "API call expectation mismatch")
 		})
 	}
-}
-
-// setupTestClient creates a test GitHub client with a mock HTTP server for testing.
-// It returns the client, the HTTP mux for registering handlers, and a teardown function
-// that should be called to clean up the server when the test completes.
-func setupTestClient(t *testing.T) (*libgithub.Client, *http.ServeMux, func()) {
-	t.Helper()
-
-	mux := http.NewServeMux()
-	server := httptest.NewServer(mux)
-
-	client := libgithub.NewClient(nil)
-	serverURL, err := url.Parse(server.URL + "/")
-	require.NoError(t, err)
-	client.BaseURL = serverURL
-
-	teardown := func() {
-		server.Close()
-	}
-
-	return client, mux, teardown
 }

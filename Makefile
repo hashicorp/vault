@@ -253,11 +253,16 @@ proto: check-tools-external
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
+# Parallelism for formatters. Batches are small enough to balance load across
+# cores but large enough that process startup cost is negligible.
+NPROCS    ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+FMT_BATCH ?= 200
+
 importfmt: check-tools-external
-	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gosimports -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs -P $(NPROCS) -n $(FMT_BATCH) gosimports -w
 
 fmt: importfmt
-	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs -P $(NPROCS) -n $(FMT_BATCH) gofumpt -w
 
 fmtcheck: check-go-fmt
 

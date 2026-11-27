@@ -6,6 +6,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -41,6 +42,11 @@ const (
 
 	// AttributionConfigPath is the storage key for the attribution retention configuration.
 	AttributionConfigPath = "attribution_config"
+
+	// ConsumptionLimitsPath is the storage key, relative to the billing sub view, of the single
+	// JSON entry holding every configured billing limit. It sits under LocalPrefix so
+	// that the entry is cluster-local and excluded from performance replication.
+	ConsumptionLimitsPath = LocalPrefix + "limits"
 
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
@@ -145,6 +151,28 @@ type BillingConfig struct {
 	// OnMetricsSent is called in tests to observe the proto that would be sent
 	// to the control hub. It is never set in production.
 	OnMetricsSent func([]byte, error)
+}
+
+// LimitableMetrics lists the billing overview metric names that a limit can be
+// set on. It is every metric reported by sys/billing/overview except kmip, which
+// is a boolean flag rather than a quantity. A test keeps this list in sync with
+// the overview, so adding a metric to the overview requires updating it here.
+var LimitableMetrics = []string{
+	"static_secrets",
+	"dynamic_roles",
+	"auto_rotated_roles",
+	"external_plugins",
+	"data_protection_calls",
+	"pki_units",
+	"managed_keys",
+	"ssh_units",
+	"id_token_units",
+	"external_ca_pki_units",
+}
+
+// IsLimitableMetric reports whether a limit can be set on the named metric.
+func IsLimitableMetric(metric string) bool {
+	return slices.Contains(LimitableMetrics, metric)
 }
 
 func GetMonthlyBillingMetricPath(localPrefix string, now time.Time, billingMetric string) string {
