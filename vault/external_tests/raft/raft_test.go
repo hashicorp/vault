@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"runtime/pprof"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -41,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -679,6 +681,69 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 
 	if len(secret.Data["keys"].([]interface{})) != 10 {
 		t.Fatal("snapshot didn't apply correctly")
+	}
+}
+
+func TestRaft_SnapshotAPI_RepeatedRestore(t *testing.T) {
+	for _, force := range []bool{false, true} {
+		t.Run(fmt.Sprintf("force=%t", force), func(t *testing.T) {
+			// Use multiple nodes: with a single node the undo log monitor exits
+			// immediately, hiding leaks of that worker.
+			cluster, _ := raftCluster(t, &RaftClusterOpts{
+				NumCores:     3,
+				InmemCluster: true,
+				DisableMlock: true,
+			})
+			client := cluster.Cores[0].Client
+			require.NoError(t, client.Sys().Mount("secret", &api.MountInput{Type: "kv"}))
+			_, err := client.Logical().Write("secret/restored", map[string]interface{}{"value": "snapshot"})
+			require.NoError(t, err)
+
+			var snapshot bytes.Buffer
+			require.NoError(t, client.Sys().RaftSnapshot(&snapshot))
+
+			goroutines := func() string {
+				var stacks bytes.Buffer
+				require.NoError(t, pprof.Lookup("goroutine").WriteTo(&stacks, 2))
+				return stacks.String()
+			}
+			// Workers started during unseal must be replaced, not accumulated,
+			// across restores. The undo log monitor may exit on its own once
+			// undo logs are deemed safe, so it is allowed to be absent.
+			workers := []struct {
+				stack    string
+				min, max int
+			}{
+				{"\ngithub.com/hashicorp/vault/vault.(*Core).setupCachedMFAResponseAuth.func", 1, 1},
+				{"\ngithub.com/hashicorp/vault/vault.(*Core).consumptionBillingMetricsWorker.func", 1, 1},
+				{"\ngithub.com/hashicorp/vault/vault.(*Core).monitorUndoLogs.func", 0, 1},
+			}
+			workersStopped := func() bool {
+				stacks := goroutines()
+				for _, worker := range workers {
+					n := strings.Count(stacks, worker.stack)
+					if n < worker.min || n > worker.max {
+						return false
+					}
+				}
+				return true
+			}
+			require.Eventually(t, workersStopped, 5*time.Second, 10*time.Millisecond)
+			before := goroutines()
+
+			for i := range 3 {
+				_, err := client.Logical().Write("secret/restored", map[string]interface{}{"value": "changed"})
+				require.NoError(t, err)
+				require.NoError(t, client.Sys().RaftSnapshotRestore(bytes.NewReader(snapshot.Bytes()), force))
+				require.Eventually(t, func() bool {
+					secret, err := client.Logical().Read("secret/restored")
+					return err == nil && secret != nil && secret.Data["value"] == "snapshot"
+				}, 30*time.Second, 50*time.Millisecond)
+				if !assert.Eventually(t, workersStopped, 5*time.Second, 10*time.Millisecond) {
+					t.Fatalf("restore %d leaked workers; goroutines before restores:\n%s\ngoroutines after restore:\n%s", i+1, before, goroutines())
+				}
+			}
+		})
 	}
 }
 
