@@ -7,6 +7,7 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { didCancel } from 'ember-concurrency';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
+import { recoverEngineMountPath } from 'vault/utils/path-encoding-helpers';
 
 export default Route.extend({
   flashMessages: service(),
@@ -18,7 +19,7 @@ export default Route.extend({
   oldModel: null,
 
   async model(params) {
-    const { backend } = params;
+    const backend = recoverEngineMountPath(params.backend);
     this.secretMountPath.update(backend);
 
     try {
