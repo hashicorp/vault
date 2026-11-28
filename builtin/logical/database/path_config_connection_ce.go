@@ -371,6 +371,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		delete(config.ConnectionDetails, "password")
 		delete(config.ConnectionDetails, "private_key")
 		delete(config.ConnectionDetails, "service_account_json")
+		delete(config.ConnectionDetails, "client_secret")
 
 		resp := &logical.Response{}
 
