@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Resolve identity templates in cached ACL policies without parsing the policy again on every request.
+```
