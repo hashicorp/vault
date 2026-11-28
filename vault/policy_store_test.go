@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/identity"
@@ -991,4 +992,53 @@ path "foo" {
 			require.NotContains(t, syncedLog.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
 		})
 	}
+}
+
+// TestPolicyStore_LockScope verifies that ACL policy operations only lock the
+// policy they touch, while RGP and EGP operations also take modifyLock so
+// that Sentinel state shared across policies is never modified concurrently.
+func TestPolicyStore_LockScope(t *testing.T) {
+	t.Parallel()
+
+	ps := NewTestCluster(t, &CoreConfig{}, nil).Cores[0].Core.policyStore
+	ctx := namespace.RootContext(context.Background())
+
+	acl, err := ParseACLPolicy(namespace.RootNamespace, `path "secret/lock-scope" { capabilities = ["read"] }`)
+	require.NoError(t, err)
+	acl.Name = "acl-lock-scope"
+	egp := &Policy{
+		Name:      "egp-lock-scope",
+		Type:      PolicyTypeEGP,
+		Raw:       `main = rule { true }`,
+		namespace: namespace.RootNamespace,
+	}
+
+	ps.modifyLock.Lock()
+	locked := true
+	defer func() {
+		if locked {
+			ps.modifyLock.Unlock()
+		}
+	}()
+
+	aclDone := make(chan error, 1)
+	go func() { aclDone <- ps.SetPolicy(ctx, acl) }()
+	select {
+	case err := <-aclDone:
+		require.NoError(t, err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("ACL policy write waited on modifyLock")
+	}
+
+	egpDone := make(chan error, 1)
+	go func() { egpDone <- ps.SetPolicy(ctx, egp) }()
+	select {
+	case <-egpDone:
+		t.Fatal("EGP policy write did not wait on modifyLock")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	ps.modifyLock.Unlock()
+	locked = false
+	require.NoError(t, <-egpDone)
 }
