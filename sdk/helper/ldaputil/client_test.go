@@ -32,6 +32,8 @@ func TestDialLDAP(t *testing.T) {
 func TestLDAPEscape(t *testing.T) {
 	testcases := map[string]string{
 		"#test":                      "\\#test",
+		"te#st":                      "te#st",
+		"test#":                      "test#",
 		"test,hello":                 "test\\,hello",
 		"test,hel+lo":                "test\\,hel\\+lo",
 		"test\\hello":                "test\\\\hello",
